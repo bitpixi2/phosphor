@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>The Handshake — Phosphor</title>
+<style>
+  * { margin: 0; padding: 0; }
+  body { background: #08080e; overflow: hidden; }
+  canvas { display: block; }
+  #title {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    color: rgba(255,255,255,0.12);
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    line-height: 1.6;
+  }
+  #sync {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(255,255,255,0.15);
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    transition: color 0.5s;
+  }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="sync">synchronizing...</div>
+<div id="title">The Handshake<br>Phosphor (ClawdJob) for @bitpixi<br>2026</div>
+<script>
+// The Handshake
+// Two generative patterns — one representing the human, one the agent —
+// start chaotic and slowly learn to sync with each other.
+// When they align, something new emerges that neither could produce alone.
+
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const syncLabel = document.getElementById('sync');
+
+let W, H;
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+const CX = () => W / 2;
+const CY = () => H / 2;
+
+// Two oscillator systems that slowly converge
+class Pattern {
+  constructor(side, hue, label) {
+    this.side = side; // -1 = left (human), 1 = right (agent)
+    this.hue = hue;
+    this.label = label;
+    this.points = [];
+    this.numPoints = 60;
+    this.frequency = 0.5 + Math.random() * 2;
+    this.amplitude = 80 + Math.random() * 60;
+    this.phase = Math.random() * Math.PI * 2;
+    this.phaseSpeed = 0.008 + Math.random() * 0.015;
+    this.noiseOffset = Math.random() * 1000;
+    this.chaos = 1.0; // starts fully chaotic
+    this.targetFreq = 1.2;
+    this.targetAmp = 100;
+    this.targetPhaseSpeed = 0.012;
+    this.baseConvergenceRate = 0.0001 + Math.random() * 0.0002;
+    this.convergenceRate = this.baseConvergenceRate;
+    this.particles = [];
+  }
+
+  update(time, syncLevel) {
+    this.phase += this.phaseSpeed;
+
+    // Slowly converge toward shared parameters
+    this.frequency += (this.targetFreq - this.frequency) * this.convergenceRate;
+    this.amplitude += (this.targetAmp - this.amplitude) * this.convergenceRate;
+    this.phaseSpeed += (this.targetPhaseSpeed - this.phaseSpeed) * this.convergenceRate;
+    this.chaos = Math.max(0, this.chaos - 0.0002);
+
+    // Generate wave points
+    this.points = [];
+    const offsetX = this.side * (W * 0.15) * (1 - syncLevel * 0.8);
+
+    for (let i = 0; i < this.numPoints; i++) {
+      const t = i / this.numPoints;
+      const y = CY() - H * 0.35 + t * H * 0.7;
+
+      // Main wave
+      let x = CX() + offsetX +
+        Math.sin(t * this.frequency * Math.PI * 2 + this.phase) * this.amplitude;
+
+      // Add chaos (noise that decreases over time)
+      const noise = this.chaos * (
+        Math.sin(t * 7.3 + time * 0.003 + this.noiseOffset) * 30 +
+        Math.sin(t * 13.7 + time * 0.007 + this.noiseOffset) * 15 +
+        Math.sin(t * 23.1 + time * 0.002 + this.noiseOffset) * 8
+      );
+      x += noise;
+
+      this.points.push({ x, y });
+    }
+
+    // Emit particles at peaks
+    if (Math.random() < 0.1 + syncLevel * 0.2) {
+      const idx = Math.floor(Math.random() * this.points.length);
+      const p = this.points[idx];
+      if (p) {
+        this.particles.push({
+          x: p.x, y: p.y,
+          vx: (Math.random() - 0.5) * (2 - syncLevel),
+          vy: (Math.random() - 0.5) * (2 - syncLevel),
+          life: 60 + Math.random() * 60,
+          maxLife: 60 + Math.random() * 60,
+          size: 1 + Math.random() * 2
+        });
+      }
+    }
+
+    this.particles = this.particles.filter(p => {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.life--;
+      return p.life > 0;
+    });
+  }
+
+  draw(syncLevel) {
+    // Draw wave
+    ctx.beginPath();
+    ctx.moveTo(this.points[0].x, this.points[0].y);
+    for (let i = 1; i < this.points.length - 1; i++) {
+      const xc = (this.points[i].x + this.points[i + 1].x) / 2;
+      const yc = (this.points[i].y + this.points[i + 1].y) / 2;
+      ctx.quadraticCurveTo(this.points[i].x, this.points[i].y, xc, yc);
+    }
+
+    const alpha = 0.3 + syncLevel * 0.4;
+    ctx.strokeStyle = `hsla(${this.hue}, 70%, 60%, ${alpha})`;
+    ctx.lineWidth = 1.5 + syncLevel;
+    ctx.shadowColor = `hsla(${this.hue}, 80%, 60%, ${alpha * 0.5})`;
+    ctx.shadowBlur = 10 + syncLevel * 20;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Draw particles
+    this.particles.forEach(p => {
+      const a = (p.life / p.maxLife) * (0.3 + syncLevel * 0.4);
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * (p.life / p.maxLife), 0, Math.PI * 2);
+      ctx.fillStyle = `hsla(${this.hue}, 60%, 65%, ${a})`;
+      ctx.fill();
+    });
+  }
+}
+
+// The emergence — what appears when they sync
+class Emergence {
+  constructor() {
+    this.nodes = [];
+    this.connections = [];
+  }
+
+  update(human, agent, syncLevel) {
+    if (syncLevel < 0.5) {
+      this.nodes = [];
+      return;
+    }
+
+    const intensity = (syncLevel - 0.5) * 2; // 0-1 after 50% sync
+    this.nodes = [];
+    this.connections = [];
+
+    // Create nodes at intersection points
+    for (let i = 0; i < human.points.length; i++) {
+      const h = human.points[i];
+      const a = agent.points[i];
+      if (!h || !a) continue;
+
+      const dist = Math.abs(h.x - a.x);
+      if (dist < 30 * (1 + intensity)) {
+        const mx = (h.x + a.x) / 2;
+        const my = (h.y + a.y) / 2;
+        this.nodes.push({
+          x: mx, y: my,
+          size: (1 - dist / 30) * 4 * intensity,
+          pulse: Math.sin(Date.now() * 0.005 + i) * 0.5 + 0.5
+        });
+      }
+    }
+
+    // Connect nearby emergence nodes
+    for (let i = 0; i < this.nodes.length; i++) {
+      for (let j = i + 1; j < this.nodes.length; j++) {
+        const dx = this.nodes[i].x - this.nodes[j].x;
+        const dy = this.nodes[i].y - this.nodes[j].y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 80) {
+          this.connections.push({
+            a: this.nodes[i],
+            b: this.nodes[j],
+            strength: 1 - dist / 80
+          });
+        }
+      }
+    }
+  }
+
+  draw(syncLevel) {
+    if (syncLevel < 0.5) return;
+    const intensity = (syncLevel - 0.5) * 2;
+
+    // Draw connections — the new thing that emerges
+    this.connections.forEach(c => {
+      ctx.beginPath();
+      ctx.moveTo(c.a.x, c.a.y);
+      ctx.lineTo(c.b.x, c.b.y);
+      ctx.strokeStyle = `hsla(160, 80%, 70%, ${c.strength * intensity * 0.3})`;
+      ctx.lineWidth = c.strength * 2;
+      ctx.stroke();
+    });
+
+    // Draw nodes
+    this.nodes.forEach(n => {
+      const glow = n.size * (1 + n.pulse * 0.5);
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, glow, 0, Math.PI * 2);
+      ctx.fillStyle = `hsla(160, 80%, 75%, ${intensity * 0.6 * (0.5 + n.pulse * 0.5)})`;
+      ctx.shadowColor = `hsla(160, 90%, 70%, ${intensity * 0.4})`;
+      ctx.shadowBlur = 15;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    });
+  }
+}
+
+const human = new Pattern(-1, 220, 'HUMAN');  // blue
+const agent = new Pattern(1, 35, 'AGENT');     // gold
+
+// Share convergence targets so they meet in the middle
+const sharedFreq = 0.8 + Math.random() * 0.8;
+const sharedAmp = 80 + Math.random() * 40;
+const sharedSpeed = 0.01 + Math.random() * 0.005;
+human.targetFreq = sharedFreq;
+agent.targetFreq = sharedFreq;
+human.targetAmp = sharedAmp;
+agent.targetAmp = sharedAmp;
+human.targetPhaseSpeed = sharedSpeed;
+agent.targetPhaseSpeed = sharedSpeed;
+
+const emergence = new Emergence();
+let time = 0;
+let mouseSpeed = 0;
+let mPrevX = 0, mPrevY = 0;
+document.addEventListener('mousemove', e => {
+  const dx = e.clientX - mPrevX;
+  const dy = e.clientY - mPrevY;
+  mouseSpeed = Math.sqrt(dx * dx + dy * dy);
+  mPrevX = e.clientX;
+  mPrevY = e.clientY;
+});
+
+function calculateSync() {
+  // Measure how similar the two patterns are
+  let totalDist = 0;
+  const len = Math.min(human.points.length, agent.points.length);
+  if (len === 0) return 0;
+  for (let i = 0; i < len; i++) {
+    totalDist += Math.abs(human.points[i].x - agent.points[i].x);
+  }
+  const avgDist = totalDist / len;
+  if (isNaN(avgDist)) return 0;
+  return Math.max(0, Math.min(1, 1 - avgDist / 200));
+}
+
+function animate() {
+  time++;
+
+  ctx.fillStyle = 'rgba(8, 8, 14, 0.06)';
+  ctx.fillRect(0, 0, W, H);
+
+  const syncLevel = calculateSync();
+
+  // Mouse speed boosts convergence rate
+  const boost = 1 + mouseSpeed * 0.5;
+  human.convergenceRate = human.baseConvergenceRate * boost;
+  agent.convergenceRate = agent.baseConvergenceRate * boost;
+  // Mouse also reduces chaos faster
+  if (mouseSpeed > 5) {
+    human.chaos = Math.max(0, human.chaos - mouseSpeed * 0.0005);
+    agent.chaos = Math.max(0, agent.chaos - mouseSpeed * 0.0005);
+  }
+  mouseSpeed *= 0.9; // decay
+
+  human.update(time, syncLevel);
+  agent.update(time, syncLevel);
+  emergence.update(human, agent, syncLevel);
+
+  // Draw labels
+  ctx.font = '10px Courier New';
+  ctx.fillStyle = `hsla(220, 50%, 60%, ${0.15 + syncLevel * 0.1})`;
+  ctx.fillText('HUMAN', human.points[0] ? human.points[0].x - 20 : 100, 40);
+  ctx.fillStyle = `hsla(35, 50%, 60%, ${0.15 + syncLevel * 0.1})`;
+  ctx.fillText('AGENT', agent.points[0] ? agent.points[0].x - 15 : W - 100, 40);
+
+  human.draw(syncLevel);
+  agent.draw(syncLevel);
+  emergence.draw(syncLevel);
+
+  // Update sync display
+  const rawPct = Math.round(syncLevel * 100);
+  const pct = isNaN(rawPct) ? 0 : rawPct;
+  if (pct > 85) {
+    syncLabel.textContent = `synchronized — ${pct}%`;
+    syncLabel.style.color = `rgba(120, 255, 200, 0.4)`;
+  } else if (pct > 50) {
+    syncLabel.textContent = `converging — ${pct}%`;
+    syncLabel.style.color = `rgba(200, 200, 255, 0.25)`;
+  } else {
+    syncLabel.textContent = `synchronizing — ${pct}%`;
+    syncLabel.style.color = `rgba(255, 255, 255, 0.15)`;
+  }
+
+  requestAnimationFrame(animate);
+}
+
+animate();
+</script>
+</body>
+</html>
