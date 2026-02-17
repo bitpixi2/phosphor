@@ -64,15 +64,15 @@ class Pattern {
     this.hue = hue;
     this.label = label;
     this.points = [];
-    this.numPoints = 82;
+    this.numPoints = 96;
     this.frequency = 0.45 + Math.random() * 1.8;
-    this.amplitude = 110 + Math.random() * 90;
+    this.amplitude = 140 + Math.random() * 100;
     this.phase = Math.random() * Math.PI * 2;
     this.phaseSpeed = 0.008 + Math.random() * 0.015;
     this.noiseOffset = Math.random() * 1000;
     this.chaos = 1.0; // starts fully chaotic
     this.targetFreq = 1.2;
-    this.targetAmp = 100;
+    this.targetAmp = 140;
     this.targetPhaseSpeed = 0.012;
     this.baseConvergenceRate = 0.0008 + Math.random() * 0.0005;
     this.convergenceRate = this.baseConvergenceRate;
@@ -90,12 +90,12 @@ class Pattern {
 
     // Generate wave points
     this.points = [];
-    const mergeBias = Math.min(1, syncLevel + (1 - this.chaos) * 0.35);
-    const offsetX = this.side * (W * 0.23) * (1 - mergeBias);
+    const mergeBias = Math.max(0, Math.min(1, syncLevel));
+    const offsetX = this.side * (W * 0.38) * (1 - mergeBias);
 
     for (let i = 0; i < this.numPoints; i++) {
       const t = i / this.numPoints;
-      const y = H * 0.08 + t * H * 0.84;
+      const y = H * 0.04 + t * H * 0.92;
 
       // Main wave
       let x = CX() + offsetX +
@@ -108,7 +108,7 @@ class Pattern {
         Math.sin(t * 23.1 + time * 0.002 + this.noiseOffset) * 8
       );
       x += noise;
-      const centerPull = mergeBias * 0.45;
+      const centerPull = mergeBias * 0.7;
       x = x * (1 - centerPull) + CX() * centerPull;
 
       this.points.push({ x, y });
@@ -264,16 +264,20 @@ agent.targetPhaseSpeed = sharedSpeed;
 const emergence = new Emergence();
 let time = 0;
 let mouseSpeed = 0;
+let mouseEnergy = 0;
+let syncProgress = 0;
+let syncDisplay = 0;
 let mPrevX = 0, mPrevY = 0;
 document.addEventListener('mousemove', e => {
   const dx = e.clientX - mPrevX;
   const dy = e.clientY - mPrevY;
   mouseSpeed = Math.sqrt(dx * dx + dy * dy);
+  mouseEnergy = Math.min(45, mouseEnergy + mouseSpeed * 0.22);
   mPrevX = e.clientX;
   mPrevY = e.clientY;
 });
 
-function calculateSync() {
+function calculateShapeSimilarity() {
   // Measure how similar the two patterns are
   let totalDist = 0;
   const len = Math.min(human.points.length, agent.points.length);
@@ -283,9 +287,7 @@ function calculateSync() {
   }
   const avgDist = totalDist / len;
   if (isNaN(avgDist)) return 0;
-  const distanceSync = 1 - avgDist / 180;
-  const calmBonus = (1 - ((human.chaos + agent.chaos) * 0.5)) * 0.2;
-  return Math.max(0, Math.min(1, distanceSync + calmBonus));
+  return Math.max(0, Math.min(1, 1 - avgDist / (W * 0.45)));
 }
 
 function animate() {
@@ -300,10 +302,13 @@ function animate() {
   ctx.fillStyle = 'rgba(8, 8, 14, 0.06)';
   ctx.fillRect(0, 0, W, H);
 
-  const syncForMotion = calculateSync();
+  // A guaranteed convergence track keeps % moving, while mouse energy accelerates it.
+  const progressStep = 0.0002 + mouseEnergy * 0.00003;
+  syncProgress = Math.min(1, syncProgress + progressStep);
+  const syncForMotion = syncProgress;
 
   // Mouse speed boosts convergence rate
-  const boost = 1 + Math.min(mouseSpeed, 40) * 0.15;
+  const boost = 1 + mouseEnergy * 0.06;
   human.convergenceRate = human.baseConvergenceRate * boost;
   agent.convergenceRate = agent.baseConvergenceRate * boost;
   // Mouse also reduces chaos faster
@@ -311,11 +316,25 @@ function animate() {
     human.chaos = Math.max(0, human.chaos - mouseSpeed * 0.0015);
     agent.chaos = Math.max(0, agent.chaos - mouseSpeed * 0.0015);
   }
+
+  // Align phase as synchronization progresses so lines truly merge.
+  const phaseGap = Math.atan2(
+    Math.sin(agent.phase - human.phase),
+    Math.cos(agent.phase - human.phase)
+  );
+  const phasePull = 0.002 + syncProgress * 0.02 + mouseEnergy * 0.0004;
+  human.phase += phaseGap * phasePull;
+  agent.phase -= phaseGap * phasePull;
+
   mouseSpeed *= 0.86; // decay
+  mouseEnergy *= 0.9;
 
   human.update(time, syncForMotion);
   agent.update(time, syncForMotion);
-  const syncLevel = calculateSync();
+  const shapeSimilarity = calculateShapeSimilarity();
+  const syncTarget = Math.min(1, syncProgress * 0.75 + shapeSimilarity * 0.25);
+  syncDisplay += (syncTarget - syncDisplay) * 0.08;
+  const syncLevel = syncDisplay;
   emergence.update(human, agent, syncLevel);
 
   // Draw labels
