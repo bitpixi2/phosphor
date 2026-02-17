@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>The Observer — Phosphor</title>
+<title>The Observer — ClawdJob (Phosphor)</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
@@ -25,7 +25,7 @@
     z-index: 2;
   }
   #poem span {
-    transition: color 0.8s, text-shadow 0.8s, opacity 0.8s;
+    transition: color 1.15s, text-shadow 1.15s, opacity 1.15s;
     display: inline;
   }
   #trail {
@@ -61,7 +61,7 @@
 <canvas id="trail"></canvas>
 <div id="poem"></div>
 <div id="whisper"></div>
-<div id="title">The Observer<br>Phosphor for @bitpixi<br>2026</div>
+<div id="title">The Observer<br>ClawdJob (Phosphor) for @bitpixi<br>2026</div>
 <script>
 // The Observer
 // A poem that watches you. It responds to your mouse movement,
@@ -72,6 +72,9 @@ const canvas = document.getElementById('trail');
 const ctx = canvas.getContext('2d');
 const poemEl = document.getElementById('poem');
 const whisperEl = document.getElementById('whisper');
+const isPreview = new URLSearchParams(window.location.search).get('preview') === '1';
+const previewFrameSkip = isPreview ? 2 : 1;
+let previewTick = 0;
 
 let W, H;
 function resize() {
@@ -230,8 +233,12 @@ function renderPoem() {
   const lines = layers[currentPoem];
   revealTimer++;
 
-  // Reveal speed based on attention — patient readers get lines faster
-  const revealSpeed = rushLevel > 0.5 ? 60 : 30;
+  // Reveal speed based on behavior.
+  // Full-page reading is slower than before, and previews are slowed further.
+  const baseReveal = rushLevel > 0.5 ? 110 : 72;
+  const attentionBoost = attentionLevel > 0.55 ? 14 : 0;
+  const previewSlowdown = isPreview ? 36 : 0;
+  const revealSpeed = Math.max(40, baseReveal - attentionBoost + previewSlowdown);
   if (revealTimer >= revealSpeed && revealIndex < lines.length) {
     displayedLines.push(lines[revealIndex]);
     revealIndex++;
@@ -317,6 +324,12 @@ document.addEventListener('mousemove', e => {
 });
 
 function animate() {
+  previewTick++;
+  if (previewTick % previewFrameSkip !== 0) {
+    requestAnimationFrame(animate);
+    return;
+  }
+
   timeOnPage++;
   stillness++;
 
