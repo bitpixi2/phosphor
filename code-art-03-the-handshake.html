@@ -303,7 +303,7 @@ function animate() {
   ctx.fillRect(0, 0, W, H);
 
   // A guaranteed convergence track keeps % moving, while mouse energy accelerates it.
-  const progressStep = 0.0002 + mouseEnergy * 0.00003;
+  const progressStep = 0.00028 + mouseEnergy * 0.00004;
   syncProgress = Math.min(1, syncProgress + progressStep);
   const syncForMotion = syncProgress;
 
@@ -332,8 +332,11 @@ function animate() {
   human.update(time, syncForMotion);
   agent.update(time, syncForMotion);
   const shapeSimilarity = calculateShapeSimilarity();
-  const syncTarget = Math.min(1, syncProgress * 0.75 + shapeSimilarity * 0.25);
-  syncDisplay += (syncTarget - syncDisplay) * 0.08;
+  // Never let visual sync fall below guaranteed progress.
+  const shapeBonus = Math.max(0, shapeSimilarity - 0.55) * 0.35;
+  const syncTarget = Math.min(1, Math.max(syncProgress, syncProgress + shapeBonus));
+  syncDisplay += (syncTarget - syncDisplay) * 0.1;
+  if (syncProgress > 0.995 && syncDisplay > 0.992) syncDisplay = 1;
   const syncLevel = syncDisplay;
   emergence.update(human, agent, syncLevel);
 
