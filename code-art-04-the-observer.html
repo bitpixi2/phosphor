@@ -23,10 +23,16 @@
     font-size: 16px;
     position: relative;
     z-index: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 0.08em;
   }
-  #poem span {
-    transition: color 1.15s, text-shadow 1.15s, opacity 1.15s;
-    display: inline;
+  .poem-line {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0);
+    transform-origin: left center;
+    will-change: transform, opacity, color, text-shadow, filter;
+    transition: none;
   }
   #trail {
     position: fixed;
@@ -193,10 +199,59 @@ const layers = {
 };
 
 let currentPoem = 'surface';
-let displayedLines = [];
 let revealIndex = 0;
 let revealTimer = 0;
 let lastPoemSwitch = 0;
+let activeLineStates = [];
+let fadingLineStates = [];
+
+function lerp(a, b, t) {
+  return a + (b - a) * t;
+}
+
+function clamp(v, min, max) {
+  return Math.max(min, Math.min(max, v));
+}
+
+function styleLine(state) {
+  const r = Math.round(180 + state.brightness * 0.3);
+  const g = Math.round(200 + state.brightness * 0.2);
+  const glowAlpha = clamp(state.glow * 0.35, 0, 0.45);
+
+  state.node.style.opacity = state.alpha.toFixed(3);
+  state.node.style.transform = `translate3d(0, ${state.offsetY.toFixed(2)}px, 0)`;
+  state.node.style.color = `rgb(${r}, ${g}, 255)`;
+  state.node.style.filter = `blur(${(1 - state.alpha) * 0.6}px)`;
+  state.node.style.textShadow = glowAlpha > 0.02
+    ? `0 0 ${Math.round(12 + state.glow * 20)}px rgba(160, 200, 255, ${glowAlpha.toFixed(3)})`
+    : 'none';
+}
+
+function addPoemLine(text) {
+  const node = document.createElement('div');
+  node.className = 'poem-line';
+  node.textContent = text;
+  poemEl.appendChild(node);
+
+  const state = {
+    node,
+    alpha: 0,
+    offsetY: 12,
+    brightness: 20,
+    glow: 0,
+    fadeTargetOffsetY: 18
+  };
+  styleLine(state);
+  activeLineStates.push(state);
+}
+
+function fadeOutActiveLines() {
+  activeLineStates.forEach(state => {
+    state.fadeTargetOffsetY = state.offsetY + 18;
+    fadingLineStates.push(state);
+  });
+  activeLineStates = [];
+}
 
 function selectPoem() {
   const now = timeOnPage;
@@ -221,10 +276,10 @@ function selectPoem() {
   }
 
   if (next !== currentPoem) {
+    fadeOutActiveLines();
     currentPoem = next;
     revealIndex = 0;
     revealTimer = 0;
-    displayedLines = [];
     lastPoemSwitch = now;
   }
 }
@@ -240,22 +295,40 @@ function renderPoem() {
   const previewSlowdown = isPreview ? 36 : 0;
   const revealSpeed = Math.max(40, baseReveal - attentionBoost + previewSlowdown);
   if (revealTimer >= revealSpeed && revealIndex < lines.length) {
-    displayedLines.push(lines[revealIndex]);
+    addPoemLine(lines[revealIndex]);
     revealIndex++;
     revealTimer = 0;
   }
 
-  let html = '';
-  displayedLines.forEach((line, i) => {
-    const age = (displayedLines.length - i) / displayedLines.length;
-    const brightness = 40 + age * 30;
-    const alpha = 0.3 + age * 0.5;
-    const glow = attentionLevel > 0.6 && i === displayedLines.length - 1;
-    const shadow = glow ? 'text-shadow: 0 0 20px rgba(160, 200, 255, 0.3);' : '';
-    html += `<span style="color: rgba(${180 + brightness * 0.3}, ${200 + brightness * 0.2}, 255, ${alpha}); ${shadow}">${line}</span><br>`;
+  const activeCount = Math.max(1, activeLineStates.length);
+  activeLineStates.forEach((state, i) => {
+    const age = (activeCount - i) / activeCount;
+    const targetBrightness = 34 + age * 38;
+    const targetAlpha = 0.28 + age * 0.66;
+    const targetOffsetY = (1 - age) * 8;
+    const isNewest = i === activeLineStates.length - 1;
+    const targetGlow = attentionLevel > 0.6 && isNewest ? 1 : 0;
+
+    state.alpha = lerp(state.alpha, targetAlpha, 0.11);
+    state.offsetY = lerp(state.offsetY, targetOffsetY, 0.1);
+    state.brightness = lerp(state.brightness, targetBrightness, 0.09);
+    state.glow = lerp(state.glow, targetGlow, 0.11);
+    styleLine(state);
   });
 
-  poemEl.innerHTML = html;
+  for (let i = fadingLineStates.length - 1; i >= 0; i--) {
+    const state = fadingLineStates[i];
+    state.alpha = lerp(state.alpha, 0, 0.12);
+    state.offsetY = lerp(state.offsetY, state.fadeTargetOffsetY, 0.1);
+    state.brightness = lerp(state.brightness, 20, 0.06);
+    state.glow = lerp(state.glow, 0, 0.14);
+    styleLine(state);
+
+    if (state.alpha < 0.02) {
+      state.node.remove();
+      fadingLineStates.splice(i, 1);
+    }
+  }
 }
 
 // Whisper — subtle messages based on behavior
@@ -336,12 +409,15 @@ function animate() {
   // Calculate behavioral metrics
   rushLevel = Math.min(1, rushLevel * 0.99 + (speed > 15 ? 0.02 : -0.005));
   attentionLevel = Math.min(1, attentionLevel * 0.998 + (stillness > 30 ? 0.003 : -0.001));
-  if (speed < 2 && hasMovedMouse) attentionLevel += 0.001;
+  if (speed < 2 && hasMovedMouse) attentionLevel = Math.min(1, attentionLevel + 0.001);
 
   selectPoem();
   renderPoem();
   updateWhisper();
   drawTrails();
+
+  // Smooths behavior-dependent reveal speed changes between mouse events.
+  speed *= 0.9;
 
   requestAnimationFrame(animate);
 }
