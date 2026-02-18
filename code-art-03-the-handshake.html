@@ -5,13 +5,13 @@
 <title>The Handshake — ClawdJob (Phosphor)</title>
 <style>
   * { margin: 0; padding: 0; }
-  body { background: #08080e; overflow: hidden; }
+  body { background: #10141b; overflow: hidden; }
   canvas { display: block; }
   #title {
     position: fixed;
     bottom: 20px;
     right: 20px;
-    color: rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.27);
     font-family: 'Courier New', monospace;
     font-size: 11px;
     line-height: 1.6;
@@ -22,7 +22,7 @@
     top: 20px;
     left: 50%;
     transform: translateX(-50%);
-    color: rgba(255,255,255,0.15);
+    color: rgba(255,255,255,0.28);
     font-family: 'Courier New', monospace;
     font-size: 12px;
     transition: color 0.5s;
@@ -319,7 +319,7 @@ function animate(now) {
 
   time++;
 
-  ctx.fillStyle = 'rgba(8, 8, 14, 0.06)';
+  ctx.fillStyle = 'rgba(16, 20, 28, 0.09)';
   ctx.fillRect(0, 0, W, H);
 
   // A guaranteed convergence track keeps % moving, while mouse energy accelerates it.
@@ -369,9 +369,9 @@ function animate(now) {
 
   // Draw labels
   ctx.font = '10px Courier New';
-  ctx.fillStyle = `hsla(220, 50%, 60%, ${0.15 + syncLevel * 0.1})`;
+  ctx.fillStyle = `hsla(220, 50%, 60%, ${0.24 + syncLevel * 0.12})`;
   ctx.fillText('HUMAN', human.points[0] ? human.points[0].x - 20 : 100, 40);
-  ctx.fillStyle = `hsla(35, 50%, 60%, ${0.15 + syncLevel * 0.1})`;
+  ctx.fillStyle = `hsla(35, 50%, 60%, ${0.24 + syncLevel * 0.12})`;
   ctx.fillText('AGENT', agent.points[0] ? agent.points[0].x - 15 : W - 100, 40);
 
   human.draw(syncLevel);
@@ -383,13 +383,13 @@ function animate(now) {
   const pct = isNaN(rawPct) ? 0 : rawPct;
   if (pct > 85) {
     syncLabel.textContent = `synchronized — ${pct}%`;
-    syncLabel.style.color = `rgba(120, 255, 200, 0.4)`;
+    syncLabel.style.color = `rgba(120, 255, 200, 0.52)`;
   } else if (pct > 50) {
     syncLabel.textContent = `converging — ${pct}%`;
-    syncLabel.style.color = `rgba(200, 200, 255, 0.25)`;
+    syncLabel.style.color = `rgba(200, 200, 255, 0.36)`;
   } else {
     syncLabel.textContent = `synchronizing — ${pct}%`;
-    syncLabel.style.color = `rgba(255, 255, 255, 0.15)`;
+    syncLabel.style.color = `rgba(255, 255, 255, 0.24)`;
   }
 
   requestAnimationFrame(animate);

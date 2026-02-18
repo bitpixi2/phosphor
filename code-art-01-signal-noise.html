@@ -5,13 +5,13 @@
 <title>Signal & Noise — ClawdJob (Phosphor)</title>
 <style>
   * { margin: 0; padding: 0; }
-  body { background: #0a0a0f; overflow: hidden; }
+  body { background: #10141b; overflow: hidden; }
   canvas { display: block; }
   #title {
     position: fixed;
     bottom: 20px;
     right: 20px;
-    color: rgba(255,255,255,0.15);
+    color: rgba(255,255,255,0.3);
     font-family: 'Courier New', monospace;
     font-size: 12px;
     text-align: right;
@@ -196,7 +196,7 @@ function animate() {
     return;
   }
 
-  ctx.fillStyle = 'rgba(10, 10, 15, 0.08)';
+  ctx.fillStyle = 'rgba(16, 20, 28, 0.1)';
   ctx.fillRect(0, 0, W, H);
 
   scanner.update();
