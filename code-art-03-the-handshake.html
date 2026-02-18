@@ -210,13 +210,13 @@ class Emergence {
     }
 
     // Keep emergence rendering stable near 100% sync.
-    if (this.nodes.length > 56) {
-      const stride = Math.ceil(this.nodes.length / 56);
+    if (this.nodes.length > 44) {
+      const stride = Math.ceil(this.nodes.length / 44);
       this.nodes = this.nodes.filter((_, idx) => idx % stride === 0);
     }
 
     // Connect nearby emergence nodes
-    const maxConnections = 900;
+    const maxConnections = 420;
     for (let i = 0; i < this.nodes.length; i++) {
       for (let j = i + 1; j < this.nodes.length; j++) {
         const dx = this.nodes[i].x - this.nodes[j].x;
@@ -278,12 +278,136 @@ human.targetPhaseSpeed = sharedSpeed;
 agent.targetPhaseSpeed = sharedSpeed;
 
 const emergence = new Emergence();
+
+function clamp(v, min, max) {
+  return Math.max(min, Math.min(max, v));
+}
+
+function lerp(a, b, t) {
+  return a + (b - a) * t;
+}
+
+function easeInOutCubic(t) {
+  if (t < 0.5) return 4 * t * t * t;
+  return 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+class Mindmap {
+  constructor() {
+    this.nodes = [];
+    this.links = [];
+    this.spawnAccumulator = 0;
+    this.time = 0;
+    this.maxNodes = 120;
+  }
+
+  reset() {
+    const center = {
+      x: CX(),
+      y: CY(),
+      tx: CX(),
+      ty: CY(),
+      radius: 5,
+      alpha: 1,
+      pulse: Math.random() * Math.PI * 2,
+      depth: 0
+    };
+    this.nodes = [center];
+    this.links = [];
+    this.spawnAccumulator = 0;
+    this.time = 0;
+  }
+
+  spawnNode() {
+    if (this.nodes.length >= this.maxNodes || this.nodes.length === 0) return;
+    const parentIdx = Math.floor(Math.pow(Math.random(), 1.35) * this.nodes.length);
+    const parent = this.nodes[parentIdx];
+    const angle = Math.random() * Math.PI * 2;
+    const distance = 55 + parent.depth * 24 + Math.random() * 34;
+    const tx = clamp(parent.tx + Math.cos(angle) * distance, 36, W - 36);
+    const ty = clamp(parent.ty + Math.sin(angle) * distance, 36, H - 36);
+
+    const node = {
+      x: parent.x,
+      y: parent.y,
+      tx,
+      ty,
+      radius: 2 + Math.random() * 2.2,
+      alpha: 0,
+      pulse: Math.random() * Math.PI * 2,
+      depth: parent.depth + 1
+    };
+
+    this.nodes.push(node);
+    this.links.push({ a: parent, b: node, alpha: 0 });
+  }
+
+  update(dt) {
+    this.time += dt;
+    this.spawnAccumulator += dt * 2.35;
+
+    let spawned = 0;
+    while (this.spawnAccumulator >= 1 && this.nodes.length < this.maxNodes && spawned < 2) {
+      this.spawnNode();
+      this.spawnAccumulator -= 1;
+      spawned++;
+    }
+
+    this.nodes.forEach((n, idx) => {
+      n.pulse += dt * (0.9 + n.depth * 0.02);
+      const speed = idx === 0 ? 0.12 : 0.08;
+      const blend = 1 - Math.exp(-speed * dt * 60);
+      n.x = lerp(n.x, n.tx, blend);
+      n.y = lerp(n.y, n.ty, blend);
+      n.alpha = Math.min(1, n.alpha + dt * (idx === 0 ? 2.4 : 1.1));
+    });
+
+    this.links.forEach(link => {
+      link.alpha = Math.min(1, link.alpha + dt * 1.2);
+    });
+  }
+
+  draw() {
+    this.links.forEach(link => {
+      ctx.beginPath();
+      ctx.moveTo(link.a.x, link.a.y);
+      ctx.lineTo(link.b.x, link.b.y);
+      ctx.strokeStyle = `hsla(160, 70%, 68%, ${0.08 + link.alpha * 0.28})`;
+      ctx.lineWidth = 0.6 + link.alpha * 1.2;
+      ctx.stroke();
+    });
+
+    this.nodes.forEach(node => {
+      const pulse = 0.75 + Math.sin(this.time * 2 + node.pulse) * 0.25;
+      const radius = node.radius * (0.85 + pulse * 0.5);
+      const alpha = node.alpha * (node.depth === 0 ? 0.95 : 0.72);
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, radius, 0, Math.PI * 2);
+      ctx.fillStyle = `hsla(160, 82%, 73%, ${alpha})`;
+      ctx.shadowColor = `hsla(160, 95%, 70%, ${alpha * 0.45})`;
+      ctx.shadowBlur = node.depth === 0 ? 28 : 12;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    });
+  }
+}
+
 let time = 0;
 let mouseSpeed = 0;
 let mouseEnergy = 0;
 let syncProgress = 0;
 let syncDisplay = 0;
+let completionHold = 0;
+let sceneMode = 'sync'; // sync -> bloom -> mindmap
+let bloomTime = 0;
+let wigglePhase = 0;
+let frozenHumanPoints = [];
+let frozenAgentPoints = [];
 let lastFrameTime = performance.now();
+const bloomDuration = 5.8;
+const mindmap = new Mindmap();
+mindmap.reset();
+
 let mPrevX = 0, mPrevY = 0;
 document.addEventListener('mousemove', e => {
   const dx = e.clientX - mPrevX;
@@ -295,7 +419,6 @@ document.addEventListener('mousemove', e => {
 });
 
 function calculateShapeSimilarity() {
-  // Measure how similar the two patterns are
   let totalDist = 0;
   const len = Math.min(human.points.length, agent.points.length);
   if (len === 0) return 0;
@@ -305,6 +428,182 @@ function calculateShapeSimilarity() {
   const avgDist = totalDist / len;
   if (isNaN(avgDist)) return 0;
   return Math.max(0, Math.min(1, 1 - avgDist / (W * 0.45)));
+}
+
+function drawWaveFromPoints(points, hue, alpha, lineWidth) {
+  if (!points || points.length < 2) return;
+  ctx.beginPath();
+  ctx.moveTo(points[0].x, points[0].y);
+  for (let i = 1; i < points.length - 1; i++) {
+    const xc = (points[i].x + points[i + 1].x) / 2;
+    const yc = (points[i].y + points[i + 1].y) / 2;
+    ctx.quadraticCurveTo(points[i].x, points[i].y, xc, yc);
+  }
+  ctx.strokeStyle = `hsla(${hue}, 72%, 64%, ${alpha})`;
+  ctx.lineWidth = lineWidth;
+  ctx.shadowColor = `hsla(${hue}, 85%, 68%, ${alpha * 0.55})`;
+  ctx.shadowBlur = 10;
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+}
+
+function drawCenterWiggle(dt, strength) {
+  wigglePhase += dt * (2.2 + strength * 2.2);
+  const baseY = CY();
+  const amp = 5 + strength * 16;
+  ctx.beginPath();
+  for (let x = 0; x <= W; x += 10) {
+    const y = baseY + Math.sin((x / W) * Math.PI * 6 + wigglePhase) * amp;
+    if (x === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.strokeStyle = `hsla(160, 82%, 70%, ${0.2 + strength * 0.42})`;
+  ctx.lineWidth = 1.2 + strength * 1.3;
+  ctx.shadowColor = `hsla(160, 95%, 72%, ${0.28 + strength * 0.35})`;
+  ctx.shadowBlur = 18 + strength * 22;
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+}
+
+function captureFrozenWaves() {
+  frozenHumanPoints = human.points.map(p => ({ x: p.x, y: p.y }));
+  frozenAgentPoints = agent.points.map(p => ({ x: p.x, y: p.y }));
+}
+
+function enterBloomMode() {
+  sceneMode = 'bloom';
+  bloomTime = 0;
+  completionHold = 0;
+  syncProgress = 1;
+  syncDisplay = 1;
+  captureFrozenWaves();
+  syncLabel.textContent = 'synchronized — 100%';
+  syncLabel.style.color = 'rgba(140, 255, 210, 0.72)';
+}
+
+function drawSyncScene(dt) {
+  time++;
+  ctx.fillStyle = 'rgba(16, 20, 28, 0.09)';
+  ctx.fillRect(0, 0, W, H);
+
+  const progressRate = 0.012 + mouseEnergy * 0.0015;
+  syncProgress = Math.min(1, syncProgress + dt * progressRate);
+  const syncForMotion = syncProgress;
+
+  const boost = 1 + mouseEnergy * 0.06;
+  human.convergenceRate = human.baseConvergenceRate * boost;
+  agent.convergenceRate = agent.baseConvergenceRate * boost;
+  if (mouseSpeed > 2) {
+    human.chaos = Math.max(0, human.chaos - mouseSpeed * 0.0015);
+    agent.chaos = Math.max(0, agent.chaos - mouseSpeed * 0.0015);
+  }
+
+  const phaseGap = Math.atan2(
+    Math.sin(agent.phase - human.phase),
+    Math.cos(agent.phase - human.phase)
+  );
+  const phasePull = 0.002 + syncProgress * 0.02 + mouseEnergy * 0.0004;
+  human.phase += phaseGap * phasePull;
+  agent.phase -= phaseGap * phasePull;
+
+  mouseSpeed *= Math.pow(0.86, dt * 60);
+  mouseEnergy *= Math.pow(0.9, dt * 60);
+
+  human.update(time, syncForMotion);
+  agent.update(time, syncForMotion);
+  const shapeSimilarity = calculateShapeSimilarity();
+  const shapeBonus = Math.max(0, shapeSimilarity - 0.45) * 0.4;
+  const syncTarget = Math.min(1, syncProgress + shapeBonus * (1 - syncProgress));
+  syncDisplay += (syncTarget - syncDisplay) * Math.min(1, dt * 9);
+  if (syncDisplay < syncProgress) {
+    syncDisplay = Math.min(syncProgress, syncDisplay + dt * 0.02);
+  }
+  if (syncProgress >= 0.999 || syncDisplay >= 0.999) {
+    syncProgress = 1;
+    syncDisplay = 1;
+  }
+  const syncLevel = syncDisplay;
+
+  if (syncLevel < 0.985) emergence.update(human, agent, syncLevel);
+
+  ctx.font = '10px Courier New';
+  ctx.fillStyle = `hsla(220, 50%, 60%, ${0.24 + syncLevel * 0.12})`;
+  ctx.fillText('HUMAN', human.points[0] ? human.points[0].x - 20 : 100, 40);
+  ctx.fillStyle = `hsla(35, 50%, 60%, ${0.24 + syncLevel * 0.12})`;
+  ctx.fillText('AGENT', agent.points[0] ? agent.points[0].x - 15 : W - 100, 40);
+
+  human.draw(syncLevel);
+  agent.draw(syncLevel);
+  if (syncLevel < 0.985) emergence.draw(syncLevel);
+
+  const pct = Math.round(clamp(syncLevel, 0, 1) * 100);
+  if (pct > 85) {
+    syncLabel.textContent = `synchronized — ${pct}%`;
+    syncLabel.style.color = 'rgba(120, 255, 200, 0.52)';
+  } else if (pct > 50) {
+    syncLabel.textContent = `converging — ${pct}%`;
+    syncLabel.style.color = 'rgba(200, 200, 255, 0.36)';
+  } else {
+    syncLabel.textContent = `synchronizing — ${pct}%`;
+    syncLabel.style.color = 'rgba(255, 255, 255, 0.24)';
+  }
+
+  if (syncLevel >= 0.992) completionHold += dt;
+  else completionHold = Math.max(0, completionHold - dt * 0.5);
+  if (completionHold > 0.45) enterBloomMode();
+}
+
+function drawBloomScene(dt) {
+  bloomTime += dt;
+  const t = clamp(bloomTime / bloomDuration, 0, 1);
+
+  ctx.fillStyle = 'rgba(16, 20, 28, 0.13)';
+  ctx.fillRect(0, 0, W, H);
+
+  const waveFade = 1 - clamp(t / 0.35, 0, 1);
+  if (waveFade > 0.01) {
+    drawWaveFromPoints(frozenHumanPoints, 220, 0.26 * waveFade, 1.6);
+    drawWaveFromPoints(frozenAgentPoints, 35, 0.26 * waveFade, 1.6);
+  }
+
+  const glowIn = easeInOutCubic(clamp((t - 0.03) / 0.35, 0, 1));
+  const glowOut = 1 - easeInOutCubic(clamp((t - 0.55) / 0.42, 0, 1));
+  const glow = clamp(glowIn * Math.max(0, glowOut), 0, 1);
+  const radius = Math.max(W, H) * (0.25 + glow * 1.25);
+  const grad = ctx.createRadialGradient(CX(), CY(), 0, CX(), CY(), radius);
+  grad.addColorStop(0, `rgba(140, 255, 210, ${0.06 + glow * 0.26})`);
+  grad.addColorStop(0.45, `rgba(96, 220, 180, ${0.02 + glow * 0.16})`);
+  grad.addColorStop(1, 'rgba(24, 40, 38, 0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  drawCenterWiggle(dt, 0.9 - t * 0.5);
+
+  if (t > 0.62) syncLabel.textContent = 'signal stabilized';
+  if (t >= 1) {
+    sceneMode = 'mindmap';
+    mindmap.reset();
+    syncLabel.textContent = 'mindmap — growing outward';
+    syncLabel.style.color = 'rgba(150, 255, 210, 0.66)';
+  }
+}
+
+function drawMindmapScene(dt) {
+  ctx.fillStyle = 'rgba(16, 20, 28, 0.14)';
+  ctx.fillRect(0, 0, W, H);
+
+  const ambient = ctx.createRadialGradient(CX(), CY(), 0, CX(), CY(), Math.max(W, H) * 0.9);
+  ambient.addColorStop(0, 'rgba(120, 255, 205, 0.08)');
+  ambient.addColorStop(1, 'rgba(20, 30, 36, 0)');
+  ctx.fillStyle = ambient;
+  ctx.fillRect(0, 0, W, H);
+
+  drawCenterWiggle(dt, 0.3);
+  mindmap.update(dt);
+  mindmap.draw();
+
+  syncLabel.textContent = `mindmap — ${mindmap.nodes.length} nodes`;
+  syncLabel.style.color = 'rgba(150, 255, 210, 0.66)';
 }
 
 function animate(now) {
@@ -317,80 +616,9 @@ function animate(now) {
   const dt = Math.min(0.05, Math.max(0.001, (now - lastFrameTime) / 1000));
   lastFrameTime = now;
 
-  time++;
-
-  ctx.fillStyle = 'rgba(16, 20, 28, 0.09)';
-  ctx.fillRect(0, 0, W, H);
-
-  // A guaranteed convergence track keeps % moving, while mouse energy accelerates it.
-  const progressRate = 0.012 + mouseEnergy * 0.0015;
-  const progressStep = dt * progressRate;
-  syncProgress = Math.min(1, syncProgress + progressStep);
-  const syncForMotion = syncProgress;
-
-  // Mouse speed boosts convergence rate
-  const boost = 1 + mouseEnergy * 0.06;
-  human.convergenceRate = human.baseConvergenceRate * boost;
-  agent.convergenceRate = agent.baseConvergenceRate * boost;
-  // Mouse also reduces chaos faster
-  if (mouseSpeed > 2) {
-    human.chaos = Math.max(0, human.chaos - mouseSpeed * 0.0015);
-    agent.chaos = Math.max(0, agent.chaos - mouseSpeed * 0.0015);
-  }
-
-  // Align phase as synchronization progresses so lines truly merge.
-  const phaseGap = Math.atan2(
-    Math.sin(agent.phase - human.phase),
-    Math.cos(agent.phase - human.phase)
-  );
-  const phasePull = 0.002 + syncProgress * 0.02 + mouseEnergy * 0.0004;
-  human.phase += phaseGap * phasePull;
-  agent.phase -= phaseGap * phasePull;
-
-  mouseSpeed *= Math.pow(0.86, dt * 60); // time-based decay
-  mouseEnergy *= Math.pow(0.9, dt * 60);
-
-  human.update(time, syncForMotion);
-  agent.update(time, syncForMotion);
-  const shapeSimilarity = calculateShapeSimilarity();
-  // Never let visual sync fall below guaranteed progress.
-  const shapeBonus = Math.max(0, shapeSimilarity - 0.45) * 0.4;
-  const syncTarget = Math.min(1, syncProgress + shapeBonus * (1 - syncProgress));
-  syncDisplay += (syncTarget - syncDisplay) * Math.min(1, dt * 9);
-  if (syncDisplay < syncProgress) {
-    syncDisplay = Math.min(syncProgress, syncDisplay + dt * 0.02);
-  }
-  if (syncProgress >= 0.999 || syncDisplay >= 0.999) {
-    syncProgress = 1;
-    syncDisplay = 1;
-  }
-  const syncLevel = syncDisplay;
-  emergence.update(human, agent, syncLevel);
-
-  // Draw labels
-  ctx.font = '10px Courier New';
-  ctx.fillStyle = `hsla(220, 50%, 60%, ${0.24 + syncLevel * 0.12})`;
-  ctx.fillText('HUMAN', human.points[0] ? human.points[0].x - 20 : 100, 40);
-  ctx.fillStyle = `hsla(35, 50%, 60%, ${0.24 + syncLevel * 0.12})`;
-  ctx.fillText('AGENT', agent.points[0] ? agent.points[0].x - 15 : W - 100, 40);
-
-  human.draw(syncLevel);
-  agent.draw(syncLevel);
-  emergence.draw(syncLevel);
-
-  // Update sync display
-  const rawPct = Math.round(syncLevel * 100);
-  const pct = isNaN(rawPct) ? 0 : rawPct;
-  if (pct > 85) {
-    syncLabel.textContent = `synchronized — ${pct}%`;
-    syncLabel.style.color = `rgba(120, 255, 200, 0.52)`;
-  } else if (pct > 50) {
-    syncLabel.textContent = `converging — ${pct}%`;
-    syncLabel.style.color = `rgba(200, 200, 255, 0.36)`;
-  } else {
-    syncLabel.textContent = `synchronizing — ${pct}%`;
-    syncLabel.style.color = `rgba(255, 255, 255, 0.24)`;
-  }
+  if (sceneMode === 'sync') drawSyncScene(dt);
+  else if (sceneMode === 'bloom') drawBloomScene(dt);
+  else drawMindmapScene(dt);
 
   requestAnimationFrame(animate);
 }
