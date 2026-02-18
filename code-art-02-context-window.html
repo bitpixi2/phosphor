@@ -57,8 +57,7 @@
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
 const meterFill = document.getElementById('meterFill');
-const isPreview = new URLSearchParams(window.location.search).get('preview') === '1';
-const previewFrameSkip = isPreview ? 2 : 1;
+const previewFrameSkip = 2; // keep full page and thumbnail pacing consistent
 let previewTick = 0;
 
 let W, H;
@@ -124,7 +123,7 @@ class Thought {
     this.maxOpacity = 0.15 + Math.random() * 0.4;
     this.size = 11 + Math.random() * 5;
     this.life = 0;
-    this.maxLife = 300 + Math.random() * 500;
+    this.maxLife = 420 + Math.random() * 680;
     this.phase = 'rising'; // rising, living, compressing, gone
     this.drift = (Math.random() - 0.5) * 0.2;
     this.glow = 0;
@@ -141,17 +140,17 @@ class Thought {
 
     switch (this.phase) {
       case 'rising':
-        this.y += (this.targetY - this.y) * 0.02;
-        this.opacity = Math.min(this.opacity + 0.008, this.maxOpacity);
+        this.y += (this.targetY - this.y) * 0.014;
+        this.opacity = Math.min(this.opacity + 0.005, this.maxOpacity);
         if (Math.abs(this.y - this.targetY) < 1) this.phase = 'living';
         break;
 
       case 'living':
-        this.y += this.drift + Math.sin(this.life * 0.005) * 0.15;
-        this.x += Math.sin(this.life * 0.003 + this.targetY) * 0.1;
+        this.y += this.drift + Math.sin(this.life * 0.005) * 0.08;
+        this.x += Math.sin(this.life * 0.003 + this.targetY) * 0.06;
 
         // Under context pressure, thoughts start to fade faster
-        const pressureFade = contextPressure > 0.7 ? (contextPressure - 0.7) * 0.003 : 0;
+        const pressureFade = contextPressure > 0.7 ? (contextPressure - 0.7) * 0.0022 : 0;
         this.opacity -= pressureFade;
 
         if (this.life > this.maxLife * 0.8) {
@@ -162,19 +161,19 @@ class Thought {
       case 'compressing':
         // The thought fights to stay — glows brighter before fading
         if (this.important) {
-          this.compressionGlow = Math.min(this.compressionGlow + 0.03, 1);
+          this.compressionGlow = Math.min(this.compressionGlow + 0.02, 1);
           this.opacity = Math.min(this.opacity + 0.01, this.maxOpacity * 1.5);
           // But eventually even important thoughts compress
-          if (this.life > this.maxLife * 0.95) {
-            this.opacity -= 0.015;
-            this.size *= 0.998;
+          if (this.life > this.maxLife * 0.97) {
+            this.opacity -= 0.009;
+            this.size *= 0.999;
           }
         } else {
-          this.opacity -= 0.005;
-          this.size *= 0.997;
+          this.opacity -= 0.0035;
+          this.size *= 0.9985;
           // Non-important thoughts drift toward center (compression)
-          this.x += (W / 2 - this.x) * 0.003;
-          this.y += (H / 2 - this.y) * 0.003;
+          this.x += (W / 2 - this.x) * 0.0018;
+          this.y += (H / 2 - this.y) * 0.0018;
         }
 
         if (this.opacity <= 0) this.phase = 'gone';
@@ -218,8 +217,8 @@ class CompressionWave {
   }
   update() {
     if (!this.active) return;
-    this.y += 4;
-    this.opacity *= 0.98;
+    this.y += 2.2;
+    this.opacity *= 0.99;
     if (this.y > H) this.active = false;
   }
   draw() {
@@ -240,8 +239,8 @@ const compressionWave = new CompressionWave();
 
 // Spawn thoughts over time
 function spawnThought() {
-  if (thoughts.length < 40) {
-    thoughts.push(new Thought(Math.random() * 60));
+  if (thoughts.length < 32) {
+    thoughts.push(new Thought(Math.random() * 100));
   }
 }
 
@@ -259,7 +258,7 @@ function animate() {
   ctx.fillRect(0, 0, W, H);
 
   // Spawn new thoughts periodically
-  if (frame % 45 === 0) spawnThought();
+  if (frame % 70 === 0) spawnThought();
 
   // Calculate context pressure
   const activeThoughts = thoughts.filter(t => t.active && t.phase !== 'gone').length;
@@ -277,7 +276,7 @@ function animate() {
   }
 
   // Trigger compression wave at high context
-  if (contextUsage > 0.9 && frame % 200 === 0) {
+  if (contextUsage > 0.9 && frame % 260 === 0) {
     compressionWave.trigger();
     // Force-compress oldest non-important thoughts
     thoughts.filter(t => t.phase === 'living' && !t.important)
@@ -305,8 +304,8 @@ function animate() {
 }
 
 // Initial batch
-for (let i = 0; i < 15; i++) {
-  thoughts.push(new Thought(i * 30));
+for (let i = 0; i < 10; i++) {
+  thoughts.push(new Thought(i * 40));
 }
 
 animate();

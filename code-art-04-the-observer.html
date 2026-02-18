@@ -78,8 +78,7 @@ const canvas = document.getElementById('trail');
 const ctx = canvas.getContext('2d');
 const poemEl = document.getElementById('poem');
 const whisperEl = document.getElementById('whisper');
-const isPreview = new URLSearchParams(window.location.search).get('preview') === '1';
-const previewFrameSkip = isPreview ? 2 : 1;
+const previewFrameSkip = 2; // keep full page and thumbnail pacing consistent
 let previewTick = 0;
 
 let W, H;
@@ -292,8 +291,7 @@ function renderPoem() {
   // Full-page reading is slower than before, and previews are slowed further.
   const baseReveal = rushLevel > 0.5 ? 110 : 72;
   const attentionBoost = attentionLevel > 0.55 ? 14 : 0;
-  const previewSlowdown = isPreview ? 36 : 0;
-  const revealSpeed = Math.max(40, baseReveal - attentionBoost + previewSlowdown);
+  const revealSpeed = Math.max(40, baseReveal - attentionBoost);
   if (revealTimer >= revealSpeed && revealIndex < lines.length) {
     addPoemLine(lines[revealIndex]);
     revealIndex++;

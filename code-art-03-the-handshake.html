@@ -42,8 +42,7 @@
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
 const syncLabel = document.getElementById('sync');
-const isPreview = new URLSearchParams(window.location.search).get('preview') === '1';
-const previewFrameSkip = isPreview ? 2 : 1;
+const previewFrameSkip = 2; // keep full page and thumbnail pacing consistent
 let previewTick = 0;
 
 let W, H;
