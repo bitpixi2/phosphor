@@ -52,7 +52,7 @@ let W, H;
 function resize() {
   W = canvas.width = window.innerWidth;
   H = canvas.height = window.innerHeight;
-  if (typeof human !== 'undefined' && typeof agent !== 'undefined') {
+  if (human && agent) {
     const resizedTargetAmp = W * sharedAmpRatio;
     human.targetAmp = resizedTargetAmp;
     agent.targetAmp = resizedTargetAmp;
