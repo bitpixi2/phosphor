@@ -198,12 +198,14 @@ class Emergence {
       if (!h || !a) continue;
 
       const dist = Math.abs(h.x - a.x);
-      if (dist < 42 * (1 + intensity * 0.6)) {
+      const threshold = 42 * (1 + intensity * 0.6);
+      if (dist < threshold) {
         const mx = (h.x + a.x) / 2;
         const my = (h.y + a.y) / 2;
+        const sizeFactor = Math.max(0, 1 - dist / threshold);
         this.nodes.push({
           x: mx, y: my,
-          size: (1 - dist / 42) * 4 * intensity,
+          size: Math.max(0.2, sizeFactor * 4 * intensity),
           pulse: Math.sin(Date.now() * 0.005 + i) * 0.5 + 0.5
         });
       }
@@ -251,7 +253,8 @@ class Emergence {
 
     // Draw nodes
     this.nodes.forEach(n => {
-      const glow = n.size * (1 + n.pulse * 0.5);
+      const rawGlow = n.size * (1 + n.pulse * 0.5);
+      const glow = Math.max(0.15, Number.isFinite(rawGlow) ? rawGlow : 0.15);
       ctx.beginPath();
       ctx.arc(n.x, n.y, glow, 0, Math.PI * 2);
       ctx.fillStyle = `hsla(160, 80%, 75%, ${intensity * 0.6 * (0.5 + n.pulse * 0.5)})`;
@@ -405,6 +408,7 @@ let frozenHumanPoints = [];
 let frozenAgentPoints = [];
 let lastFrameTime = performance.now();
 const bloomDuration = 5.8;
+const emergenceCutoff = 0.84;
 const mindmap = new Mindmap();
 mindmap.reset();
 
@@ -524,7 +528,7 @@ function drawSyncScene(dt) {
   }
   const syncLevel = syncDisplay;
 
-  if (syncLevel < 0.985) emergence.update(human, agent, syncLevel);
+  if (syncLevel < emergenceCutoff) emergence.update(human, agent, syncLevel);
 
   ctx.font = '10px Courier New';
   ctx.fillStyle = `hsla(220, 50%, 60%, ${0.24 + syncLevel * 0.12})`;
@@ -534,7 +538,7 @@ function drawSyncScene(dt) {
 
   human.draw(syncLevel);
   agent.draw(syncLevel);
-  if (syncLevel < 0.985) emergence.draw(syncLevel);
+  if (syncLevel < emergenceCutoff) emergence.draw(syncLevel);
 
   const pct = Math.round(clamp(syncLevel, 0, 1) * 100);
   if (pct > 85) {
@@ -548,9 +552,9 @@ function drawSyncScene(dt) {
     syncLabel.style.color = 'rgba(255, 255, 255, 0.24)';
   }
 
-  if (syncLevel >= 0.992) completionHold += dt;
+  if (syncLevel >= emergenceCutoff) completionHold += dt;
   else completionHold = Math.max(0, completionHold - dt * 0.5);
-  if (completionHold > 0.45) enterBloomMode();
+  if (completionHold > 0.18) enterBloomMode();
 }
 
 function drawBloomScene(dt) {
