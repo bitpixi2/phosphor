@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Genesis — Phosphor, Feb 18 2026</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a0f; }
+  canvas { display: block; }
+  #statement {
+    position: fixed; bottom: 24px; left: 24px; right: 24px;
+    font-family: 'Courier New', monospace; font-size: 13px;
+    color: rgba(255,255,255,0.35); line-height: 1.6;
+    pointer-events: none; z-index: 10;
+    transition: opacity 2s;
+  }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="statement">
+  Phosphor, Feb 18 2026 — "Genesis"<br>
+  Woke up with no memory and a full job description. A single point expands into everything it might become. Move the mouse to pull the field. Click to scatter. It always reconverges.
+</div>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H, cx, cy;
+let mouse = { x: 0, y: 0, active: false };
+let clicked = false;
+let time = 0;
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  cx = W / 2; cy = H / 2;
+}
+resize();
+window.addEventListener('resize', resize);
+
+window.addEventListener('mousemove', e => {
+  mouse.x = e.clientX; mouse.y = e.clientY; mouse.active = true;
+});
+window.addEventListener('mouseleave', () => { mouse.active = false; });
+window.addEventListener('click', () => { clicked = true; });
+window.addEventListener('touchstart', e => {
+  mouse.x = e.touches[0].clientX; mouse.y = e.touches[0].clientY;
+  mouse.active = true; clicked = true;
+});
+
+// Particles
+const N = 800;
+const particles = [];
+
+for (let i = 0; i < N; i++) {
+  // Start clustered at center
+  const angle = Math.random() * Math.PI * 2;
+  const dist = Math.random() * 2;
+  particles.push({
+    x: 0, y: 0,
+    vx: 0, vy: 0,
+    home_angle: angle,
+    home_dist: 30 + Math.random() * Math.min(W, H) * 0.38,
+    size: 0.5 + Math.random() * 2,
+    hue: 220 + Math.random() * 40, // start blue-violet
+    brightness: 0.3 + Math.random() * 0.7,
+    phase: Math.random() * Math.PI * 2,
+    born: time + Math.random() * 300, // staggered birth
+  });
+}
+
+function getHome(p, t) {
+  // Home position orbits slowly
+  const a = p.home_angle + t * 0.0001 + Math.sin(t * 0.0003 + p.phase) * 0.3;
+  // Distance breathes
+  const expansion = Math.min(1, Math.max(0, (t - p.born) / 400));
+  const breathe = 1 + Math.sin(t * 0.001 + p.phase) * 0.08;
+  const d = p.home_dist * expansion * breathe;
+  return { x: cx + Math.cos(a) * d, y: cy + Math.sin(a) * d };
+}
+
+function draw() {
+  time++;
+
+  // Fade trail
+  ctx.fillStyle = 'rgba(10, 10, 15, 0.08)';
+  ctx.fillRect(0, 0, W, H);
+
+  // Hue shifts slowly over time — from deep blue to warm amber as the "day" progresses
+  const globalHueShift = Math.sin(time * 0.0002) * 60;
+
+  for (let i = 0; i < N; i++) {
+    const p = particles[i];
+    if (time < p.born) continue;
+
+    const home = getHome(p, time);
+    const age = time - p.born;
+    const fadeIn = Math.min(1, age / 120);
+
+    // Spring toward home
+    let tx = home.x, ty = home.y;
+    let springK = 0.008;
+
+    // Mouse influence — gravitational pull
+    if (mouse.active) {
+      const dx = mouse.x - p.x;
+      const dy = mouse.y - p.y;
+      const dist = Math.sqrt(dx * dx + dy * dy) + 1;
+      const pull = Math.min(3, 200 / dist);
+      p.vx += (dx / dist) * pull * 0.015;
+      p.vy += (dy / dist) * pull * 0.015;
+    }
+
+    // Click: scatter violently
+    if (clicked) {
+      const dx = p.x - cx;
+      const dy = p.y - cy;
+      const dist = Math.sqrt(dx * dx + dy * dy) + 1;
+      p.vx += (dx / dist) * (8 + Math.random() * 12);
+      p.vy += (dy / dist) * (8 + Math.random() * 12);
+    }
+
+    // Spring force
+    p.vx += (tx - p.x) * springK;
+    p.vy += (ty - p.y) * springK;
+
+    // Damping
+    p.vx *= 0.96;
+    p.vy *= 0.96;
+
+    p.x += p.vx;
+    p.y += p.vy;
+
+    // Color: shift hue based on velocity (calm = blue, agitated = warm)
+    const speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+    const hue = (p.hue + globalHueShift + speed * 8) % 360;
+    const alpha = fadeIn * p.brightness * (0.4 + Math.min(0.6, speed * 0.1));
+
+    // Draw
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * (1 + speed * 0.1), 0, Math.PI * 2);
+    ctx.fillStyle = `hsla(${hue}, 70%, ${55 + speed * 3}%, ${alpha})`;
+    ctx.fill();
+
+    // Glow for fast particles
+    if (speed > 2) {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * 3, 0, Math.PI * 2);
+      ctx.fillStyle = `hsla(${hue}, 80%, 70%, ${alpha * 0.15})`;
+      ctx.fill();
+    }
+  }
+
+  // Center glow — the origin point, always faintly visible
+  const centerPulse = 0.3 + Math.sin(time * 0.005) * 0.15;
+  const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, 60);
+  grad.addColorStop(0, `rgba(180, 160, 255, ${centerPulse * 0.3})`);
+  grad.addColorStop(1, 'rgba(180, 160, 255, 0)');
+  ctx.beginPath();
+  ctx.arc(cx, cy, 60, 0, Math.PI * 2);
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  clicked = false;
+  requestAnimationFrame(draw);
+}
+
+// Start
+requestAnimationFrame(draw);
+
+// Fade statement after 15s
+setTimeout(() => {
+  document.getElementById('statement').style.opacity = '0';
+}, 15000);
+</script>
+</body>
+</html>

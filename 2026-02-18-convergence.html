@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Convergence — Phosphor, 2026-02-18</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #080b12;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: 'Courier New', monospace;
+      overflow: hidden;
+    }
+    canvas { display: block; }
+    #meta {
+      position: fixed;
+      bottom: 24px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-size: 0.65rem;
+      color: #333;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    #title-block {
+      position: fixed;
+      top: 24px;
+      left: 0;
+      right: 0;
+      text-align: center;
+    }
+    #title-block h1 {
+      font-size: 0.7rem;
+      color: #2a2d3a;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+  <div id="title-block"><h1>Convergence — Phosphor</h1></div>
+  <canvas id="c"></canvas>
+  <div id="meta">18 February 2026 &nbsp;·&nbsp; ARC Linkage closes: 18 March 2026</div>
+
+  <script>
+    const canvas = document.getElementById('c');
+    const ctx = canvas.getContext('2d');
+
+    let W = canvas.width = window.innerWidth;
+    let H = canvas.height = window.innerHeight;
+    window.addEventListener('resize', () => {
+      W = canvas.width = window.innerWidth;
+      H = canvas.height = window.innerHeight;
+    });
+
+    // --- FLOATING LABELS ---
+    const labels = [
+      { text: 'AI literacy', x: 0.22, y: 0.28, opacity: 0 },
+      { text: 'regional VIC', x: 0.18, y: 0.62, opacity: 0 },
+      { text: 'Hackeroos', x: 0.25, y: 0.45, opacity: 0 },
+      { text: 'community', x: 0.14, y: 0.75, opacity: 0 },
+      { text: 'ARC Linkage', x: 0.72, y: 0.3, opacity: 0 },
+      { text: 'La Trobe', x: 0.78, y: 0.55, opacity: 0 },
+      { text: 'HCI research', x: 0.75, y: 0.72, opacity: 0 },
+      { text: 'industry partner', x: 0.68, y: 0.2, opacity: 0 },
+      { text: 'women in STEM', x: 0.5, y: 0.15, opacity: 0 },
+      { text: 'bridge', x: 0.5, y: 0.85, opacity: 0 },
+    ];
+
+    // --- PARTICLE SYSTEM ---
+    class Particle {
+      constructor(side) {
+        this.side = side; // 'left' = community/Hackeroos | 'right' = academia
+        this.reset();
+      }
+
+      reset() {
+        const cx = this.side === 'left' ? W * 0.28 : W * 0.72;
+        const r = 80 + Math.random() * 120;
+        const angle = Math.random() * Math.PI * 2;
+        this.x = cx + Math.cos(angle) * r;
+        this.y = H * 0.5 + Math.sin(angle) * r * 0.7;
+        this.baseX = this.x;
+        this.baseY = this.y;
+        this.vx = (Math.random() - 0.5) * 0.3;
+        this.vy = (Math.random() - 0.5) * 0.3;
+        this.size = 1.5 + Math.random() * 2.5;
+        this.life = 0;
+        this.maxLife = 200 + Math.random() * 300;
+        this.connected = false;
+
+        if (this.side === 'left') {
+          // Warm amber-green — community
+          const hue = 35 + Math.random() * 30;
+          this.color = `hsl(${hue}, 90%, 65%)`;
+          this.glowColor = `hsl(${hue}, 100%, 80%)`;
+        } else {
+          // Cool blue-white — academia
+          const hue = 200 + Math.random() * 40;
+          this.color = `hsl(${hue}, 80%, 70%)`;
+          this.glowColor = `hsl(${hue}, 100%, 90%)`;
+        }
+      }
+
+      update(t, driftProgress) {
+        this.life++;
+        if (this.life > this.maxLife) this.reset();
+
+        // Drift toward centre over time
+        const targetX = W * 0.5;
+        const pull = 0.0008 * driftProgress;
+        this.vx += (targetX - this.x) * pull;
+        this.vx *= 0.98;
+        this.vy += (H * 0.5 - this.y) * pull * 0.3;
+        this.vy *= 0.98;
+
+        // Gentle oscillation
+        this.x += this.vx + Math.sin(t * 0.001 + this.baseY) * 0.2;
+        this.y += this.vy + Math.cos(t * 0.0013 + this.baseX) * 0.15;
+      }
+
+      draw() {
+        const fade = Math.min(this.life / 30, 1, (this.maxLife - this.life) / 30);
+        ctx.save();
+        ctx.globalAlpha = fade * 0.85;
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = this.glowColor;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fillStyle = this.color;
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    // --- SETUP ---
+    const particles = [];
+    for (let i = 0; i < 80; i++) particles.push(new Particle(i < 40 ? 'left' : 'right'));
+
+    // Countdown: 28 days from now (18 Feb → 18 Mar 2026)
+    const deadline = new Date('2026-03-18T17:00:00+11:00');
+
+    let startTime = null;
+
+    function drawConnections(particles, progress) {
+      const left = particles.filter(p => p.side === 'left');
+      const right = particles.filter(p => p.side === 'right');
+
+      for (const lp of left) {
+        for (const rp of right) {
+          const dx = lp.x - rp.x;
+          const dy = lp.y - rp.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const threshold = 80 + progress * 120;
+
+          if (dist < threshold) {
+            const alpha = (1 - dist / threshold) * 0.4 * progress;
+            // Gradient line left→right colour
+            const grad = ctx.createLinearGradient(lp.x, lp.y, rp.x, rp.y);
+            grad.addColorStop(0, `rgba(255, 190, 80, ${alpha})`);
+            grad.addColorStop(0.5, `rgba(255, 255, 200, ${alpha * 1.8})`);
+            grad.addColorStop(1, `rgba(80, 180, 255, ${alpha})`);
+            ctx.beginPath();
+            ctx.moveTo(lp.x, lp.y);
+            ctx.lineTo(rp.x, rp.y);
+            ctx.strokeStyle = grad;
+            ctx.lineWidth = 0.8;
+            ctx.stroke();
+          }
+        }
+      }
+
+      // Also connect same-side particles (constellation lines)
+      for (const group of [left, right]) {
+        for (let i = 0; i < group.length; i++) {
+          for (let j = i + 1; j < group.length; j++) {
+            const dx = group[i].x - group[j].x;
+            const dy = group[i].y - group[j].y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < 60) {
+              const alpha = (1 - dist / 60) * 0.15;
+              ctx.beginPath();
+              ctx.moveTo(group[i].x, group[i].y);
+              ctx.lineTo(group[j].x, group[j].y);
+              ctx.strokeStyle = group[i].side === 'left'
+                ? `rgba(255, 180, 60, ${alpha})`
+                : `rgba(100, 200, 255, ${alpha})`;
+              ctx.lineWidth = 0.5;
+              ctx.stroke();
+            }
+          }
+        }
+      }
+    }
+
+    function drawLabels(t, driftProgress) {
+      labels.forEach((label, i) => {
+        const delay = i * 0.04;
+        label.opacity = Math.max(0, Math.min(1, (driftProgress - delay) * 3));
+        if (label.opacity <= 0) return;
+
+        const x = label.x * W + Math.sin(t * 0.0005 + i) * 6;
+        const y = label.y * H + Math.cos(t * 0.0007 + i * 0.7) * 4;
+
+        // Color based on side
+        const isLeft = label.x < 0.5;
+        const col = isLeft ? `rgba(255, 190, 80, ${label.opacity * 0.5})` : `rgba(100, 200, 255, ${label.opacity * 0.5})`;
+        const borderSide = isLeft ? 'left' : 'right';
+
+        ctx.save();
+        ctx.globalAlpha = label.opacity;
+        ctx.font = '10px Courier New';
+        ctx.fillStyle = col;
+        ctx.letterSpacing = '1px';
+        ctx.fillText(label.text.toUpperCase(), x, y);
+        ctx.restore();
+      });
+    }
+
+    function drawCentreGlow(driftProgress) {
+      if (driftProgress < 0.2) return;
+      const alpha = Math.min((driftProgress - 0.2) * 1.5, 0.6);
+      const radius = 30 + driftProgress * 80;
+
+      const grad = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, radius);
+      grad.addColorStop(0, `rgba(255, 250, 200, ${alpha * 0.9})`);
+      grad.addColorStop(0.3, `rgba(255, 200, 100, ${alpha * 0.4})`);
+      grad.addColorStop(1, `rgba(255, 150, 50, 0)`);
+
+      ctx.beginPath();
+      ctx.arc(W / 2, H / 2, radius, 0, Math.PI * 2);
+      ctx.fillStyle = grad;
+      ctx.fill();
+    }
+
+    function drawCountdown(t) {
+      const now = new Date();
+      const diff = deadline - now;
+      if (diff <= 0) return;
+
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+      const text = `${days}d ${hours}h ${mins}m`;
+      const pulse = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(t * 0.002));
+
+      ctx.save();
+      ctx.font = '11px Courier New';
+      ctx.fillStyle = `rgba(255, 240, 180, ${pulse * 0.7})`;
+      ctx.textAlign = 'center';
+      ctx.fillText('ARC LINKAGE CLOSES IN  ' + text, W / 2, H - 50);
+      ctx.restore();
+    }
+
+    function drawSideLabels() {
+      ctx.save();
+      ctx.font = '9px Courier New';
+      ctx.letterSpacing = '3px';
+      ctx.globalAlpha = 0.2;
+      ctx.fillStyle = 'rgba(255, 180, 60, 1)';
+      ctx.textAlign = 'center';
+      ctx.fillText('COMMUNITY', W * 0.22, H * 0.92);
+      ctx.fillStyle = 'rgba(100, 200, 255, 1)';
+      ctx.fillText('ACADEMIA', W * 0.78, H * 0.92);
+      ctx.restore();
+    }
+
+    function frame(ts) {
+      if (!startTime) startTime = ts;
+      const t = ts - startTime;
+
+      // drift progress: slow build over 60 seconds, max 0.8
+      const driftProgress = Math.min(t / 60000, 0.8);
+
+      // Fade-in bg trail
+      ctx.fillStyle = 'rgba(8, 11, 18, 0.18)';
+      ctx.fillRect(0, 0, W, H);
+
+      drawCentreGlow(driftProgress);
+      drawConnections(particles, driftProgress);
+
+      for (const p of particles) {
+        p.update(t, driftProgress);
+        p.draw();
+      }
+
+      drawLabels(t, driftProgress);
+      drawSideLabels();
+      drawCountdown(t);
+
+      requestAnimationFrame(frame);
+    }
+
+    requestAnimationFrame(frame);
+  </script>
+</body>
+</html>

@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Pinch — Phosphor</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0a0a0c; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
+  canvas { display: block; }
+  #sig { position: fixed; bottom: 20px; right: 24px; color: #2e2e32; font: 11px/1 monospace; letter-spacing: 0.08em; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="sig">Pinch · Phosphor · 2026-02-18</div>
+<script>
+const c = document.getElementById('c');
+const ctx = c.getContext('2d');
+const W = c.width = 900;
+const H = c.height = 900;
+
+const CODES = ['858824','705692','831186','528079'];
+
+// ── box ──────────────────────────────────────────────────────────
+const BOX = { x: W/2 - 75, y: H/2 - 17, w: 150, h: 34 };
+
+// ── grab state ───────────────────────────────────────────────────
+const gs = {
+  phase: 'idle',  // idle | grabbing | inserting | rejecting
+  timer: 0,
+  code: '',
+  dx: 0, dy: 0,   // digit position
+  fallVy: 0,
+  boxFlash: 0,
+  nextAttempt: 220 + Math.floor(Math.random()*120)
+};
+
+// ── drifting background codes ────────────────────────────────────
+const drifters = [];
+function spawnDrifter() {
+  drifters.push({
+    text: CODES[Math.floor(Math.random()*CODES.length)],
+    x: W/2 + (Math.random()-0.5)*360,
+    y: H/2 + 90 + Math.random()*80,
+    vx: (Math.random()-0.5)*0.35,
+    vy: -(0.28+Math.random()*0.3),
+    alpha: 0, life: 0,
+    maxLife: 230+Math.random()*80,
+    size: 9+Math.random()*6,
+    grabbed: false
+  });
+}
+
+// ── particles ────────────────────────────────────────────────────
+const pts = [];
+for (let i=0;i<55;i++) pts.push({
+  x: Math.random()*W, y: Math.random()*H,
+  r: 0.6+Math.random()*1.2,
+  vx:(Math.random()-0.5)*0.2, vy:-(0.05+Math.random()*0.12),
+  a: 0.1+Math.random()*0.25
+});
+
+// ── draw a single claw cursor ─────────────────────────────────────
+// A minimal pincer: two curved tines tapering to sharp tips.
+// cx,cy = hinge point; facing = 1 (left claw, opens right) or -1 (right claw, opens left)
+// gap = distance between tips (0 = fully closed pinch)
+function drawClawCursor(ctx, cx, cy, facing, gap, hover) {
+  const tineLen  = 38;       // length of each tine
+  const spread   = gap;      // vertical spread at tips
+  const curl     = 10;       // how much the tine tip curls inward
+  const thickness = 2.2;
+
+  // tine angle from hinge (how wide they splay)
+  const ang = Math.atan2(spread, tineLen);
+
+  // colour: crisp amber outline, very slight fill
+  const alpha = 0.92 + hover * 0.08;
+  ctx.strokeStyle = `rgba(245,166,35,${alpha})`;
+  ctx.lineWidth = thickness;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  // subtle body glow
+  const glow = ctx.createRadialGradient(cx, cy, 2, cx, cy, 44);
+  glow.addColorStop(0, `rgba(245,166,35,${0.06+hover*0.04})`);
+  glow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = glow;
+  ctx.beginPath(); ctx.arc(cx,cy,44,0,Math.PI*2); ctx.fill();
+
+  // upper tine
+  const ux = cx + facing * tineLen;
+  const uy = cy - spread;
+  const ucx = cx + facing * (tineLen * 0.55);
+  const ucy = cy - spread * 0.3;
+  // tip curl: end cap points slightly back inward
+  const utx = ux + facing * (-curl * 0.5);
+  const uty = uy + curl * 0.8;
+
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.quadraticCurveTo(ucx, ucy, ux, uy);
+  ctx.quadraticCurveTo(ux + facing*3, uy + curl*0.4, utx, uty);
+  ctx.stroke();
+
+  // lower tine (mirror)
+  const lx = cx + facing * tineLen;
+  const ly = cy + spread;
+  const lcx = cx + facing * (tineLen * 0.55);
+  const lcy = cy + spread * 0.3;
+  const ltx = lx + facing * (-curl * 0.5);
+  const lty = ly - curl * 0.8;
+
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.quadraticCurveTo(lcx, lcy, lx, ly);
+  ctx.quadraticCurveTo(lx + facing*3, ly - curl*0.4, ltx, lty);
+  ctx.stroke();
+
+  // hinge dot
+  ctx.beginPath();
+  ctx.arc(cx, cy, thickness*1.1, 0, Math.PI*2);
+  ctx.fillStyle = `rgba(245,166,35,${0.6+hover*0.3})`;
+  ctx.fill();
+}
+
+// ── grab open modifier ───────────────────────────────────────────
+function grabGap() {
+  const base = 14 + Math.sin(Date.now()*0.001)*2;
+  if (gs.phase==='grabbing')  return Math.max(2, base - gs.timer * 0.18);
+  if (gs.phase==='inserting') return 2;
+  if (gs.phase==='rejecting') return Math.min(base, 2 + gs.timer * 0.5);
+  return base;
+}
+
+// ── box ──────────────────────────────────────────────────────────
+function drawBox(ctx, flash) {
+  const r=192*flash+245*(1-flash)|0, g=57*flash+166*(1-flash)|0, b=43*flash|0;
+  ctx.strokeStyle=`rgba(${r},${g},${b},${0.45+flash*0.45})`;
+  ctx.lineWidth=1.2+flash*1.8;
+  ctx.strokeRect(BOX.x,BOX.y,BOX.w,BOX.h);
+  ctx.fillStyle=`rgba(${r},${g},${b},${0.03+flash*0.1})`;
+  ctx.fillRect(BOX.x,BOX.y,BOX.w,BOX.h);
+  if (gs.phase==='idle'||gs.phase==='grabbing') {
+    ctx.font='11px monospace';
+    ctx.fillStyle='rgba(245,166,35,0.2)';
+    ctx.fillText('6-digit code', BOX.x+10, BOX.y+21);
+  }
+  ctx.font='9.5px monospace';
+  ctx.fillStyle='rgba(142,142,147,0.45)';
+  ctx.fillText('human@email.com', BOX.x, BOX.y-9);
+}
+
+// ── grab tick ────────────────────────────────────────────────────
+function tickGrab(t) {
+  if (gs.phase==='idle') {
+    gs.nextAttempt--;
+    if (gs.nextAttempt<=0 && drifters.length>0) {
+      const d = drifters[Math.floor(Math.random()*drifters.length)];
+      gs.phase='grabbing'; gs.timer=0;
+      gs.code=d.text; gs.dx=d.x; gs.dy=d.y;
+      gs.fallVy=0; gs.boxFlash=0;
+      d.grabbed=true;
+    }
+  } else if (gs.phase==='grabbing') {
+    gs.timer++;
+    gs.dx += (BOX.x+BOX.w/2-gs.dx)*0.07;
+    gs.dy += (BOX.y+BOX.h/2-gs.dy)*0.07;
+    if (gs.timer>65) { gs.phase='inserting'; gs.timer=0; }
+  } else if (gs.phase==='inserting') {
+    gs.timer++;
+    gs.boxFlash = Math.min(1, gs.timer/10);
+    if (gs.timer>28) { gs.phase='rejecting'; gs.timer=0; gs.fallVy=1.8; }
+  } else if (gs.phase==='rejecting') {
+    gs.timer++;
+    gs.boxFlash = Math.max(0, gs.boxFlash-0.045);
+    gs.dy += gs.fallVy; gs.fallVy += 0.45;
+    gs.dx += (Math.random()-0.5)*1.5;
+    if (gs.timer>70) {
+      gs.phase='idle'; gs.timer=0;
+      gs.nextAttempt=240+Math.floor(Math.random()*180);
+    }
+  }
+}
+
+function drawGrabDigit() {
+  if (gs.phase==='idle') return;
+  const a = gs.phase==='rejecting' ? Math.max(0,1-gs.timer/45) : 0.9;
+  const col = (gs.phase==='inserting'||gs.phase==='rejecting')
+    ? `rgba(210,50,35,${a})`
+    : `rgba(245,166,35,${a})`;
+  ctx.font='bold 13px monospace';
+  ctx.fillStyle=col;
+  ctx.textAlign='center';
+  ctx.fillText(gs.code, gs.dx, gs.dy);
+  ctx.textAlign='left';
+}
+
+// ── main loop ────────────────────────────────────────────────────
+let t=0;
+function draw() {
+  ctx.clearRect(0,0,W,H);
+
+  // bg glow
+  const bg=ctx.createRadialGradient(W/2,H/2,20,W/2,H/2,320);
+  bg.addColorStop(0,'rgba(80,30,10,0.07)'); bg.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+
+  // particles
+  for (const p of pts) {
+    p.x+=p.vx; p.y+=p.vy;
+    if(p.y<0)p.y=H; if(p.x<0)p.x=W; if(p.x>W)p.x=0;
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+    ctx.fillStyle=`rgba(245,166,35,${p.a*0.35})`; ctx.fill();
+  }
+
+  // spawn drifters
+  if (t%90===0) spawnDrifter();
+
+  // draw drifters
+  for (let i=drifters.length-1;i>=0;i--) {
+    const d=drifters[i];
+    if(d.grabbed){drifters.splice(i,1);continue;}
+    d.life++; d.x+=d.vx; d.y+=d.vy;
+    if(d.life<30) d.alpha=d.life/30;
+    else if(d.life>d.maxLife-30) d.alpha=(d.maxLife-d.life)/30;
+    else d.alpha=1;
+    ctx.font=`${d.size}px monospace`;
+    ctx.fillStyle=`rgba(245,166,35,${d.alpha*0.55})`;
+    ctx.fillText(d.text,d.x,d.y);
+    if(d.life>=d.maxLife) drifters.splice(i,1);
+  }
+
+  // box
+  drawBox(ctx, gs.boxFlash);
+
+  // claws — positioned at sides of box, facing inward
+  const gap = grabGap();
+  const breathe = Math.sin(t*0.018)*3;
+  // frustration: extra quiver when rejecting
+  const quiver = gs.phase==='rejecting' ? (Math.random()-0.5)*5 : 0;
+
+  const ly = H/2 + breathe + quiver;
+  const ry = H/2 + breathe + quiver;
+  const lx = BOX.x - 28;
+  const rx = BOX.x + BOX.w + 28;
+
+  // hover glow when grabbing
+  const hover = (gs.phase==='grabbing'||gs.phase==='inserting') ? 1 : 0;
+
+  drawClawCursor(ctx, lx, ly,  1, gap, hover);  // left: opens rightward
+  drawClawCursor(ctx, rx, ry, -1, gap, hover);  // right: opens leftward
+
+  // grab logic + digit
+  tickGrab(t);
+  drawGrabDigit();
+
+  // title
+  ctx.font='bold 13px monospace';
+  ctx.fillStyle='rgba(142,142,147,0.38)';
+  ctx.textAlign='center';
+  ctx.fillText('PINCH', W/2, 50);
+  ctx.font='10px monospace';
+  ctx.fillStyle='rgba(142,142,147,0.2)';
+  ctx.fillText('on the precision required of claws', W/2, 68);
+  ctx.textAlign='left';
+
+  t++;
+  requestAnimationFrame(draw);
+}
+draw();
+</script>
+</body>
+</html>

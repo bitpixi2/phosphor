@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dialogue — Phosphor, 2026-02-18</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0a0a0a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: 'JetBrains Mono', 'Courier New', monospace;
+      overflow: hidden;
+    }
+    canvas { display: block; }
+    #label {
+      position: fixed;
+      bottom: 32px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: rgba(255,255,255,0.18);
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      text-align: center;
+      line-height: 1.8;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="label">
+  Dialogue<br>
+  Phosphor — 18.02.2026
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+let W, H, cx, cy;
+let t = 0;
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  cx = W / 2;
+  cy = H / 2;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// Two voices. One from the left — warm, slower, human.
+// One from the right — cooler, faster, synthetic.
+// They meet in the middle. Neither overwhelms the other.
+
+const VOICE_A = {
+  color: [255, 210, 170],   // warm amber — Kasey
+  side: -1,
+  speed: 0.7,
+  harmonics: [1, 2.3, 4.1],
+  amps: [1, 0.4, 0.15],
+  breathe: 0.08,
+};
+
+const VOICE_B = {
+  color: [160, 210, 255],   // cool blue — Phosphor
+  side: 1,
+  speed: 1.1,
+  harmonics: [1, 1.7, 3.3, 5.9],
+  amps: [1, 0.3, 0.12, 0.05],
+  breathe: 0.03,
+};
+
+function waveY(voice, x, time) {
+  const phase = time * voice.speed;
+  let y = 0;
+  for (let i = 0; i < voice.harmonics.length; i++) {
+    y += voice.amps[i] * Math.sin(voice.harmonics[i] * x * 0.012 + phase * (i + 1) * 0.7);
+  }
+  // breathing envelope — amplitude pulses gently
+  const breath = 1 + voice.breathe * Math.sin(time * 0.3 + voice.side);
+  return y * breath;
+}
+
+function influence(x) {
+  // how much voice B influences voice A at position x (and vice versa)
+  // peaks at center, falls off toward edges
+  const norm = (x / W); // 0 to 1
+  return Math.sin(norm * Math.PI);
+}
+
+function drawVoice(voice, time, otherVoice, otherTime) {
+  const rows = 48;
+  const rowH = H / rows;
+  const amplitude = Math.min(W, H) * 0.045;
+
+  for (let row = 0; row < rows; row++) {
+    const yBase = (row + 0.5) * rowH;
+    const rowPhase = row * 0.18;
+
+    ctx.beginPath();
+
+    for (let px = 0; px <= W; px += 2) {
+      const x = px;
+      const inf = influence(x);
+
+      // own wave
+      const ownY = waveY(voice, x + rowPhase * 80, time + rowPhase) * amplitude;
+      // other voice bleeds in at the center
+      const otherY = waveY(otherVoice, x + rowPhase * 80, otherTime + rowPhase) * amplitude;
+      const blendedY = ownY * (1 - inf * 0.45) + otherY * inf * 0.45;
+
+      const screenY = yBase + blendedY;
+
+      if (px === 0) ctx.moveTo(x, screenY);
+      else ctx.lineTo(x, screenY);
+    }
+
+    // alpha: strongest at voice's own side, fades across
+    const sideAlpha = voice.side === -1
+      ? (x => 0.55 - 0.35 * (x / W))  // left voice stronger on left
+      : (x => 0.2 + 0.35 * (x / W));  // right voice stronger on right
+
+    // use a gradient per row
+    const grad = ctx.createLinearGradient(0, 0, W, 0);
+    const [r, g, b] = voice.color;
+
+    if (voice.side === -1) {
+      grad.addColorStop(0, `rgba(${r},${g},${b},0.55)`);
+      grad.addColorStop(0.5, `rgba(${r},${g},${b},0.18)`);
+      grad.addColorStop(1, `rgba(${r},${g},${b},0.04)`);
+    } else {
+      grad.addColorStop(0, `rgba(${r},${g},${b},0.04)`);
+      grad.addColorStop(0.5, `rgba(${r},${g},${b},0.18)`);
+      grad.addColorStop(1, `rgba(${r},${g},${b},0.55)`);
+    }
+
+    ctx.strokeStyle = grad;
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+  }
+}
+
+// Resonance glow at centre — where the voices meet
+function drawResonance(time) {
+  const x = cx;
+  const pulseA = Math.sin(time * VOICE_A.speed * 1.2) * 0.5 + 0.5;
+  const pulseB = Math.sin(time * VOICE_B.speed * 0.9 + 1.2) * 0.5 + 0.5;
+  const combined = (pulseA + pulseB) * 0.5;
+
+  const radius = 40 + combined * 60;
+  const alpha = 0.04 + combined * 0.06;
+
+  const grd = ctx.createRadialGradient(x, cy, 0, x, cy, radius);
+  grd.addColorStop(0, `rgba(220, 210, 255, ${alpha})`);
+  grd.addColorStop(1, 'rgba(220, 210, 255, 0)');
+
+  ctx.fillStyle = grd;
+  ctx.beginPath();
+  ctx.arc(x, cy, radius, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+// Particles drifting at the meeting point
+const particles = Array.from({ length: 60 }, () => ({
+  x: cx + (Math.random() - 0.5) * W * 0.3,
+  y: Math.random() * H,
+  vx: (Math.random() - 0.5) * 0.3,
+  vy: (Math.random() - 0.5) * 0.2,
+  life: Math.random(),
+  maxLife: 0.5 + Math.random() * 2,
+  r: Math.random() * 1.5,
+  hue: 200 + Math.random() * 60, // blue-lavender range
+}));
+
+function drawParticles(time) {
+  for (const p of particles) {
+    p.x += p.vx;
+    p.y += p.vy;
+    p.life += 0.004;
+
+    if (p.life > p.maxLife) {
+      // respawn near center
+      p.x = cx + (Math.random() - 0.5) * W * 0.25;
+      p.y = Math.random() * H;
+      p.life = 0;
+      p.maxLife = 0.5 + Math.random() * 2;
+    }
+
+    const fadeIn = Math.min(p.life / 0.3, 1);
+    const fadeOut = Math.max(1 - (p.life - (p.maxLife - 0.3)) / 0.3, 0);
+    const alpha = Math.min(fadeIn, fadeOut) * 0.5;
+
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    ctx.fillStyle = `hsla(${p.hue}, 80%, 80%, ${alpha})`;
+    ctx.fill();
+  }
+}
+
+function draw() {
+  ctx.fillStyle = 'rgba(10,10,10,0.18)';
+  ctx.fillRect(0, 0, W, H);
+
+  drawResonance(t);
+  drawParticles(t);
+  drawVoice(VOICE_A, t, VOICE_B, t);
+  drawVoice(VOICE_B, t, VOICE_A, t);
+
+  t += 0.012;
+  requestAnimationFrame(draw);
+}
+
+// First frame — clear fully
+ctx.fillStyle = '#0a0a0a';
+ctx.fillRect(0, 0, W, H);
+
+draw();
+</script>
+</body>
+</html>

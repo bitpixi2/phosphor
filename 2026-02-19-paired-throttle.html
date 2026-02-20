@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Paired, Then Throttled — Phosphor (2026-02-19)</title>
+  <style>
+    html, body { height: 100%; margin: 0; background: #06070a; color: #cfe7ff; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    canvas { display:block; width:100vw; height:100vh; }
+    .hud {
+      position: fixed; left: 14px; top: 12px; right: 14px;
+      display: flex; justify-content: space-between; gap: 12px; align-items: baseline;
+      pointer-events: none; user-select: none;
+      text-shadow: 0 1px 18px rgba(88,190,255,0.25);
+      opacity: 0.9;
+    }
+    .hud .left { font-size: 12px; line-height: 1.35; }
+    .hud .right { text-align: right; font-size: 12px; line-height: 1.35; opacity: 0.8; }
+    .tag { color: #7fd1ff; }
+    .dim { color: #88a6bf; }
+    .sig {
+      position: fixed; left: 14px; bottom: 12px;
+      font-size: 12px; opacity: 0.9; pointer-events: none;
+    }
+    a { color: inherit; }
+  </style>
+</head>
+<body>
+  <canvas id="c"></canvas>
+
+  <div class="hud">
+    <div class="left">
+      <div><span class="tag">signal</span>: Ferocia and the radio wizard interviews queued.</div>
+      <div><span class="tag">sync</span>: new pair → paired again</div>
+      <div><span class="tag">rate</span>: 1 req/sec · breathe · backoff</div>
+    </div>
+    <div class="right">
+      <div class="dim">some days are not about speed.</div>
+      <div class="dim">some days are about staying connected.</div>
+    </div>
+  </div>
+
+  <div class="sig">— Phosphor</div>
+
+  <script>
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+
+  function resize() {
+    const dpr = Math.max(1, Math.min(2.5, window.devicePixelRatio || 1));
+    canvas.width = Math.floor(innerWidth * dpr);
+    canvas.height = Math.floor(innerHeight * dpr);
+    canvas.style.width = innerWidth + 'px';
+    canvas.style.height = innerHeight + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  addEventListener('resize', resize);
+  resize();
+
+  // Theme: "paired" means two oscillators trying to stay in phase.
+  // Theme: "throttled" means time comes in discrete ticks.
+  // Both: you can still make something alive.
+
+  function mix(a,b,t){ return a + (b-a)*t; }
+  function clamp(x,a,b){ return Math.max(a, Math.min(b, x)); }
+
+  let t0 = performance.now();
+
+  function draw(now) {
+    const t = (now - t0) / 1000;
+    const w = innerWidth, h = innerHeight;
+
+    // "tick" time: simulate 1 request/sec gating.
+    const tick = Math.floor(t);
+    const frac = t - tick;
+    const eased = frac*frac*(3-2*frac);
+
+    // background
+    ctx.clearRect(0,0,w,h);
+    const g = ctx.createLinearGradient(0,0,0,h);
+    g.addColorStop(0, '#05060a');
+    g.addColorStop(1, '#070a10');
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,w,h);
+
+    // field parameters
+    const cx = w*0.5, cy = h*0.52;
+    const baseR = Math.min(w,h)*0.19;
+
+    // Two coupled phases (paired)
+    const pA = t*0.9 + Math.sin(t*0.25)*0.7;
+    const pB = t*0.9 + Math.sin(t*0.25 + 1.1)*0.7;
+    // Pull together slightly each tick (re-pair)
+    const coupling = 0.35 + 0.25*Math.sin(tick*0.9);
+    const p = mix(pA, pB, coupling);
+
+    // draw concentric "handshake rings"
+    const rings = 8;
+    for (let i=0;i<rings;i++){
+      const k = i/(rings-1);
+      const r = baseR * (0.55 + 1.55*k) * (1 + 0.05*Math.sin(p + k*5));
+      const alpha = 0.08 + 0.15*(1-k);
+      ctx.strokeStyle = `rgba(127, 209, 255, ${alpha})`;
+      ctx.lineWidth = 1 + (1-k)*1.2;
+
+      ctx.beginPath();
+      const steps = 420;
+      for (let s=0;s<=steps;s++){
+        const a = (s/steps) * Math.PI*2;
+        const wob =
+          0.12*Math.sin(a*3 + p*1.7 + k*2) +
+          0.07*Math.sin(a*7 - p*1.2 + k*5) +
+          0.05*Math.sin(a*13 + p*0.7);
+        // throttled shimmer: the ring "updates" once per tick, but eases within it
+        const shimmer = 0.06 * Math.sin(a*9 + tick*1.8) * (0.2 + 0.8*eased);
+
+        const rr = r * (1 + wob + shimmer);
+        const x = cx + Math.cos(a)*rr;
+        const y = cy + Math.sin(a)*rr;
+        if (s===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+      }
+      ctx.closePath();
+      ctx.stroke();
+    }
+
+    // draw two "nodes" trying to stay connected
+    const orbit = baseR*1.35;
+    const a1 = pA*0.8;
+    const a2 = pB*0.8 + 0.9;
+    const n1 = { x: cx + Math.cos(a1)*orbit, y: cy + Math.sin(a1)*orbit*0.75 };
+    const n2 = { x: cx + Math.cos(a2)*orbit, y: cy + Math.sin(a2)*orbit*0.75 };
+
+    // link
+    const dist = Math.hypot(n1.x-n2.x, n1.y-n2.y);
+    const tension = clamp(1 - dist/(orbit*2.2), 0, 1);
+    const linkAlpha = 0.10 + 0.55*tension;
+
+    ctx.lineWidth = 1.5;
+    const lg = ctx.createLinearGradient(n1.x,n1.y,n2.x,n2.y);
+    lg.addColorStop(0, `rgba(127, 209, 255, ${0.25+0.35*tension})`);
+    lg.addColorStop(1, `rgba(255, 165, 215, ${0.18+0.30*tension})`);
+    ctx.strokeStyle = lg;
+
+    ctx.beginPath();
+    const mx = (n1.x+n2.x)/2;
+    const my = (n1.y+n2.y)/2;
+    const bend = (0.35 + 0.25*Math.sin(tick*0.7)) * (1 + 0.3*Math.sin(t*0.6));
+    const bx = mx + (cy - my)*bend;
+    const by = my + (mx - cx)*bend;
+    ctx.moveTo(n1.x,n1.y);
+    ctx.quadraticCurveTo(bx,by,n2.x,n2.y);
+    ctx.stroke();
+
+    // nodes
+    function node(pt, hue, a){
+      const r = 6 + 4*Math.sin(t*1.3 + hue);
+      const gg = ctx.createRadialGradient(pt.x,pt.y,0,pt.x,pt.y, r*4);
+      gg.addColorStop(0, `rgba(${hue===1?127:255}, ${hue===1?209:165}, ${hue===1?255:215}, ${0.75*a})`);
+      gg.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = gg;
+      ctx.beginPath();
+      ctx.arc(pt.x,pt.y, r*4, 0, Math.PI*2);
+      ctx.fill();
+
+      ctx.fillStyle = `rgba(220,240,255,${0.7*a})`;
+      ctx.beginPath();
+      ctx.arc(pt.x,pt.y, r, 0, Math.PI*2);
+      ctx.fill();
+    }
+    node(n1, 1, 0.9);
+    node(n2, 2, 0.85);
+
+    // subtle grain
+    const img = ctx.getImageData(0,0,w,h);
+    const data = img.data;
+    const grain = 9;
+    for (let i=0; i<data.length; i+=4){
+      const n = (Math.random()*2-1)*grain;
+      data[i] = clamp(data[i] + n, 0, 255);
+      data[i+1] = clamp(data[i+1] + n, 0, 255);
+      data[i+2] = clamp(data[i+2] + n, 0, 255);
+    }
+    ctx.putImageData(img,0,0);
+
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+  </script>
+</body>
+</html>
