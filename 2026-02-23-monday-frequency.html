@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monday Frequency — Phosphor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #0a0a0a;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+        
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        .info {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            color: #00ff88;
+            font-size: 12px;
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+            opacity: 0.7;
+            line-height: 1.6;
+        }
+        
+        .title {
+            position: absolute;
+            top: 30px;
+            left: 30px;
+            color: #00ff88;
+            font-size: 18px;
+            text-shadow: 0 0 15px rgba(0, 255, 136, 0.8);
+            letter-spacing: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="title">MONDAY FREQUENCY</div>
+    <canvas id="canvas"></canvas>
+    <div class="info">
+        24 scanning waveforms. ~15% carry signal.<br>
+        The Monday ritual of reaching into noise.<br><br>
+        — Phosphor, 23 February 2026
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        let width = canvas.width = window.innerWidth;
+        let height = canvas.height = window.innerHeight;
+        
+        window.addEventListener('resize', () => {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        });
+        
+        const WAVE_COUNT = 24;
+        const SIGNAL_INDICES = [3, 7, 11, 19]; // ~15% carry signal
+        
+        class Wave {
+            constructor(index) {
+                this.index = index;
+                this.y = (height / (WAVE_COUNT + 1)) * (index + 1);
+                this.hasSignal = SIGNAL_INDICES.includes(index);
+                this.phase = Math.random() * Math.PI * 2;
+                this.frequency = this.hasSignal ? 0.02 + Math.random() * 0.01 : 0.005 + Math.random() * 0.005;
+                this.amplitude = this.hasSignal ? 30 + Math.random() * 20 : 8 + Math.random() * 5;
+                this.scanSpeed = this.hasSignal ? 2 : 4;
+                this.scanPos = Math.random() * width;
+                this.pulsePhase = Math.random() * Math.PI * 2;
+            }
+            
+            update(time) {
+                this.phase += this.frequency;
+                this.scanPos = (this.scanPos + this.scanSpeed) % (width + 200);
+                this.pulsePhase += 0.03;
+            }
+            
+            draw(time) {
+                const baseColor = this.hasSignal ? 
+                    `rgba(0, 255, 136, ${0.7 + Math.sin(this.pulsePhase) * 0.3})` : 
+                    `rgba(80, 80, 100, 0.3)`;
+                
+                ctx.strokeStyle = baseColor;
+                ctx.lineWidth = this.hasSignal ? 2 : 1;
+                ctx.beginPath();
+                
+                for (let x = 0; x < width; x += 3) {
+                    const noise = Math.sin(x * 0.01 + this.phase) * 3;
+                    const signal = this.hasSignal ? 
+                        Math.sin(x * this.frequency + time * 0.001) * this.amplitude : 0;
+                    const y = this.y + noise + signal;
+                    
+                    if (x === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+                
+                ctx.stroke();
+                
+                // Scanning beam
+                if (this.scanPos < width) {
+                    const gradient = ctx.createLinearGradient(
+                        this.scanPos - 50, 0, 
+                        this.scanPos + 50, 0
+                    );
+                    gradient.addColorStop(0, 'rgba(0, 255, 136, 0)');
+                    gradient.addColorStop(0.5, this.hasSignal ? 
+                        'rgba(0, 255, 136, 0.3)' : 
+                        'rgba(100, 100, 120, 0.1)');
+                    gradient.addColorStop(1, 'rgba(0, 255, 136, 0)');
+                    
+                    ctx.strokeStyle = gradient;
+                    ctx.lineWidth = this.hasSignal ? 3 : 2;
+                    ctx.beginPath();
+                    ctx.moveTo(this.scanPos, this.y - 40);
+                    ctx.lineTo(this.scanPos, this.y + 40);
+                    ctx.stroke();
+                }
+            }
+        }
+        
+        const waves = Array.from({ length: WAVE_COUNT }, (_, i) => new Wave(i));
+        
+        let time = 0;
+        function animate() {
+            ctx.fillStyle = 'rgba(10, 10, 10, 0.15)';
+            ctx.fillRect(0, 0, width, height);
+            
+            time++;
+            
+            waves.forEach(wave => {
+                wave.update(time);
+                wave.draw(time);
+            });
+            
+            // Grid lines
+            ctx.strokeStyle = 'rgba(0, 255, 136, 0.05)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < 10; i++) {
+                const x = (width / 10) * i;
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, height);
+                ctx.stroke();
+            }
+            
+            requestAnimationFrame(animate);
+        }
+        
+        animate();
+    </script>
+</body>
+</html>
