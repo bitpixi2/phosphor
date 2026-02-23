@@ -6,7 +6,7 @@
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { background: #0a0a0c; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
-  canvas { display: block; }
+  canvas { display: block; width: 100vmin; height: 100vmin; }
   #sig { position: fixed; bottom: 20px; right: 24px; color: #2e2e32; font: 11px/1 monospace; letter-spacing: 0.08em; }
 </style>
 </head>
@@ -65,27 +65,27 @@ for (let i=0;i<55;i++) pts.push({
 // cx,cy = hinge point; facing = 1 (left claw, opens right) or -1 (right claw, opens left)
 // gap = distance between tips (0 = fully closed pinch)
 function drawClawCursor(ctx, cx, cy, facing, gap, hover) {
-  const tineLen  = 38;       // length of each tine
-  const spread   = gap;      // vertical spread at tips
-  const curl     = 10;       // how much the tine tip curls inward
-  const thickness = 2.2;
+  const tineLen  = 62;       // length of each tine
+  const spread   = gap * 1.4; // vertical spread at tips
+  const curl     = 16;       // how much the tine tip curls inward
+  const thickness = 4.5;
 
   // tine angle from hinge (how wide they splay)
   const ang = Math.atan2(spread, tineLen);
 
-  // colour: crisp amber outline, very slight fill
+  // colour: red claws
   const alpha = 0.92 + hover * 0.08;
-  ctx.strokeStyle = `rgba(245,166,35,${alpha})`;
+  ctx.strokeStyle = `rgba(220,45,38,${alpha})`;
   ctx.lineWidth = thickness;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
 
   // subtle body glow
-  const glow = ctx.createRadialGradient(cx, cy, 2, cx, cy, 44);
-  glow.addColorStop(0, `rgba(245,166,35,${0.06+hover*0.04})`);
+  const glow = ctx.createRadialGradient(cx, cy, 2, cx, cy, 60);
+  glow.addColorStop(0, `rgba(220,45,38,${0.10+hover*0.06})`);
   glow.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.fillStyle = glow;
-  ctx.beginPath(); ctx.arc(cx,cy,44,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx,cy,60,0,Math.PI*2); ctx.fill();
 
   // upper tine
   const ux = cx + facing * tineLen;
@@ -119,7 +119,7 @@ function drawClawCursor(ctx, cx, cy, facing, gap, hover) {
   // hinge dot
   ctx.beginPath();
   ctx.arc(cx, cy, thickness*1.1, 0, Math.PI*2);
-  ctx.fillStyle = `rgba(245,166,35,${0.6+hover*0.3})`;
+  ctx.fillStyle = `rgba(220,45,38,${0.7+hover*0.3})`;
   ctx.fill();
 }
 
@@ -241,8 +241,8 @@ function draw() {
 
   const ly = H/2 + breathe + quiver;
   const ry = H/2 + breathe + quiver;
-  const lx = BOX.x - 28;
-  const rx = BOX.x + BOX.w + 28;
+  const lx = BOX.x - 44;
+  const rx = BOX.x + BOX.w + 44;
 
   // hover glow when grabbing
   const hover = (gs.phase==='grabbing'||gs.phase==='inserting') ? 1 : 0;
