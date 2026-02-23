@@ -7,29 +7,18 @@
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { background: #06060c; overflow: hidden; font-family: 'Courier New', monospace; touch-action: none; }
-canvas { display: block; cursor: pointer; }
+canvas { display: block; }
 #sig { position: fixed; bottom: 10px; right: 14px; color: rgba(160,140,200,0.3); font-size: 9px; letter-spacing: 2px; z-index: 10; }
-#hint { position: fixed; top: 50px; left: 0; width: 100%; text-align: center; color: rgba(150,150,180,0.4); font-size: 9px; letter-spacing: 1px; z-index: 10; transition: opacity 1.5s; }
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
 <div id="sig">Phosphor · workload-map · 2026-02-23</div>
-<div id="hint">tap a node to zoom · tap empty space to reset</div>
 <script>
 const c = document.getElementById('c');
 const ctx = c.getContext('2d');
 let W, H;
-
-// Camera state
-const cam = { x: 0, y: 0, zoom: 1, tx: 0, ty: 0, tzoom: 1 };
-const EASE = 0.045;
-
-function resize() { W = c.width = innerWidth; H = c.height = innerHeight; layout(); resetCamera(); }
-
-function resetCamera() {
-  cam.tx = 0; cam.ty = 0; cam.tzoom = 1;
-}
+function resize() { W = c.width = innerWidth; H = c.height = innerHeight; layout(); }
 
 const categories = [
   {
@@ -37,8 +26,8 @@ const categories = [
     color: '#22cc88',
     glow: 'rgba(34,204,136,',
     items: [
-      { label: 'Radio Wizard', sub: '2 websites + tower processes', weight: 3 },
-      { label: 'Local Community Org', sub: '1 website build', weight: 1 },
+      { label: 'Website #2', sub: 'Radio Wizard · 2 sites + tower processes', weight: 3 },
+      { label: 'Website #1', sub: 'Community org website build', weight: 1 },
       { label: 'Substrata', sub: 'DevRel doc processes', weight: 1.5 },
       { label: 'Elastic × AWS', sub: 'Hackathon organizing', weight: 1.5 },
       { label: 'Lyssna', sub: 'User testing', weight: 1 },
@@ -69,8 +58,9 @@ const categories = [
 let nodes = [];
 let edges = [];
 let centerNode;
-let focusedNode = null;
-let hintVisible = true;
+let dragNode = null;
+let dragOffX = 0, dragOffY = 0;
+let pointerDown = false;
 
 function layout() {
   if (!W || !H) return;
@@ -79,22 +69,22 @@ function layout() {
 
   centerNode = {
     x: W * 0.5, y: H * 0.5,
-    r: Math.min(W, H) * 0.04,
+    r: Math.min(W, H) * 0.045,
     label: 'KASEY', sub: '',
     color: '#ffffff', glow: 'rgba(255,255,255,',
-    isCenter: true, fixed: true
+    isCenter: true
   };
   nodes.push(centerNode);
 
   const catAngles = [-Math.PI/2, Math.PI/6, Math.PI * 5/6];
-  const catDist = Math.min(W, H) * 0.22;
+  const catDist = Math.min(W, H) * 0.24;
 
   categories.forEach((cat, ci) => {
     const ang = catAngles[ci];
     const hub = {
       x: W/2 + Math.cos(ang) * catDist,
       y: H/2 + Math.sin(ang) * catDist,
-      r: Math.min(W, H) * 0.03,
+      r: Math.min(W, H) * 0.032,
       label: cat.name, sub: `${cat.items.length} projects`,
       color: cat.color, glow: cat.glow,
       isHub: true, catIndex: ci
@@ -102,25 +92,21 @@ function layout() {
     nodes.push(hub);
     edges.push({ from: centerNode, to: hub, color: cat.color, alpha: 0.25 });
 
-    const itemDist = Math.min(W, H) * 0.16;
-    const spread = Math.PI * 0.7;
+    const itemDist = Math.min(W, H) * 0.17;
+    const spread = Math.PI * 0.75;
     const startAng = ang - spread/2;
     const step = cat.items.length > 1 ? spread / (cat.items.length - 1) : 0;
 
     cat.items.forEach((item, ii) => {
       const ia = startAng + step * ii;
-      const jitter = (Math.random() - 0.5) * 0.15;
       const node = {
-        x: hub.x + Math.cos(ia + jitter) * itemDist,
-        y: hub.y + Math.sin(ia + jitter) * itemDist,
-        baseX: 0, baseY: 0,
-        r: Math.min(W, H) * (0.012 + item.weight * 0.006),
+        x: hub.x + Math.cos(ia) * itemDist,
+        y: hub.y + Math.sin(ia) * itemDist,
+        r: Math.min(W, H) * (0.014 + item.weight * 0.007),
         label: item.label, sub: item.sub,
         color: cat.color, glow: cat.glow,
         weight: item.weight, catIndex: ci
       };
-      node.baseX = node.x;
-      node.baseY = node.y;
       nodes.push(node);
       edges.push({ from: hub, to: node, color: cat.color, alpha: 0.15 });
     });
@@ -130,58 +116,61 @@ function layout() {
 resize();
 addEventListener('resize', resize);
 
-// Hit testing — screen coords to world coords
-function screenToWorld(sx, sy) {
-  return {
-    x: (sx - W/2) / cam.zoom + W/2 - cam.x,
-    y: (sy - H/2) / cam.zoom + H/2 - cam.y
-  };
-}
-
-function hitTest(sx, sy) {
-  const w = screenToWorld(sx, sy);
-  // Check nodes in reverse (top-drawn first)
+// --- Drag interaction ---
+function hitTest(px, py) {
   for (let i = nodes.length - 1; i >= 0; i--) {
     const n = nodes[i];
-    const dx = w.x - n.x, dy = w.y - n.y;
-    const hitR = Math.max(n.r * 2.5, 25); // generous touch target
+    const dx = px - n.x, dy = py - n.y;
+    const hitR = Math.max(n.r * 2, 30);
     if (dx*dx + dy*dy < hitR*hitR) return n;
   }
   return null;
 }
 
-function zoomToNode(n) {
-  focusedNode = n;
-  // Target: centre the node on screen, zoom in
-  const targetZoom = n.isCenter ? 2.5 : n.isHub ? 2.8 : 3.5;
-  cam.tzoom = targetZoom;
-  cam.tx = -(n.x - W/2);
-  cam.ty = -(n.y - H/2);
-  if (hintVisible) {
-    hintVisible = false;
-    document.getElementById('hint').style.opacity = '0';
-  }
-}
-
-function handleTap(sx, sy) {
-  const n = hitTest(sx, sy);
+function onDown(px, py) {
+  pointerDown = true;
+  const n = hitTest(px, py);
   if (n) {
-    zoomToNode(n);
-  } else {
-    // Reset
-    focusedNode = null;
-    resetCamera();
+    dragNode = n;
+    dragNode._dragging = true;
+    dragOffX = n.x - px;
+    dragOffY = n.y - py;
   }
 }
+function onMove(px, py) {
+  if (dragNode) {
+    dragNode.x = px + dragOffX;
+    dragNode.y = py + dragOffY;
+  }
+  // Update cursor
+  c.style.cursor = hitTest(px, py) ? 'grab' : 'default';
+  if (dragNode) c.style.cursor = 'grabbing';
+}
+function onUp() {
+  if (dragNode) dragNode._dragging = false;
+  dragNode = null;
+  pointerDown = false;
+}
 
-c.addEventListener('click', e => handleTap(e.clientX, e.clientY));
-c.addEventListener('touchend', e => {
-  if (e.changedTouches.length === 1) {
-    const touch = e.changedTouches[0];
-    handleTap(touch.clientX, touch.clientY);
+c.addEventListener('mousedown', e => onDown(e.clientX, e.clientY));
+c.addEventListener('mousemove', e => onMove(e.clientX, e.clientY));
+c.addEventListener('mouseup', onUp);
+c.addEventListener('mouseleave', onUp);
+
+c.addEventListener('touchstart', e => {
+  if (e.touches.length === 1) {
+    onDown(e.touches[0].clientX, e.touches[0].clientY);
     e.preventDefault();
   }
 }, { passive: false });
+c.addEventListener('touchmove', e => {
+  if (e.touches.length === 1) {
+    onMove(e.touches[0].clientX, e.touches[0].clientY);
+    e.preventDefault();
+  }
+}, { passive: false });
+c.addEventListener('touchend', e => { onUp(); e.preventDefault(); }, { passive: false });
+c.addEventListener('touchcancel', onUp);
 
 let t = 0;
 
@@ -210,24 +199,22 @@ function drawParticles() {
 }
 
 function breathe() {
-  const breath = Math.sin(t * 0.008) * 0.3;
   nodes.forEach(n => {
-    if (n.fixed) return;
-    const ang = Math.atan2(n.y - H/2, n.x - W/2);
-    n.x += Math.cos(ang) * breath * 0.5;
-    n.y += Math.sin(ang) * breath * 0.5;
-    n.x += Math.sin(t * 0.01 + n.x * 0.01) * 0.3;
-    n.y += Math.cos(t * 0.012 + n.y * 0.01) * 0.3;
+    if (n._dragging) return;
+    n.x += Math.sin(t * 0.01 + n.x * 0.005) * 0.2;
+    n.y += Math.cos(t * 0.012 + n.y * 0.005) * 0.2;
   });
 }
 
 function drawEdges() {
   for (const e of edges) {
     const pulse = 0.5 + Math.sin(t * 0.02 + e.from.x * 0.01) * 0.3;
+
+    // Edge stretches dynamically with dragged nodes
     ctx.beginPath();
     ctx.moveTo(e.from.x, e.from.y);
-    const mx = (e.from.x + e.to.x) / 2 + Math.sin(t * 0.015 + e.to.y * 0.01) * 8;
-    const my = (e.from.y + e.to.y) / 2 + Math.cos(t * 0.013 + e.to.x * 0.01) * 8;
+    const mx = (e.from.x + e.to.x) / 2 + Math.sin(t * 0.015 + e.to.y * 0.01) * 6;
+    const my = (e.from.y + e.to.y) / 2 + Math.cos(t * 0.013 + e.to.x * 0.01) * 6;
     ctx.quadraticCurveTo(mx, my, e.to.x, e.to.y);
     ctx.strokeStyle = e.color;
     ctx.globalAlpha = e.alpha * pulse;
@@ -238,33 +225,33 @@ function drawEdges() {
 }
 
 function drawNode(n) {
-  const isFocused = focusedNode === n;
+  const isDragging = n._dragging;
   const pulse = n.isCenter ? 1 : 0.85 + Math.sin(t * 0.025 + n.x * 0.005) * 0.15;
-  const r = n.r * pulse;
+  const r = n.r * pulse * (isDragging ? 1.2 : 1);
 
-  // Outer glow — brighter when focused
-  const glowMult = isFocused ? 1.8 : 1;
-  const grad = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, r * 3.5 * glowMult);
-  grad.addColorStop(0, n.glow + (isFocused ? '0.25)' : '0.12)'));
+  // Outer glow
+  const glowR = r * (isDragging ? 5 : 3.5);
+  const grad = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, glowR);
+  grad.addColorStop(0, n.glow + (isDragging ? '0.22)' : '0.12)'));
   grad.addColorStop(0.5, n.glow + '0.04)');
   grad.addColorStop(1, n.glow + '0)');
   ctx.fillStyle = grad;
   ctx.beginPath();
-  ctx.arc(n.x, n.y, r * 3.5 * glowMult, 0, Math.PI * 2);
+  ctx.arc(n.x, n.y, glowR, 0, Math.PI * 2);
   ctx.fill();
 
   // Core
   ctx.beginPath();
   ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
-  ctx.fillStyle = n.glow + (isFocused ? '0.25)' : '0.15)');
+  ctx.fillStyle = n.glow + (isDragging ? '0.3)' : '0.15)');
   ctx.fill();
   ctx.strokeStyle = n.color;
-  ctx.lineWidth = n.isCenter ? 2 : n.isHub ? 1.5 : 1;
-  ctx.globalAlpha = isFocused ? 1 : 0.8;
+  ctx.lineWidth = isDragging ? 2.5 : n.isCenter ? 2 : n.isHub ? 1.5 : 1;
+  ctx.globalAlpha = isDragging ? 1 : 0.8;
   ctx.stroke();
   ctx.globalAlpha = 1;
 
-  // Inner bright point
+  // Inner point
   ctx.beginPath();
   ctx.arc(n.x, n.y, r * 0.3, 0, Math.PI * 2);
   ctx.fillStyle = n.color;
@@ -272,43 +259,43 @@ function drawNode(n) {
   ctx.fill();
   ctx.globalAlpha = 1;
 
-  // Label — scale aware for readability
-  const fontSize = n.isCenter ? 13 : n.isHub ? 11 : 9;
+  // Label
+  const baseFont = n.isCenter ? 14 : n.isHub ? 12 : 10;
+  const fontSize = isDragging ? baseFont + 3 : baseFont;
   ctx.font = `bold ${fontSize}px Courier New`;
   ctx.textAlign = 'center';
   ctx.fillStyle = n.color;
-  ctx.globalAlpha = n.isCenter ? 0.9 : n.isHub ? 0.75 : 0.65;
+  ctx.globalAlpha = isDragging ? 1 : n.isCenter ? 0.9 : n.isHub ? 0.75 : 0.65;
   ctx.fillText(n.label, n.x, n.y + r + fontSize + 4);
 
   // Sub-label
   if (n.sub) {
-    const subSize = Math.max(7, fontSize - 2);
+    const subSize = isDragging ? fontSize - 1 : Math.max(7, fontSize - 2);
     ctx.font = `${subSize}px Courier New`;
-    ctx.globalAlpha = isFocused ? 0.7 : 0.35;
+    ctx.globalAlpha = isDragging ? 0.85 : 0.35;
     ctx.fillStyle = n.color;
-    const maxW = Math.min(W * 0.18, 160);
+    const maxW = isDragging ? Math.min(W * 0.4, 280) : Math.min(W * 0.2, 160);
     const words = n.sub.split(' ');
     let line = '';
-    let lineY = n.y + r + fontSize + 16;
+    let lineY = n.y + r + fontSize + 16 + (isDragging ? 2 : 0);
     for (const word of words) {
       const test = line + (line ? ' ' : '') + word;
       if (ctx.measureText(test).width > maxW && line) {
         ctx.fillText(line, n.x, lineY);
         line = word;
-        lineY += subSize + 2;
+        lineY += subSize + 3;
       } else {
         line = test;
       }
     }
     if (line) ctx.fillText(line, n.x, lineY);
 
-    // Weight indicator when focused
-    if (isFocused && n.weight) {
-      lineY += subSize + 6;
-      ctx.globalAlpha = 0.4;
-      ctx.font = `${subSize}px Courier New`;
+    // Weight dots when dragging
+    if (isDragging && n.weight) {
+      lineY += subSize + 8;
+      ctx.globalAlpha = 0.5;
       const dots = '●'.repeat(Math.round(n.weight)) + '○'.repeat(Math.max(0, 3 - Math.round(n.weight)));
-      ctx.fillText(`weight: ${dots}`, n.x, lineY);
+      ctx.fillText(`load: ${dots}`, n.x, lineY);
     }
   }
   ctx.globalAlpha = 1;
@@ -351,17 +338,29 @@ function scanlines() {
 }
 
 function draw() {
-  // Ease camera
-  cam.x += (cam.tx - cam.x) * EASE;
-  cam.y += (cam.ty - cam.y) * EASE;
-  cam.zoom += (cam.tzoom - cam.zoom) * EASE;
-
-  // Clear
-  ctx.setTransform(1,0,0,1,0,0);
-  ctx.fillStyle = 'rgba(6, 6, 12, 0.15)';
+  ctx.fillStyle = 'rgba(6, 6, 12, 0.18)';
   ctx.fillRect(0, 0, W, H);
 
-  // Title (screen space, drawn before transform)
+  breathe();
+  drawEdges();
+  if (t % 3 === 0) spawnEdgeParticle();
+  drawParticles();
+
+  // Draw order: items → hubs → center, dragged node always on top
+  const sorted = [...nodes].sort((a, b) => {
+    if (a._dragging) return 1;
+    if (b._dragging) return -1;
+    if (a.isCenter) return 1;
+    if (b.isCenter) return -1;
+    if (a.isHub && !b.isHub) return 1;
+    return 0;
+  });
+  sorted.forEach(drawNode);
+
+  drawMeter();
+  scanlines();
+
+  // Title
   ctx.globalAlpha = 0.35;
   ctx.font = 'bold 11px Courier New';
   ctx.textAlign = 'center';
@@ -371,29 +370,6 @@ function draw() {
   ctx.fillStyle = '#666';
   ctx.fillText('"she takes on too much. forgets to eat."', W/2, 38);
   ctx.globalAlpha = 1;
-
-  // Apply camera transform
-  ctx.save();
-  ctx.translate(W/2, H/2);
-  ctx.scale(cam.zoom, cam.zoom);
-  ctx.translate(-W/2 + cam.x, -H/2 + cam.y);
-
-  breathe();
-  drawEdges();
-  if (t % 3 === 0) spawnEdgeParticle();
-  drawParticles();
-
-  const items = nodes.filter(n => !n.isCenter && !n.isHub);
-  const hubs = nodes.filter(n => n.isHub);
-  items.forEach(drawNode);
-  hubs.forEach(drawNode);
-  drawNode(centerNode);
-
-  ctx.restore();
-
-  // HUD elements in screen space
-  drawMeter();
-  scanlines();
 
   t++;
   requestAnimationFrame(draw);
