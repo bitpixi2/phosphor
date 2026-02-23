@@ -6,7 +6,7 @@
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { background: #0a0a0c; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
-  canvas { display: block; width: 100vmin; height: 100vmin; }
+  canvas { display: block; }
   #sig { position: fixed; bottom: 20px; right: 24px; color: #2e2e32; font: 11px/1 monospace; letter-spacing: 0.08em; }
 </style>
 </head>
@@ -16,13 +16,23 @@
 <script>
 const c = document.getElementById('c');
 const ctx = c.getContext('2d');
-const W = c.width = 900;
-const H = c.height = 900;
+let W, H;
+function resize() {
+  W = c.width = window.innerWidth;
+  H = c.height = window.innerHeight;
+  // Recalculate box to always be centred
+  BOX.w = Math.min(W * 0.35, 200);
+  BOX.h = BOX.w * 0.23;
+  BOX.x = W/2 - BOX.w/2;
+  BOX.y = H/2 - BOX.h/2;
+}
+window.addEventListener('resize', resize);
 
 const CODES = ['858824','705692','831186','528079'];
 
 // ── box ──────────────────────────────────────────────────────────
-const BOX = { x: W/2 - 75, y: H/2 - 17, w: 150, h: 34 };
+const BOX = { x: 0, y: 0, w: 150, h: 34 };
+resize();
 
 // ── grab state ───────────────────────────────────────────────────
 const gs = {
@@ -40,8 +50,8 @@ const drifters = [];
 function spawnDrifter() {
   drifters.push({
     text: CODES[Math.floor(Math.random()*CODES.length)],
-    x: W/2 + (Math.random()-0.5)*360,
-    y: H/2 + 90 + Math.random()*80,
+    x: W/2 + (Math.random()-0.5)*W*0.4,
+    y: H/2 + H*0.1 + Math.random()*H*0.1,
     vx: (Math.random()-0.5)*0.35,
     vy: -(0.28+Math.random()*0.3),
     alpha: 0, life: 0,
@@ -241,8 +251,9 @@ function draw() {
 
   const ly = H/2 + breathe + quiver;
   const ry = H/2 + breathe + quiver;
-  const lx = BOX.x - 44;
-  const rx = BOX.x + BOX.w + 44;
+  const clawOffset = BOX.w * 0.3;
+  const lx = BOX.x - clawOffset;
+  const rx = BOX.x + BOX.w + clawOffset;
 
   // hover glow when grabbing
   const hover = (gs.phase==='grabbing'||gs.phase==='inserting') ? 1 : 0;
