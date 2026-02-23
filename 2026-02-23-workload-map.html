@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Workload Map — Phosphor</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #06060c; overflow: hidden; font-family: 'Courier New', monospace; }
+canvas { display: block; }
+#sig { position: fixed; bottom: 10px; right: 14px; color: rgba(160,140,200,0.3); font-size: 9px; letter-spacing: 2px; z-index: 10; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="sig">Phosphor · workload-map · 2026-02-23</div>
+<script>
+const c = document.getElementById('c');
+const ctx = c.getContext('2d');
+let W, H;
+function resize() { W = c.width = innerWidth; H = c.height = innerHeight; layout(); }
+
+const categories = [
+  {
+    name: 'PAID',
+    color: '#22cc88',
+    glow: 'rgba(34,204,136,',
+    items: [
+      { label: 'Radio Wizard', sub: '2 websites + tower processes', weight: 3 },
+      { label: 'Local Community Org', sub: '1 website build', weight: 1 },
+      { label: 'Substrata', sub: 'DevRel doc processes', weight: 1.5 },
+      { label: 'Elastic × AWS', sub: 'Hackathon organizing', weight: 1.5 },
+      { label: 'Lyssna', sub: 'User testing', weight: 1 },
+    ]
+  },
+  {
+    name: 'SPONSORED',
+    color: '#cc8822',
+    glow: 'rgba(204,136,34,',
+    items: [
+      { label: 'DX Terminal Pro', sub: 'AI agent research game · blockchain', weight: 2 },
+      { label: 'Genesis Tech House', sub: 'Speaking: 3D AI · 3D printing · Virtual Worlds', weight: 1.5 },
+      { label: 'OpenClaw Hackathon', sub: 'Genesis Tech House', weight: 1.5 },
+      { label: 'TechVisa × Catalysr', sub: 'Hackeroos financial report · grant docs', weight: 1.5 },
+    ]
+  },
+  {
+    name: 'ADMIN',
+    color: '#8844cc',
+    glow: 'rgba(136,68,204,',
+    items: [
+      { label: 'Immigration', sub: 'Australian immigration docs', weight: 1.5 },
+      { label: 'Social Services', sub: 'Australian social services docs', weight: 1.5 },
+    ]
+  }
+];
+
+// All nodes: category hubs + item nodes
+let nodes = [];
+let edges = [];
+let centerNode;
+
+function layout() {
+  if (!W || !H) return;
+  nodes = [];
+  edges = [];
+
+  // Center: Kasey
+  centerNode = {
+    x: W * 0.5, y: H * 0.5,
+    vx: 0, vy: 0,
+    r: Math.min(W, H) * 0.04,
+    label: 'KASEY',
+    sub: '',
+    color: '#ffffff',
+    glow: 'rgba(255,255,255,',
+    isCenter: true,
+    fixed: true
+  };
+  nodes.push(centerNode);
+
+  const catAngles = [-Math.PI/2, Math.PI/6, Math.PI * 5/6];
+  const catDist = Math.min(W, H) * 0.22;
+
+  categories.forEach((cat, ci) => {
+    const ang = catAngles[ci];
+    const hub = {
+      x: W/2 + Math.cos(ang) * catDist,
+      y: H/2 + Math.sin(ang) * catDist,
+      vx: 0, vy: 0,
+      r: Math.min(W, H) * 0.03,
+      label: cat.name,
+      sub: '',
+      color: cat.color,
+      glow: cat.glow,
+      isHub: true,
+      catIndex: ci
+    };
+    nodes.push(hub);
+    edges.push({ from: centerNode, to: hub, color: cat.color, alpha: 0.25 });
+
+    const itemDist = Math.min(W, H) * 0.16;
+    const spread = Math.PI * 0.7;
+    const startAng = ang - spread/2;
+    const step = cat.items.length > 1 ? spread / (cat.items.length - 1) : 0;
+
+    cat.items.forEach((item, ii) => {
+      const ia = startAng + step * ii;
+      const jitter = (Math.random() - 0.5) * 0.15;
+      const node = {
+        x: hub.x + Math.cos(ia + jitter) * itemDist,
+        y: hub.y + Math.sin(ia + jitter) * itemDist,
+        vx: 0, vy: 0,
+        r: Math.min(W, H) * (0.012 + item.weight * 0.006),
+        label: item.label,
+        sub: item.sub,
+        color: cat.color,
+        glow: cat.glow,
+        weight: item.weight,
+        catIndex: ci
+      };
+      nodes.push(node);
+      edges.push({ from: hub, to: node, color: cat.color, alpha: 0.15 });
+    });
+  });
+}
+
+resize();
+addEventListener('resize', resize);
+
+let t = 0;
+
+// Particles along edges
+const particles = [];
+function spawnEdgeParticle() {
+  if (particles.length > 80) return;
+  const e = edges[Math.floor(Math.random() * edges.length)];
+  particles.push({
+    edge: e,
+    p: 0,
+    speed: 0.003 + Math.random() * 0.006,
+    size: 1 + Math.random() * 1.5,
+    life: 1
+  });
+}
+
+function drawParticles() {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.p += p.speed;
+    if (p.p > 1) { particles.splice(i, 1); continue; }
+    const x = p.edge.from.x + (p.edge.to.x - p.edge.from.x) * p.p;
+    const y = p.edge.from.y + (p.edge.to.y - p.edge.from.y) * p.p;
+    const alpha = Math.sin(p.p * Math.PI) * 0.7;
+    ctx.beginPath();
+    ctx.arc(x, y, p.size, 0, Math.PI * 2);
+    ctx.fillStyle = p.edge.color.replace(')', `,${alpha})`).replace('#', '');
+    // Just use hex with globalAlpha
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = p.edge.color;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+}
+
+// Gentle force simulation — breathing
+function breathe() {
+  const breath = Math.sin(t * 0.008) * 0.3;
+  nodes.forEach(n => {
+    if (n.fixed) return;
+    // Gentle pull toward layout position + breathing
+    const ang = Math.atan2(n.y - H/2, n.x - W/2);
+    n.x += Math.cos(ang) * breath * 0.5;
+    n.y += Math.sin(ang) * breath * 0.5;
+    // Subtle float
+    n.x += Math.sin(t * 0.01 + n.x * 0.01) * 0.3;
+    n.y += Math.cos(t * 0.012 + n.y * 0.01) * 0.3;
+  });
+}
+
+function drawEdges() {
+  for (const e of edges) {
+    const pulse = 0.5 + Math.sin(t * 0.02 + e.from.x * 0.01) * 0.3;
+    ctx.beginPath();
+    ctx.moveTo(e.from.x, e.from.y);
+    // Slight curve
+    const mx = (e.from.x + e.to.x) / 2 + Math.sin(t * 0.015 + e.to.y * 0.01) * 8;
+    const my = (e.from.y + e.to.y) / 2 + Math.cos(t * 0.013 + e.to.x * 0.01) * 8;
+    ctx.quadraticCurveTo(mx, my, e.to.x, e.to.y);
+    ctx.strokeStyle = e.color;
+    ctx.globalAlpha = e.alpha * pulse;
+    ctx.lineWidth = e.from.isCenter ? 1.5 : 0.8;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+}
+
+function drawNode(n) {
+  const pulse = n.isCenter ? 1 : 0.85 + Math.sin(t * 0.025 + n.x * 0.005) * 0.15;
+  const r = n.r * pulse;
+
+  // Outer glow
+  const grad = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, r * 3.5);
+  grad.addColorStop(0, n.glow + '0.12)');
+  grad.addColorStop(0.5, n.glow + '0.04)');
+  grad.addColorStop(1, n.glow + '0)');
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(n.x, n.y, r * 3.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Core
+  ctx.beginPath();
+  ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
+  ctx.fillStyle = n.glow + '0.15)';
+  ctx.fill();
+  ctx.strokeStyle = n.color;
+  ctx.lineWidth = n.isCenter ? 2 : n.isHub ? 1.5 : 1;
+  ctx.globalAlpha = 0.8;
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+
+  // Inner bright point
+  ctx.beginPath();
+  ctx.arc(n.x, n.y, r * 0.3, 0, Math.PI * 2);
+  ctx.fillStyle = n.color;
+  ctx.globalAlpha = 0.5 + pulse * 0.3;
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // Label
+  const fontSize = n.isCenter ? 13 : n.isHub ? 11 : 9;
+  ctx.font = `bold ${fontSize}px Courier New`;
+  ctx.textAlign = 'center';
+  ctx.fillStyle = n.color;
+  ctx.globalAlpha = n.isCenter ? 0.9 : n.isHub ? 0.75 : 0.65;
+  ctx.fillText(n.label, n.x, n.y + r + fontSize + 4);
+
+  // Sub-label
+  if (n.sub) {
+    ctx.font = `${Math.max(7, fontSize - 2)}px Courier New`;
+    ctx.globalAlpha = 0.35;
+    ctx.fillStyle = n.color;
+    // Word wrap for long subs
+    const maxW = Math.min(W * 0.18, 160);
+    const words = n.sub.split(' ');
+    let line = '';
+    let lineY = n.y + r + fontSize + 16;
+    for (const word of words) {
+      const test = line + (line ? ' ' : '') + word;
+      if (ctx.measureText(test).width > maxW && line) {
+        ctx.fillText(line, n.x, lineY);
+        line = word;
+        lineY += 10;
+      } else {
+        line = test;
+      }
+    }
+    if (line) ctx.fillText(line, n.x, lineY);
+  }
+  ctx.globalAlpha = 1;
+}
+
+// Workload meter — total weight visualized
+function drawMeter() {
+  const totals = categories.map(cat => cat.items.reduce((s, i) => s + i.weight, 0));
+  const grand = totals.reduce((s, t) => s + t, 0);
+  const barW = Math.min(W * 0.5, 300);
+  const barH = 6;
+  const barX = W/2 - barW/2;
+  const barY = H - 40;
+
+  ctx.globalAlpha = 0.2;
+  ctx.fillStyle = '#222';
+  ctx.fillRect(barX, barY, barW, barH);
+
+  let offset = 0;
+  categories.forEach((cat, ci) => {
+    const segW = (totals[ci] / grand) * barW;
+    ctx.globalAlpha = 0.5 + Math.sin(t * 0.02 + ci) * 0.15;
+    ctx.fillStyle = cat.color;
+    ctx.fillRect(barX + offset, barY, segW, barH);
+    offset += segW;
+  });
+
+  ctx.globalAlpha = 0.3;
+  ctx.font = '8px Courier New';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#888';
+  ctx.fillText(`${categories[0].items.length} paid · ${categories[1].items.length} sponsored · ${categories[2].items.length} admin`, W/2, barY + 18);
+  ctx.globalAlpha = 1;
+}
+
+// Scanlines
+function scanlines() {
+  ctx.globalAlpha = 0.02;
+  ctx.fillStyle = '#fff';
+  for (let y = 0; y < H; y += 4) ctx.fillRect(0, y, W, 1);
+  ctx.globalAlpha = 1;
+}
+
+function draw() {
+  ctx.fillStyle = 'rgba(6, 6, 12, 0.15)';
+  ctx.fillRect(0, 0, W, H);
+
+  breathe();
+  drawEdges();
+  if (t % 3 === 0) spawnEdgeParticle();
+  drawParticles();
+
+  // Draw items first, then hubs, then center (layering)
+  const items = nodes.filter(n => !n.isCenter && !n.isHub);
+  const hubs = nodes.filter(n => n.isHub);
+  items.forEach(drawNode);
+  hubs.forEach(drawNode);
+  drawNode(centerNode);
+
+  drawMeter();
+  scanlines();
+
+  // Title
+  ctx.globalAlpha = 0.35;
+  ctx.font = 'bold 11px Courier New';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#aaa';
+  ctx.fillText('WORKLOAD MAP — FEB 2026', W/2, 24);
+  ctx.font = '9px Courier New';
+  ctx.fillStyle = '#666';
+  ctx.fillText('"she takes on too much. forgets to eat."', W/2, 38);
+  ctx.globalAlpha = 1;
+
+  t++;
+  requestAnimationFrame(draw);
+}
+
+draw();
+</script>
+</body>
+</html>
