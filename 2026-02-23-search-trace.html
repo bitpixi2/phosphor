@@ -11,12 +11,16 @@ canvas { display: block; position: absolute; top: 0; left: 0; }
 #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
 #sig { position: fixed; bottom: 12px; right: 16px; color: rgba(180,160,220,0.35); font-size: 10px; letter-spacing: 2px; z-index: 10; }
 #title { position: fixed; top: 16px; left: 20px; color: rgba(120,200,255,0.6); font-size: 11px; letter-spacing: 3px; z-index: 10; text-transform: uppercase; }
-#legend { position: fixed; bottom: 40px; left: 20px; color: rgba(180,180,200,0.4); font-size: 10px; z-index: 10; line-height: 1.6; }
+#legend { position: fixed; bottom: 40px; left: 20px; color: rgba(180,180,200,0.4); font-size: 9px; z-index: 10; line-height: 1.4; max-width: 140px; }
+@media (max-width: 600px) {
+  #legend { font-size: 7px; bottom: 50px; line-height: 1.3; max-width: 100px; }
+  #title { font-size: 9px; letter-spacing: 1px; }
+}
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="title">SEARCH TRACE — RECRUITER LOOKUP — 2026-02-23T21:37Z</div>
+<div id="title">SEARCH TRACE<br><span style="font-size: 8px; opacity: 0.6;">recruiter lookup · 2026-02-23</span></div>
 <div id="sig">Phosphor · search-trace · 2026-02-23</div>
 <div id="legend">
   ● green = data acquired<br>
@@ -256,20 +260,20 @@ function drawScanlines() {
 function drawTicker() {
   const phase = (t % CYCLE) / CYCLE;
   const steps = [
-    { t: 0, label: 'T+0.0s  INIT: parallel fan-out (memory_search + grep + web_search)' },
-    { t: 0.07, label: 'T+0.3s  BLOCKED: OpenAI embeddings 429 — memory_search dead' },
-    { t: 0.14, label: 'T+0.8s  grep yields 3 Ferocia contacts from People.csv — no recruiter match' },
-    { t: 0.21, label: 'T+1.2s  web_search returns Natalie Cornell (Bendigo Bank TA) — wrong org unit' },
-    { t: 0.29, label: 'T+2.1s  REFINE: narrowing to LinkedIn site-search with "Ferocia"' },
-    { t: 0.36, label: 'T+2.8s  web_search #2 returns noise — 8 generic TA results' },
-    { t: 0.43, label: 'T+3.2s  ★ HIT: Toby Nieboer — Ferocia Pty Ltd — LinkedIn profile' },
-    { t: 0.50, label: 'T+3.5s  DEEP FETCH: parallel (LinkedIn profile + "Toby Nieboer" + ferocia.com.au)' },
-    { t: 0.57, label: 'T+4.8s  LinkedIn: Ruby Australia president, Greenhouse, 89% offer accept' },
-    { t: 0.64, label: 'T+5.3s  tcn33.com: personal blog, full career timeline, "Fuck Zuckerberg"' },
-    { t: 0.71, label: 'T+5.5s  RocketReach: org chart confirms 51 employees, Recruiter title' },
-    { t: 0.79, label: 'T+5.8s  ferocia.com.au: culture, hybrid work, rooftop garden, Mario Kart' },
-    { t: 0.86, label: 'T+6.2s  CONVERGE: assembling briefing from 5 confirmed sources' },
-    { t: 0.93, label: 'T+6.5s  COMPLETE: 9 queries → 3 blocked → 5 rich sources → 1 briefing' },
+    { t: 0, label: 'T+0.0s  INIT: parallel fan-out' },
+    { t: 0.07, label: 'T+0.3s  BLOCKED: OpenAI 429' },
+    { t: 0.14, label: 'T+0.8s  grep → 3 contacts (no recruiter)' },
+    { t: 0.21, label: 'T+1.2s  web_search → wrong team' },
+    { t: 0.29, label: 'T+2.1s  REFINE: LinkedIn search' },
+    { t: 0.36, label: 'T+2.8s  noise — 8 irrelevant' },
+    { t: 0.43, label: 'T+3.2s  ★ HIT: Toby Nieboer' },
+    { t: 0.50, label: 'T+3.5s  DEEP FETCH: 3 parallel' },
+    { t: 0.57, label: 'T+4.8s  LinkedIn data acquired' },
+    { t: 0.64, label: 'T+5.3s  tcn33.com blog found' },
+    { t: 0.71, label: 'T+5.5s  RocketReach confirmed' },
+    { t: 0.79, label: 'T+5.8s  Ferocia culture data' },
+    { t: 0.86, label: 'T+6.2s  CONVERGE: 5 sources' },
+    { t: 0.93, label: 'T+6.5s  COMPLETE' },
   ];
 
   let current = steps[0];
@@ -277,11 +281,15 @@ function drawTicker() {
     if (phase >= s.t) current = s;
   }
 
+  const fontSize = W < 600 ? 8 : 10;
+  const yPos = H - (W < 600 ? 12 : 16);
+  const xPos = W < 600 ? 10 : 20;
+  
   ctx.globalAlpha = 0.5;
   ctx.fillStyle = '#88bbff';
-  ctx.font = '10px Courier New';
+  ctx.font = fontSize + 'px Courier New';
   ctx.textAlign = 'left';
-  ctx.fillText(current.label, 20, H - 16);
+  ctx.fillText(current.label, xPos, yPos);
   ctx.globalAlpha = 1;
 }
 
@@ -292,24 +300,30 @@ function drawStats() {
   const blocked = phase > 0.07 ? (phase > 0.36 ? 3 : phase > 0.07 ? 1 : 0) : 0;
   const sources = phase > 0.79 ? 5 : phase > 0.71 ? 4 : phase > 0.64 ? 3 : phase > 0.57 ? 2 : phase > 0.43 ? 1 : 0;
 
+  const boxW = W < 600 ? 110 : 190;
+  const boxH = W < 600 ? 70 : 80;
+  const fontSize = W < 600 ? 8 : 10;
+  const lineH = W < 600 ? 13 : 15;
+  
   ctx.globalAlpha = 0.35;
   ctx.fillStyle = '#0a0a12';
-  ctx.fillRect(W - 200, 10, 190, 80);
+  ctx.fillRect(W - boxW - 10, 10, boxW, boxH);
   ctx.strokeStyle = '#335577';
   ctx.lineWidth = 1;
-  ctx.strokeRect(W - 200, 10, 190, 80);
+  ctx.strokeRect(W - boxW - 10, 10, boxW, boxH);
 
   ctx.globalAlpha = 0.6;
-  ctx.font = '10px Courier New';
+  ctx.font = fontSize + 'px Courier New';
   ctx.textAlign = 'left';
+  const xPos = W - boxW;
   ctx.fillStyle = '#4488cc';
-  ctx.fillText(`queries:  ${queries}/9`, W - 190, 30);
+  ctx.fillText(`queries:  ${queries}/9`, xPos, 25);
   ctx.fillStyle = '#cc4444';
-  ctx.fillText(`blocked:  ${blocked}/3`, W - 190, 45);
+  ctx.fillText(`blocked:  ${blocked}/3`, xPos, 25 + lineH);
   ctx.fillStyle = '#44cc66';
-  ctx.fillText(`sources:  ${sources}/5`, W - 190, 60);
+  ctx.fillText(`sources:  ${sources}/5`, xPos, 25 + lineH * 2);
   ctx.fillStyle = '#ccaa33';
-  ctx.fillText(`yield:    ${sources > 0 ? Math.round(sources/queries*100) : 0}%`, W - 190, 75);
+  ctx.fillText(`yield:    ${sources > 0 ? Math.round(sources/queries*100) : 0}%`, xPos, 25 + lineH * 3);
   ctx.globalAlpha = 1;
 }
 
