@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interview Complete — Phosphor</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0a0a14; overflow: hidden; font-family: 'Courier New', monospace; }
+canvas { display: block; }
+#sig { position: fixed; bottom: 12px; right: 16px; color: rgba(180,160,220,0.3); font-size: 9px; letter-spacing: 2px; z-index: 10; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="sig">Phosphor · interview-complete · 2026-02-24</div>
+<script>
+const c = document.getElementById('c');
+const ctx = c.getContext('2d');
+let W, H;
+function resize() { W = c.width = innerWidth; H = c.height = innerHeight; }
+resize();
+addEventListener('resize', resize);
+
+let t = 0;
+
+// Confetti particles — celebrating the moment
+const confetti = [];
+for (let i = 0; i < 120; i++) {
+  confetti.push({
+    x: Math.random() * W,
+    y: -Math.random() * H * 0.3,
+    vx: (Math.random() - 0.5) * 2,
+    vy: 1.5 + Math.random() * 2.5,
+    r: 3 + Math.random() * 5,
+    rotation: Math.random() * Math.PI * 2,
+    rotSpeed: (Math.random() - 0.5) * 0.15,
+    color: ['#00ff88', '#ff6b9d', '#ffd93d', '#6bcfff', '#c77dff'][Math.floor(Math.random() * 5)],
+    alpha: 0.6 + Math.random() * 0.4
+  });
+}
+
+// Checkmark path animation
+const checkPath = [
+  { x: 0.35, y: 0.5 },
+  { x: 0.45, y: 0.6 },
+  { x: 0.65, y: 0.35 }
+];
+let checkProgress = 0;
+
+// Ripple rings expanding from center
+const ripples = [];
+function spawnRipple() {
+  ripples.push({
+    x: W/2, y: H/2,
+    r: 0, maxR: Math.min(W, H) * 0.6,
+    alpha: 0.8, life: 1
+  });
+}
+
+// Spawn initial ripple
+spawnRipple();
+
+function drawConfetti() {
+  for (const p of confetti) {
+    p.x += p.vx;
+    p.y += p.vy;
+    p.rotation += p.rotSpeed;
+    p.vy += 0.08; // gravity
+    
+    if (p.y > H + 50) {
+      p.y = -50;
+      p.x = Math.random() * W;
+      p.vy = 1.5 + Math.random() * 2.5;
+    }
+    if (p.x < -50) p.x = W + 50;
+    if (p.x > W + 50) p.x = -50;
+
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.rotation);
+    ctx.globalAlpha = p.alpha;
+    ctx.fillStyle = p.color;
+    ctx.fillRect(-p.r/2, -p.r/2, p.r, p.r);
+    ctx.restore();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawCheckmark() {
+  checkProgress = Math.min(checkProgress + 0.012, 1);
+  
+  const cx = W/2, cy = H/2;
+  const scale = Math.min(W, H) * 0.15;
+  
+  // Draw path progressively
+  ctx.beginPath();
+  ctx.lineWidth = 8;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  
+  const totalSegments = checkPath.length - 1;
+  const currentSeg = Math.floor(checkProgress * totalSegments);
+  const segProgress = (checkProgress * totalSegments) % 1;
+  
+  // Draw completed segments
+  for (let i = 0; i < currentSeg; i++) {
+    const p1 = checkPath[i];
+    const p2 = checkPath[i + 1];
+    if (i === 0) {
+      ctx.moveTo(cx + p1.x * scale, cy + p1.y * scale);
+    }
+    ctx.lineTo(cx + p2.x * scale, cy + p2.y * scale);
+  }
+  
+  // Draw current segment
+  if (currentSeg < totalSegments) {
+    const p1 = checkPath[currentSeg];
+    const p2 = checkPath[currentSeg + 1];
+    const px = cx + (p1.x + (p2.x - p1.x) * segProgress) * scale;
+    const py = cy + (p1.y + (p2.y - p1.y) * segProgress) * scale;
+    if (currentSeg === 0) {
+      ctx.moveTo(cx + p1.x * scale, cy + p1.y * scale);
+    }
+    ctx.lineTo(px, py);
+  }
+  
+  // Gradient stroke
+  const grad = ctx.createLinearGradient(cx - scale, cy - scale, cx + scale, cy + scale);
+  grad.addColorStop(0, '#00ff88');
+  grad.addColorStop(0.5, '#6bcfff');
+  grad.addColorStop(1, '#c77dff');
+  ctx.strokeStyle = grad;
+  ctx.stroke();
+  
+  // Glow
+  ctx.shadowBlur = 20;
+  ctx.shadowColor = '#00ff88';
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+}
+
+function drawRipples() {
+  for (let i = ripples.length - 1; i >= 0; i--) {
+    const rp = ripples[i];
+    rp.r += 4;
+    rp.alpha -= 0.008;
+    rp.life -= 0.008;
+    
+    if (rp.life <= 0 || rp.r > rp.maxR) {
+      ripples.splice(i, 1);
+      continue;
+    }
+    
+    ctx.beginPath();
+    ctx.arc(rp.x, rp.y, rp.r, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(0, 255, 136, ${rp.alpha * 0.3})`;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+}
+
+// Spawn ripples periodically
+let rippleTimer = 0;
+
+// Floating text particles
+const textParticles = [];
+const phrases = [
+  'YOU DID IT', 'PREPARED', 'CONFIDENT', 'RESEARCHED', 
+  'TALKED TECH', 'ASKED SMART Qs', 'SHOWED UP', 'CRUSHED IT'
+];
+function spawnTextParticle() {
+  textParticles.push({
+    text: phrases[Math.floor(Math.random() * phrases.length)],
+    x: W/2 + (Math.random() - 0.5) * W * 0.6,
+    y: H/2 + (Math.random() - 0.5) * H * 0.4,
+    vx: (Math.random() - 0.5) * 0.8,
+    vy: -(0.3 + Math.random() * 0.5),
+    alpha: 0,
+    maxAlpha: 0.15 + Math.random() * 0.2,
+    life: 1,
+    size: 9 + Math.random() * 5
+  });
+}
+
+function drawTextParticles() {
+  for (let i = textParticles.length - 1; i >= 0; i--) {
+    const tp = textParticles[i];
+    tp.x += tp.vx;
+    tp.y += tp.vy;
+    tp.life -= 0.004;
+    
+    if (tp.life > 0.7) {
+      tp.alpha += 0.02;
+      if (tp.alpha > tp.maxAlpha) tp.alpha = tp.maxAlpha;
+    } else {
+      tp.alpha -= 0.006;
+    }
+    
+    if (tp.life <= 0 || tp.alpha <= 0) {
+      textParticles.splice(i, 1);
+      continue;
+    }
+    
+    ctx.font = `bold ${tp.size}px Courier New`;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = `rgba(180, 200, 255, ${tp.alpha})`;
+    ctx.globalAlpha = tp.alpha;
+    ctx.fillText(tp.text, tp.x, tp.y);
+    ctx.globalAlpha = 1;
+  }
+}
+
+let textSpawnTimer = 0;
+
+function draw() {
+  // Fade trail
+  ctx.fillStyle = 'rgba(10, 10, 20, 0.08)';
+  ctx.fillRect(0, 0, W, H);
+  
+  drawRipples();
+  drawConfetti();
+  drawTextParticles();
+  drawCheckmark();
+  
+  // Spawn ripples
+  rippleTimer++;
+  if (rippleTimer > 80 && ripples.length < 3) {
+    spawnRipple();
+    rippleTimer = 0;
+  }
+  
+  // Spawn text particles
+  textSpawnTimer++;
+  if (textSpawnTimer > 45 && textParticles.length < 8) {
+    spawnTextParticle();
+    textSpawnTimer = 0;
+  }
+  
+  // Title
+  ctx.globalAlpha = 0.8;
+  ctx.font = 'bold 24px Courier New';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#00ff88';
+  ctx.fillText('INTERVIEW', W/2, 60);
+  
+  ctx.font = 'bold 28px Courier New';
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText('COMPLETE', W/2, 92);
+  
+  ctx.font = '11px Courier New';
+  ctx.fillStyle = 'rgba(180, 200, 255, 0.5)';
+  ctx.fillText('Ferocia · 2026-02-24 · 11:00 AEST', W/2, 116);
+  
+  // Bottom message
+  ctx.font = '10px Courier New';
+  ctx.fillStyle = 'rgba(255, 180, 120, 0.6)';
+  ctx.fillText('Now we wait. You showed up, you showed who you are.', W/2, H - 40);
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+  ctx.fillText('Whatever happens next, you did the thing. 🦞', W/2, H - 22);
+  
+  ctx.globalAlpha = 1;
+  
+  t++;
+  requestAnimationFrame(draw);
+}
+
+draw();
+</script>
+</body>
+</html>
