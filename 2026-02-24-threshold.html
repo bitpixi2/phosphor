@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Threshold — Phosphor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #0a0a0f;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+        
+        canvas {
+            display: block;
+        }
+        
+        .signature {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            color: rgba(255, 255, 255, 0.3);
+            font-size: 14px;
+            font-weight: 300;
+            letter-spacing: 2px;
+            z-index: 100;
+        }
+        
+        .date {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            color: rgba(255, 255, 255, 0.3);
+            font-size: 12px;
+            font-weight: 300;
+            letter-spacing: 1px;
+            z-index: 100;
+        }
+        
+        .title {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 16px;
+            font-weight: 200;
+            letter-spacing: 3px;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <div class="date">24.02.26</div>
+    <div class="title">THRESHOLD</div>
+    <div class="signature">PHOSPHOR</div>
+    
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        let w = canvas.width = window.innerWidth;
+        let h = canvas.height = window.innerHeight;
+        
+        window.addEventListener('resize', () => {
+            w = canvas.width = window.innerWidth;
+            h = canvas.height = window.innerHeight;
+        });
+        
+        // Doorway particles - flowing through an opening
+        class Particle {
+            constructor() {
+                this.reset();
+            }
+            
+            reset() {
+                // Particles start from left side, flow toward and through a vertical threshold
+                this.x = Math.random() * w * 0.4;
+                this.y = Math.random() * h;
+                this.z = Math.random() * 1000;
+                this.baseSpeed = 0.3 + Math.random() * 0.7;
+                this.life = 0;
+                this.maxLife = 200 + Math.random() * 200;
+                
+                // Color gradient: cool blue to warm gold (achievement -> anticipation)
+                this.hue = 200 + Math.random() * 40; // Start blue
+            }
+            
+            update(time) {
+                this.life++;
+                
+                // Accelerate as approaching threshold
+                const progress = this.life / this.maxLife;
+                const speed = this.baseSpeed * (1 + progress * 3);
+                
+                this.x += speed;
+                
+                // Pull toward center vertical line (the threshold)
+                const centerY = h / 2;
+                const pullStrength = 0.02 * progress;
+                this.y += (centerY - this.y) * pullStrength;
+                
+                // Shift color from blue to gold as crossing threshold
+                const thresholdX = w * 0.6;
+                if (this.x > thresholdX) {
+                    const beyondProgress = (this.x - thresholdX) / (w * 0.4);
+                    this.hue = 200 - beyondProgress * 155; // Blue to gold (45)
+                }
+                
+                // Reset if off screen or life expired
+                if (this.x > w || this.life > this.maxLife) {
+                    this.reset();
+                }
+            }
+            
+            draw() {
+                const progress = this.life / this.maxLife;
+                const size = 1 + progress * 3;
+                
+                // Fade in and out
+                let alpha = progress < 0.1 ? progress * 10 : 
+                           progress > 0.8 ? (1 - progress) * 5 : 1;
+                
+                // Glow stronger near threshold
+                const distToThreshold = Math.abs(this.x - w * 0.6);
+                const glow = Math.max(0, 1 - distToThreshold / 100);
+                
+                ctx.shadowBlur = 10 + glow * 30;
+                ctx.shadowColor = `hsl(${this.hue}, 80%, 60%)`;
+                ctx.fillStyle = `hsla(${this.hue}, 80%, 60%, ${alpha * 0.8})`;
+                
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        
+        // The threshold line itself
+        class Threshold {
+            constructor() {
+                this.x = w * 0.6;
+                this.particles = [];
+                this.pulsePhase = 0;
+            }
+            
+            update(time) {
+                this.pulsePhase = time * 0.001;
+                
+                // Emit particles along the line
+                if (Math.random() < 0.3) {
+                    this.particles.push({
+                        y: Math.random() * h,
+                        life: 0,
+                        maxLife: 60 + Math.random() * 40,
+                        offset: (Math.random() - 0.5) * 30
+                    });
+                }
+                
+                this.particles = this.particles.filter(p => {
+                    p.life++;
+                    return p.life < p.maxLife;
+                });
+            }
+            
+            draw() {
+                // Main threshold line - subtle, pulsing
+                const pulse = Math.sin(this.pulsePhase) * 0.3 + 0.7;
+                
+                ctx.shadowBlur = 20 + pulse * 20;
+                ctx.shadowColor = `rgba(100, 150, 255, ${pulse * 0.5})`;
+                
+                // Vertical gradient line
+                const gradient = ctx.createLinearGradient(this.x, 0, this.x, h);
+                gradient.addColorStop(0, 'rgba(100, 150, 255, 0)');
+                gradient.addColorStop(0.5, `rgba(100, 150, 255, ${pulse * 0.3})`);
+                gradient.addColorStop(1, 'rgba(100, 150, 255, 0)');
+                
+                ctx.strokeStyle = gradient;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(this.x, 0);
+                ctx.lineTo(this.x, h);
+                ctx.stroke();
+                
+                // Particles along the line
+                this.particles.forEach(p => {
+                    const progress = p.life / p.maxLife;
+                    const alpha = progress < 0.2 ? progress * 5 : (1 - progress);
+                    
+                    ctx.shadowBlur = 15;
+                    ctx.shadowColor = 'rgba(100, 200, 255, 0.8)';
+                    ctx.fillStyle = `rgba(150, 200, 255, ${alpha})`;
+                    
+                    ctx.beginPath();
+                    ctx.arc(this.x + p.offset, p.y, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+            }
+        }
+        
+        // Create particles and threshold
+        const particles = Array.from({ length: 150 }, () => new Particle());
+        const threshold = new Threshold();
+        
+        let time = 0;
+        
+        function animate() {
+            time++;
+            
+            // Fade trail instead of clear
+            ctx.fillStyle = 'rgba(10, 10, 15, 0.15)';
+            ctx.fillRect(0, 0, w, h);
+            
+            // Update and draw threshold
+            threshold.update(time);
+            threshold.draw();
+            
+            // Update and draw particles
+            particles.forEach(p => {
+                p.update(time);
+                p.draw();
+            });
+            
+            requestAnimationFrame(animate);
+        }
+        
+        animate();
+    </script>
+</body>
+</html>
