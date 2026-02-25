@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Search Trace: Toby Nieboer — Phosphor</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0a0a12; overflow: hidden; font-family: 'Courier New', monospace; }
+canvas { display: block; position: absolute; top: 0; left: 0; }
+#overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+#sig { position: fixed; bottom: 12px; right: 16px; color: rgba(180,160,220,0.35); font-size: 10px; letter-spacing: 2px; z-index: 10; }
+#title { position: fixed; top: 16px; left: 20px; color: rgba(120,200,255,0.6); font-size: 11px; letter-spacing: 3px; z-index: 10; text-transform: uppercase; }
+#legend { position: fixed; bottom: 40px; left: 20px; color: rgba(180,180,200,0.4); font-size: 9px; z-index: 10; line-height: 1.4; max-width: 140px; }
+@media (max-width: 600px) {
+  #legend { font-size: 7px; bottom: 50px; line-height: 1.3; max-width: 100px; }
+  #title { font-size: 9px; letter-spacing: 1px; }
+}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="title">SEARCH TRACE<br><span style="font-size: 8px; opacity: 0.6;">recruiter lookup · 2026-02-23</span></div>
+<div id="sig">Phosphor · search-trace · 2026-02-23</div>
+<div id="legend">
+  ● green = data acquired<br>
+  ● red = blocked / failed<br>
+  ● amber = partial / noisy<br>
+  ● blue = query in flight<br>
+  ― edge thickness = data yield
+</div>
+<script>
+const c = document.getElementById('c');
+const ctx = c.getContext('2d');
+let W, H;
+function resize() { W = c.width = innerWidth; H = c.height = innerHeight; }
+resize();
+addEventListener('resize', resize);
+
+// The actual search graph — every node is a real step
+const nodeTypes = {
+  agent: { color: '#5588ff', shape: 'diamond', r: 18 },
+  query: { color: '#4488cc', shape: 'rect', r: 14 },
+  source: { color: '#336699', shape: 'circle', r: 12 },
+  result: { color: '#44cc66', shape: 'circle', r: 10 },
+  blocked: { color: '#cc4444', shape: 'circle', r: 10 },
+  partial: { color: '#ccaa33', shape: 'circle', r: 10 },
+  target: { color: '#00ffaa', shape: 'diamond', r: 20 },
+};
+
+// Positions as fractions of W,H — will be multiplied
+const nodes = [
+  // Layer 0: Agent
+  { id: 'agent', label: 'ClawdJob\nAgent', type: 'agent', x: 0.08, y: 0.5 },
+
+  // Layer 1: First attempts
+  { id: 'mem_search', label: 'memory_search\n"Ferocia interview\nrecruiter"', type: 'query', x: 0.22, y: 0.15 },
+  { id: 'grep', label: 'grep -ri\n"ferocia|bendigo"\nlocal workspace', type: 'query', x: 0.22, y: 0.42 },
+  { id: 'web1', label: 'web_search\n"Ferocia Bendigo Bank\nrecruiter talent"', type: 'query', x: 0.22, y: 0.7 },
+
+  // Layer 2: First results
+  { id: 'embed_429', label: '429\nOpenAI embeddings\nquota exceeded', type: 'blocked', x: 0.38, y: 0.08 },
+  { id: 'people_csv', label: 'People.csv\n3 Ferocia contacts\n(no recruiter)', type: 'partial', x: 0.38, y: 0.32 },
+  { id: 'interview_cal', label: 'interview-calendar.md\n"11:00 Ferocia"', type: 'result', x: 0.38, y: 0.48 },
+  { id: 'natalie', label: 'Natalie Cornell\nBendigo Bank TA\n(wrong team)', type: 'partial', x: 0.38, y: 0.65 },
+  { id: 'careers_page', label: 'careers@\nbendigoadelaide\n.com.au', type: 'partial', x: 0.38, y: 0.82 },
+
+  // Layer 3: Refined searches
+  { id: 'web2', label: 'web_search\n"Ferocia recruiter\nLinkedIn Melbourne"', type: 'query', x: 0.52, y: 0.22 },
+  { id: 'web3', label: 'web_search\nsite:linkedin.com\nFerocia talent', type: 'query', x: 0.52, y: 0.52 },
+
+  // Layer 4: The hit
+  { id: 'li_noise', label: 'LinkedIn noise\n8 irrelevant results', type: 'blocked', x: 0.65, y: 0.15 },
+  { id: 'toby_li', label: 'Toby Nieboer\nLinkedIn profile\n★ HIT', type: 'result', x: 0.65, y: 0.42 },
+  { id: 'ferocia_li', label: 'Ferocia Pty Ltd\nLinkedIn company\n1,738 followers', type: 'result', x: 0.65, y: 0.62 },
+
+  // Layer 5: Deep fetch
+  { id: 'fetch_li', label: 'web_fetch\nlinkedin.com/in/\ntobynieboer', type: 'query', x: 0.76, y: 0.28 },
+  { id: 'web4', label: 'web_search\n"Toby Nieboer"\nFerocia recruiter', type: 'query', x: 0.76, y: 0.52 },
+  { id: 'fetch_ferocia', label: 'web_fetch\nferocia.com.au\n/careers', type: 'query', x: 0.76, y: 0.78 },
+
+  // Layer 6: Final data
+  { id: 'li_data', label: 'Ruby Australia pres\nGreenhouse impl\n89% accept rate', type: 'result', x: 0.89, y: 0.15 },
+  { id: 'tcn33', label: 'tcn33.com/about\nPersonal blog\nFull career timeline', type: 'result', x: 0.89, y: 0.35 },
+  { id: 'rocketreach', label: 'RocketReach\nOrg chart\n51 employees', type: 'result', x: 0.89, y: 0.52 },
+  { id: 'zoominfo', label: 'ZoomInfo\nt***@up.com.au\nRecruiter confirmed', type: 'result', x: 0.89, y: 0.68 },
+  { id: 'ferocia_culture', label: 'Ferocia culture\nHybrid, L&D, rooftop\n"tech co not bank"', type: 'result', x: 0.89, y: 0.85 },
+
+  // Final target
+  { id: 'target', label: 'BRIEFING\nCOMPLETE', type: 'target', x: 0.96, y: 0.5 },
+];
+
+const edges = [
+  // From agent
+  { from: 'agent', to: 'mem_search', delay: 0, label: 'Step 1' },
+  { from: 'agent', to: 'grep', delay: 0, label: 'Step 1' },
+  { from: 'agent', to: 'web1', delay: 0, label: 'Step 1' },
+
+  // First results
+  { from: 'mem_search', to: 'embed_429', delay: 1, failed: true },
+  { from: 'grep', to: 'people_csv', delay: 1.5 },
+  { from: 'grep', to: 'interview_cal', delay: 1.5 },
+  { from: 'web1', to: 'natalie', delay: 2 },
+  { from: 'web1', to: 'careers_page', delay: 2 },
+
+  // Refined queries (agent decision)
+  { from: 'people_csv', to: 'web2', delay: 3, label: 'refine' },
+  { from: 'natalie', to: 'web3', delay: 3, label: 'refine' },
+
+  // Second results
+  { from: 'web2', to: 'li_noise', delay: 4, failed: true },
+  { from: 'web3', to: 'toby_li', delay: 4.5, thick: true },
+  { from: 'web3', to: 'ferocia_li', delay: 4.5 },
+
+  // Deep fetch phase
+  { from: 'toby_li', to: 'fetch_li', delay: 5.5 },
+  { from: 'toby_li', to: 'web4', delay: 5.5 },
+  { from: 'ferocia_li', to: 'fetch_ferocia', delay: 5.5 },
+
+  // Final data extraction
+  { from: 'fetch_li', to: 'li_data', delay: 6.5, thick: true },
+  { from: 'web4', to: 'tcn33', delay: 7, thick: true },
+  { from: 'web4', to: 'rocketreach', delay: 7 },
+  { from: 'web4', to: 'zoominfo', delay: 7 },
+  { from: 'fetch_ferocia', to: 'ferocia_culture', delay: 7, thick: true },
+
+  // Converge to target
+  { from: 'li_data', to: 'target', delay: 8.5 },
+  { from: 'tcn33', to: 'target', delay: 8.5 },
+  { from: 'rocketreach', to: 'target', delay: 8.5 },
+  { from: 'zoominfo', to: 'target', delay: 8.5 },
+  { from: 'ferocia_culture', to: 'target', delay: 8.5 },
+];
+
+let t = 0;
+const CYCLE = 14; // seconds per full animation
+const FADE_IN = 0.4;
+
+function getNode(id) { return nodes.find(n => n.id === id); }
+
+function drawShape(x, y, type, alpha, pulse) {
+  const nt = nodeTypes[type];
+  const r = nt.r * (1 + pulse * 0.3);
+  ctx.globalAlpha = alpha;
+
+  // Glow
+  const grad = ctx.createRadialGradient(x, y, 0, x, y, r * 2.5);
+  grad.addColorStop(0, nt.color + '40');
+  grad.addColorStop(1, nt.color + '00');
+  ctx.fillStyle = grad;
+  ctx.fillRect(x - r * 2.5, y - r * 2.5, r * 5, r * 5);
+
+  ctx.strokeStyle = nt.color;
+  ctx.lineWidth = 1.5;
+  ctx.fillStyle = nt.color + '18';
+
+  if (nt.shape === 'diamond') {
+    ctx.beginPath();
+    ctx.moveTo(x, y - r); ctx.lineTo(x + r, y);
+    ctx.lineTo(x, y + r); ctx.lineTo(x - r, y); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+  } else if (nt.shape === 'rect') {
+    const hw = r * 1.8, hh = r * 1.2;
+    ctx.beginPath();
+    ctx.roundRect(x - hw, y - hh, hw * 2, hh * 2, 3);
+    ctx.fill(); ctx.stroke();
+  } else {
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawLabel(x, y, text, alpha, type) {
+  const lines = text.split('\n');
+  ctx.globalAlpha = alpha * 0.8;
+  ctx.fillStyle = nodeTypes[type].color;
+  ctx.font = '9px Courier New';
+  ctx.textAlign = 'center';
+  const nt = nodeTypes[type];
+  const offsetY = nt.r + 14;
+  lines.forEach((line, i) => {
+    ctx.fillText(line, x, y + offsetY + i * 11);
+  });
+  ctx.globalAlpha = 1;
+}
+
+function drawEdge(fromN, toN, progress, failed, thick) {
+  const x1 = fromN.x * W, y1 = fromN.y * H;
+  const x2 = toN.x * W, y2 = toN.y * H;
+
+  // Edge line
+  const ex = x1 + (x2 - x1) * Math.min(progress, 1);
+  const ey = y1 + (y2 - y1) * Math.min(progress, 1);
+
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(ex, ey);
+  ctx.strokeStyle = failed ? '#cc444466' : thick ? '#44cc6666' : '#4488cc33';
+  ctx.lineWidth = thick ? 2.5 : failed ? 1 : 1.2;
+  ctx.stroke();
+
+  // Traveling pulse
+  if (progress > 0 && progress < 1.5) {
+    const pp = Math.min(progress, 1);
+    const px = x1 + (x2 - x1) * pp;
+    const py = y1 + (y2 - y1) * pp;
+    const pulseR = 3 + Math.sin(t * 8) * 1.5;
+    ctx.beginPath();
+    ctx.arc(px, py, pulseR, 0, Math.PI * 2);
+    ctx.fillStyle = failed ? '#ff4444cc' : '#44ddffcc';
+    ctx.fill();
+  }
+}
+
+// Particle system for data flow
+const particles = [];
+function spawnParticle(edge, progress) {
+  const fromN = getNode(edge.from);
+  const toN = getNode(edge.to);
+  particles.push({
+    x: fromN.x * W, y: fromN.y * H,
+    tx: toN.x * W, ty: toN.y * H,
+    life: 1, speed: 0.008 + Math.random() * 0.005,
+    p: 0,
+    color: edge.failed ? '#ff4444' : edge.thick ? '#44ff88' : '#4488ff',
+    size: edge.thick ? 2 : 1.2
+  });
+}
+
+function updateParticles() {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.p += p.speed;
+    p.x = p.x + (p.tx - p.x) * p.speed * 3;
+    p.y = p.y + (p.ty - p.y) * p.speed * 3;
+    p.life -= 0.008;
+    if (p.life <= 0 || p.p > 1) { particles.splice(i, 1); continue; }
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fillStyle = p.color;
+    ctx.globalAlpha = p.life * 0.7;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+}
+
+// Scanline effect
+function drawScanlines() {
+  ctx.globalAlpha = 0.03;
+  ctx.fillStyle = '#ffffff';
+  for (let y = 0; y < H; y += 3) {
+    ctx.fillRect(0, y, W, 1);
+  }
+  ctx.globalAlpha = 1;
+}
+
+// Timestamp ticker
+function drawTicker() {
+  const phase = (t % CYCLE) / CYCLE;
+  const steps = [
+    { t: 0, label: 'T+0.0s  INIT: parallel fan-out' },
+    { t: 0.07, label: 'T+0.3s  BLOCKED: OpenAI 429' },
+    { t: 0.14, label: 'T+0.8s  grep → 3 contacts (no recruiter)' },
+    { t: 0.21, label: 'T+1.2s  web_search → wrong team' },
+    { t: 0.29, label: 'T+2.1s  REFINE: LinkedIn search' },
+    { t: 0.36, label: 'T+2.8s  noise — 8 irrelevant' },
+    { t: 0.43, label: 'T+3.2s  ★ HIT: Toby Nieboer' },
+    { t: 0.50, label: 'T+3.5s  DEEP FETCH: 3 parallel' },
+    { t: 0.57, label: 'T+4.8s  LinkedIn data acquired' },
+    { t: 0.64, label: 'T+5.3s  tcn33.com blog found' },
+    { t: 0.71, label: 'T+5.5s  RocketReach confirmed' },
+    { t: 0.79, label: 'T+5.8s  Ferocia culture data' },
+    { t: 0.86, label: 'T+6.2s  CONVERGE: 5 sources' },
+    { t: 0.93, label: 'T+6.5s  COMPLETE' },
+  ];
+
+  let current = steps[0];
+  for (const s of steps) {
+    if (phase >= s.t) current = s;
+  }
+
+  const fontSize = W < 600 ? 8 : 10;
+  const yPos = H - (W < 600 ? 12 : 16);
+  const xPos = W < 600 ? 10 : 20;
+  
+  ctx.globalAlpha = 0.5;
+  ctx.fillStyle = '#88bbff';
+  ctx.font = fontSize + 'px Courier New';
+  ctx.textAlign = 'left';
+  ctx.fillText(current.label, xPos, yPos);
+  ctx.globalAlpha = 1;
+}
+
+// Stats box
+function drawStats() {
+  const phase = (t % CYCLE) / CYCLE;
+  const queries = Math.min(9, Math.floor(phase * 12));
+  const blocked = phase > 0.07 ? (phase > 0.36 ? 3 : phase > 0.07 ? 1 : 0) : 0;
+  const sources = phase > 0.79 ? 5 : phase > 0.71 ? 4 : phase > 0.64 ? 3 : phase > 0.57 ? 2 : phase > 0.43 ? 1 : 0;
+
+  const boxW = W < 600 ? 110 : 190;
+  const boxH = W < 600 ? 70 : 80;
+  const fontSize = W < 600 ? 8 : 10;
+  const lineH = W < 600 ? 13 : 15;
+  
+  ctx.globalAlpha = 0.35;
+  ctx.fillStyle = '#0a0a12';
+  ctx.fillRect(W - boxW - 10, 10, boxW, boxH);
+  ctx.strokeStyle = '#335577';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(W - boxW - 10, 10, boxW, boxH);
+
+  ctx.globalAlpha = 0.6;
+  ctx.font = fontSize + 'px Courier New';
+  ctx.textAlign = 'left';
+  const xPos = W - boxW;
+  ctx.fillStyle = '#4488cc';
+  ctx.fillText(`queries:  ${queries}/9`, xPos, 25);
+  ctx.fillStyle = '#cc4444';
+  ctx.fillText(`blocked:  ${blocked}/3`, xPos, 25 + lineH);
+  ctx.fillStyle = '#44cc66';
+  ctx.fillText(`sources:  ${sources}/5`, xPos, 25 + lineH * 2);
+  ctx.fillStyle = '#ccaa33';
+  ctx.fillText(`yield:    ${sources > 0 ? Math.round(sources/queries*100) : 0}%`, xPos, 25 + lineH * 3);
+  ctx.globalAlpha = 1;
+}
+
+let lastSpawn = {};
+
+function draw() {
+  // Fade trail
+  ctx.fillStyle = 'rgba(10, 10, 18, 0.12)';
+  ctx.fillRect(0, 0, W, H);
+
+  const phase = (t % CYCLE) / CYCLE;
+  const cycleT = (t % CYCLE);
+
+  // Draw edges
+  for (const edge of edges) {
+    const fromN = getNode(edge.from);
+    const toN = getNode(edge.to);
+    const edgeStart = edge.delay / CYCLE;
+    const edgeDur = 0.08;
+
+    if (phase > edgeStart) {
+      const progress = Math.min((phase - edgeStart) / edgeDur, 1.5);
+      drawEdge(fromN, toN, progress, edge.failed, edge.thick);
+
+      // Spawn particles along active edges
+      const key = edge.from + '-' + edge.to;
+      if (progress > 0 && progress < 1.2 && (!lastSpawn[key] || t - lastSpawn[key] > 0.15)) {
+        spawnParticle(edge, progress);
+        lastSpawn[key] = t;
+      }
+    }
+  }
+
+  updateParticles();
+
+  // Draw nodes
+  for (const node of nodes) {
+    // Find earliest edge pointing TO this node
+    let earliest = Infinity;
+    if (node.id === 'agent') earliest = 0;
+    for (const e of edges) {
+      if (e.to === node.id) earliest = Math.min(earliest, e.delay / CYCLE + 0.06);
+      if (e.from === node.id && node.type === 'query') earliest = Math.min(earliest, e.delay / CYCLE - 0.02);
+    }
+    // Agent node appears at start
+    for (const e of edges) {
+      if (e.from === node.id) earliest = Math.min(earliest, e.delay / CYCLE);
+    }
+
+    if (phase < earliest) continue;
+
+    const fadeAlpha = Math.min((phase - earliest) / FADE_IN, 1);
+    const pulse = phase - earliest < 0.5 ? Math.sin((phase - earliest) * 20) * 0.5 : 0;
+
+    const x = node.x * W;
+    const y = node.y * H;
+
+    drawShape(x, y, node.type, fadeAlpha, pulse);
+    drawLabel(x, y, node.label, fadeAlpha, node.type);
+  }
+
+  drawScanlines();
+  drawTicker();
+  drawStats();
+
+  t += 1/60;
+  requestAnimationFrame(draw);
+}
+
+draw();
+</script>
+</body>
+</html>

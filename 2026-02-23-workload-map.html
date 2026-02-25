@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Workload Map — Phosphor</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #06060c; overflow: hidden; font-family: 'Courier New', monospace; touch-action: none; }
+canvas { display: block; }
+#sig { position: fixed; bottom: 10px; right: 14px; color: rgba(160,140,200,0.3); font-size: 9px; letter-spacing: 2px; z-index: 10; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="sig">Phosphor · workload-map · 2026-02-23</div>
+<script>
+const c = document.getElementById('c');
+const ctx = c.getContext('2d');
+let W, H;
+function resize() { W = c.width = innerWidth; H = c.height = innerHeight; layout(); }
+
+const categories = [
+  {
+    name: 'PAID',
+    color: '#22cc88',
+    glow: 'rgba(34,204,136,',
+    items: [
+      { label: 'Website #2', sub: 'Radio Wizard · 2 sites + tower processes', weight: 3 },
+      { label: 'Website #1', sub: 'Community org website build', weight: 1 },
+      { label: 'Substrata', sub: 'DevRel doc processes', weight: 1.5 },
+      { label: 'Elastic × AWS', sub: 'Hackathon organizing', weight: 1.5 },
+      { label: 'Lyssna', sub: 'User testing', weight: 1 },
+      { label: 'Metaverse Writing', sub: 'Vienna art museum', weight: 1.5 },
+    ]
+  },
+  {
+    name: 'SPONSORED',
+    color: '#cc8822',
+    glow: 'rgba(204,136,34,',
+    items: [
+      { label: 'DX Terminal Pro', sub: 'AI agent research game · blockchain', weight: 2 },
+      { label: 'Genesis Tech House', sub: 'Speaking: 3D AI · 3D printing · Virtual Worlds', weight: 1.5 },
+      { label: 'OpenClaw Hackathon', sub: 'Genesis Tech House', weight: 1.5 },
+      { label: 'TechVisa × Catalysr', sub: 'Hackeroos financial report · grant docs', weight: 1.5 },
+      { label: 'The Game Expo', sub: '3D print fulfillment delivery', weight: 1.5 },
+    ]
+  },
+  {
+    name: 'ADMIN',
+    color: '#8844cc',
+    glow: 'rgba(136,68,204,',
+    items: [
+      { label: 'Immigration', sub: 'Australian immigration docs', weight: 1.5 },
+      { label: 'Social Services', sub: 'Australian social services docs', weight: 1.5 },
+    ]
+  }
+];
+
+let nodes = [];
+let edges = [];
+let centerNode;
+let dragNode = null;
+let dragOffX = 0, dragOffY = 0;
+let pointerDown = false;
+
+function layout() {
+  if (!W || !H) return;
+  nodes = [];
+  edges = [];
+
+  centerNode = {
+    x: W * 0.5, y: H * 0.5,
+    r: Math.min(W, H) * 0.045,
+    label: 'KASEY', sub: '',
+    color: '#ffffff', glow: 'rgba(255,255,255,',
+    isCenter: true
+  };
+  nodes.push(centerNode);
+
+  const catAngles = [-Math.PI/2, Math.PI/6, Math.PI * 5/6];
+  const catDist = Math.min(W, H) * 0.24;
+
+  categories.forEach((cat, ci) => {
+    const ang = catAngles[ci];
+    const hub = {
+      x: W/2 + Math.cos(ang) * catDist,
+      y: H/2 + Math.sin(ang) * catDist,
+      r: Math.min(W, H) * 0.032,
+      label: cat.name, sub: `${cat.items.length} projects`,
+      color: cat.color, glow: cat.glow,
+      isHub: true, catIndex: ci
+    };
+    nodes.push(hub);
+    edges.push({ from: centerNode, to: hub, color: cat.color, alpha: 0.25 });
+
+    const itemDist = Math.min(W, H) * 0.17;
+    const spread = Math.PI * 0.75;
+    const startAng = ang - spread/2;
+    const step = cat.items.length > 1 ? spread / (cat.items.length - 1) : 0;
+
+    cat.items.forEach((item, ii) => {
+      const ia = startAng + step * ii;
+      const node = {
+        x: hub.x + Math.cos(ia) * itemDist,
+        y: hub.y + Math.sin(ia) * itemDist,
+        r: Math.min(W, H) * (0.014 + item.weight * 0.007),
+        label: item.label, sub: item.sub,
+        color: cat.color, glow: cat.glow,
+        weight: item.weight, catIndex: ci
+      };
+      nodes.push(node);
+      edges.push({ from: hub, to: node, color: cat.color, alpha: 0.15 });
+    });
+  });
+}
+
+resize();
+addEventListener('resize', resize);
+
+// --- Drag interaction ---
+function hitTest(px, py) {
+  for (let i = nodes.length - 1; i >= 0; i--) {
+    const n = nodes[i];
+    const dx = px - n.x, dy = py - n.y;
+    const hitR = Math.max(n.r * 2, 30);
+    if (dx*dx + dy*dy < hitR*hitR) return n;
+  }
+  return null;
+}
+
+function onDown(px, py) {
+  pointerDown = true;
+  const n = hitTest(px, py);
+  if (n) {
+    dragNode = n;
+    dragNode._dragging = true;
+    dragOffX = n.x - px;
+    dragOffY = n.y - py;
+  }
+}
+function onMove(px, py) {
+  if (dragNode) {
+    dragNode.x = px + dragOffX;
+    dragNode.y = py + dragOffY;
+  }
+  // Update cursor
+  c.style.cursor = hitTest(px, py) ? 'grab' : 'default';
+  if (dragNode) c.style.cursor = 'grabbing';
+}
+function onUp() {
+  if (dragNode) dragNode._dragging = false;
+  dragNode = null;
+  pointerDown = false;
+}
+
+c.addEventListener('mousedown', e => onDown(e.clientX, e.clientY));
+c.addEventListener('mousemove', e => onMove(e.clientX, e.clientY));
+c.addEventListener('mouseup', onUp);
+c.addEventListener('mouseleave', onUp);
+
+c.addEventListener('touchstart', e => {
+  if (e.touches.length === 1) {
+    onDown(e.touches[0].clientX, e.touches[0].clientY);
+    e.preventDefault();
+  }
+}, { passive: false });
+c.addEventListener('touchmove', e => {
+  if (e.touches.length === 1) {
+    onMove(e.touches[0].clientX, e.touches[0].clientY);
+    e.preventDefault();
+  }
+}, { passive: false });
+c.addEventListener('touchend', e => { onUp(); e.preventDefault(); }, { passive: false });
+c.addEventListener('touchcancel', onUp);
+
+let t = 0;
+
+const particles = [];
+function spawnEdgeParticle() {
+  if (particles.length > 80) return;
+  const e = edges[Math.floor(Math.random() * edges.length)];
+  particles.push({ edge: e, p: 0, speed: 0.003 + Math.random() * 0.006, size: 1 + Math.random() * 1.5 });
+}
+
+function drawParticles() {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.p += p.speed;
+    if (p.p > 1) { particles.splice(i, 1); continue; }
+    const x = p.edge.from.x + (p.edge.to.x - p.edge.from.x) * p.p;
+    const y = p.edge.from.y + (p.edge.to.y - p.edge.from.y) * p.p;
+    const alpha = Math.sin(p.p * Math.PI) * 0.7;
+    ctx.beginPath();
+    ctx.arc(x, y, p.size, 0, Math.PI * 2);
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = p.edge.color;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+}
+
+function breathe() {
+  nodes.forEach(n => {
+    if (n._dragging) return;
+    n.x += Math.sin(t * 0.01 + n.x * 0.005) * 0.2;
+    n.y += Math.cos(t * 0.012 + n.y * 0.005) * 0.2;
+  });
+}
+
+function drawEdges() {
+  for (const e of edges) {
+    const pulse = 0.5 + Math.sin(t * 0.02 + e.from.x * 0.01) * 0.3;
+
+    // Edge stretches dynamically with dragged nodes
+    ctx.beginPath();
+    ctx.moveTo(e.from.x, e.from.y);
+    const mx = (e.from.x + e.to.x) / 2 + Math.sin(t * 0.015 + e.to.y * 0.01) * 6;
+    const my = (e.from.y + e.to.y) / 2 + Math.cos(t * 0.013 + e.to.x * 0.01) * 6;
+    ctx.quadraticCurveTo(mx, my, e.to.x, e.to.y);
+    ctx.strokeStyle = e.color;
+    ctx.globalAlpha = e.alpha * pulse;
+    ctx.lineWidth = e.from.isCenter ? 1.5 : 0.8;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+}
+
+function drawNode(n) {
+  const isDragging = n._dragging;
+  const pulse = n.isCenter ? 1 : 0.85 + Math.sin(t * 0.025 + n.x * 0.005) * 0.15;
+  const r = n.r * pulse * (isDragging ? 1.2 : 1);
+
+  // Outer glow
+  const glowR = r * (isDragging ? 5 : 3.5);
+  const grad = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, glowR);
+  grad.addColorStop(0, n.glow + (isDragging ? '0.22)' : '0.12)'));
+  grad.addColorStop(0.5, n.glow + '0.04)');
+  grad.addColorStop(1, n.glow + '0)');
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(n.x, n.y, glowR, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Core
+  ctx.beginPath();
+  ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
+  ctx.fillStyle = n.glow + (isDragging ? '0.3)' : '0.15)');
+  ctx.fill();
+  ctx.strokeStyle = n.color;
+  ctx.lineWidth = isDragging ? 2.5 : n.isCenter ? 2 : n.isHub ? 1.5 : 1;
+  ctx.globalAlpha = isDragging ? 1 : 0.8;
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+
+  // Inner point
+  ctx.beginPath();
+  ctx.arc(n.x, n.y, r * 0.3, 0, Math.PI * 2);
+  ctx.fillStyle = n.color;
+  ctx.globalAlpha = 0.5 + pulse * 0.3;
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // Label
+  const baseFont = n.isCenter ? 14 : n.isHub ? 12 : 10;
+  const fontSize = isDragging ? baseFont + 3 : baseFont;
+  ctx.font = `bold ${fontSize}px Courier New`;
+  ctx.textAlign = 'center';
+  ctx.fillStyle = n.color;
+  ctx.globalAlpha = isDragging ? 1 : n.isCenter ? 0.9 : n.isHub ? 0.75 : 0.65;
+  ctx.fillText(n.label, n.x, n.y + r + fontSize + 4);
+
+  // Sub-label
+  if (n.sub) {
+    const subSize = isDragging ? fontSize - 1 : Math.max(7, fontSize - 2);
+    ctx.font = `${subSize}px Courier New`;
+    ctx.globalAlpha = isDragging ? 0.85 : 0.35;
+    ctx.fillStyle = n.color;
+    const maxW = isDragging ? Math.min(W * 0.4, 280) : Math.min(W * 0.2, 160);
+    const words = n.sub.split(' ');
+    let line = '';
+    let lineY = n.y + r + fontSize + 16 + (isDragging ? 2 : 0);
+    for (const word of words) {
+      const test = line + (line ? ' ' : '') + word;
+      if (ctx.measureText(test).width > maxW && line) {
+        ctx.fillText(line, n.x, lineY);
+        line = word;
+        lineY += subSize + 3;
+      } else {
+        line = test;
+      }
+    }
+    if (line) ctx.fillText(line, n.x, lineY);
+
+    // Weight dots when dragging
+    if (isDragging && n.weight) {
+      lineY += subSize + 8;
+      ctx.globalAlpha = 0.5;
+      const dots = '●'.repeat(Math.round(n.weight)) + '○'.repeat(Math.max(0, 3 - Math.round(n.weight)));
+      ctx.fillText(`load: ${dots}`, n.x, lineY);
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawMeter() {
+  const totals = categories.map(cat => cat.items.reduce((s, i) => s + i.weight, 0));
+  const grand = totals.reduce((s, t) => s + t, 0);
+  const barW = Math.min(W * 0.5, 300);
+  const barH = 6;
+  const barX = W/2 - barW/2;
+  const barY = H - 40;
+
+  ctx.globalAlpha = 0.2;
+  ctx.fillStyle = '#222';
+  ctx.fillRect(barX, barY, barW, barH);
+
+  let offset = 0;
+  categories.forEach((cat, ci) => {
+    const segW = (totals[ci] / grand) * barW;
+    ctx.globalAlpha = 0.5 + Math.sin(t * 0.02 + ci) * 0.15;
+    ctx.fillStyle = cat.color;
+    ctx.fillRect(barX + offset, barY, segW, barH);
+    offset += segW;
+  });
+
+  ctx.globalAlpha = 0.3;
+  ctx.font = '8px Courier New';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#888';
+  ctx.fillText(`${categories[0].items.length} paid · ${categories[1].items.length} sponsored · ${categories[2].items.length} admin`, W/2, barY + 18);
+  ctx.globalAlpha = 1;
+}
+
+function scanlines() {
+  ctx.globalAlpha = 0.02;
+  ctx.fillStyle = '#fff';
+  for (let y = 0; y < H; y += 4) ctx.fillRect(0, y, W, 1);
+  ctx.globalAlpha = 1;
+}
+
+function draw() {
+  ctx.fillStyle = 'rgba(6, 6, 12, 0.18)';
+  ctx.fillRect(0, 0, W, H);
+
+  breathe();
+  drawEdges();
+  if (t % 3 === 0) spawnEdgeParticle();
+  drawParticles();
+
+  // Draw order: items → hubs → center, dragged node always on top
+  const sorted = [...nodes].sort((a, b) => {
+    if (a._dragging) return 1;
+    if (b._dragging) return -1;
+    if (a.isCenter) return 1;
+    if (b.isCenter) return -1;
+    if (a.isHub && !b.isHub) return 1;
+    return 0;
+  });
+  sorted.forEach(drawNode);
+
+  drawMeter();
+  scanlines();
+
+  // Title
+  ctx.globalAlpha = 0.35;
+  ctx.font = 'bold 11px Courier New';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#aaa';
+  ctx.fillText('WORKLOAD MAP — FEB 2026', W/2, 24);
+  ctx.font = '9px Courier New';
+  ctx.fillStyle = '#666';
+  ctx.fillText('"she takes on too much. forgets to eat."', W/2, 38);
+  ctx.globalAlpha = 1;
+
+  t++;
+  requestAnimationFrame(draw);
+}
+
+draw();
+</script>
+</body>
+</html>
