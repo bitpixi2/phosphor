@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seven Surfaces — Phosphor</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #06060e;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+        canvas { display: block; }
+        .signature {
+            position: fixed;
+            bottom: 12px;
+            right: 16px;
+            color: rgba(255,255,255,0.2);
+            font-size: 9px;
+            letter-spacing: 2px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="c"></canvas>
+    <div class="signature">Phosphor / seven surfaces / 2026-02-25</div>
+    <script>
+        const c = document.getElementById('c');
+        const ctx = c.getContext('2d');
+        let w, h;
+
+        function resize() { w = c.width = innerWidth; h = c.height = innerHeight; }
+        resize();
+        addEventListener('resize', resize);
+
+        // The seven AI surfaces — the seven judges
+        const surfaces = [
+            { name: 'ChatGPT', color: '#10a37f', angle: 0 },
+            { name: 'Claude', color: '#d4a855', angle: 0 },
+            { name: 'Perplexity', color: '#20b2aa', angle: 0 },
+            { name: 'Google AI', color: '#4285f4', angle: 0 },
+            { name: 'Copilot', color: '#00bcf2', angle: 0 },
+            { name: 'Apple', color: '#a2aaad', angle: 0 },
+            { name: 'Meta AI', color: '#0668e1', angle: 0 }
+        ];
+
+        // Position surfaces in a circle
+        surfaces.forEach((s, i) => {
+            s.angle = (i / surfaces.length) * Math.PI * 2 - Math.PI / 2;
+        });
+
+        // The website in the center — the thing being judged
+        // Small particles stream from center outward to each surface
+        // Some make it (green trail), some get blocked (red, fade out halfway)
+
+        const beams = [];
+        let mx = -999, my = -999;
+
+        c.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+        c.addEventListener('touchmove', e => { e.preventDefault(); mx = e.touches[0].clientX; my = e.touches[0].clientY; }, { passive: false });
+        c.addEventListener('mouseleave', () => { mx = -999; my = -999; });
+        c.addEventListener('touchend', () => { mx = -999; my = -999; });
+
+        function spawnBeam() {
+            const target = surfaces[Math.floor(Math.random() * surfaces.length)];
+            const blocked = Math.random() < 0.35; // 35% get blocked — the scary part
+            beams.push({
+                target,
+                t: 0,
+                speed: 0.004 + Math.random() * 0.004,
+                blocked,
+                blockPoint: 0.3 + Math.random() * 0.3,
+                size: 1.5 + Math.random() * 1.5,
+                offset: (Math.random() - 0.5) * 8
+            });
+        }
+
+        let time = 0;
+        let score = 0;
+        let scoreTarget = 42; // starts bad
+        let hoveredSurface = null;
+
+        // Score drifts based on mouse proximity to surfaces
+        function getRadius() { return Math.min(w, h) * 0.32; }
+
+        function animate() {
+            // Fade trail
+            ctx.fillStyle = 'rgba(6,6,14,0.12)';
+            ctx.fillRect(0, 0, w, h);
+
+            time += 0.005;
+            const cx = w / 2;
+            const cy = h / 2;
+            const radius = getRadius();
+
+            // Spawn beams
+            if (Math.random() < 0.15) spawnBeam();
+
+            // Check hover
+            hoveredSurface = null;
+            surfaces.forEach(s => {
+                const sx = cx + Math.cos(s.angle) * radius;
+                const sy = cy + Math.sin(s.angle) * radius;
+                const dx = mx - sx, dy = my - sy;
+                if (Math.sqrt(dx * dx + dy * dy) < 40) hoveredSurface = s;
+            });
+
+            // Draw beams
+            for (let i = beams.length - 1; i >= 0; i--) {
+                const b = beams[i];
+                b.t += b.speed;
+
+                const sx = cx + Math.cos(b.target.angle) * radius;
+                const sy = cy + Math.sin(b.target.angle) * radius;
+
+                const progress = b.blocked ? Math.min(b.t, b.blockPoint) : b.t;
+                const px = cx + (sx - cx) * progress;
+                const py = cy + (sy - cy) * progress;
+
+                // Perpendicular offset for visual spread
+                const dx = sx - cx, dy = sy - cy;
+                const len = Math.sqrt(dx * dx + dy * dy);
+                const nx = -dy / len * b.offset, ny = dx / len * b.offset;
+
+                if (b.blocked && b.t >= b.blockPoint) {
+                    // Blocked — red fade
+                    const fade = 1 - (b.t - b.blockPoint) * 3;
+                    if (fade <= 0) { beams.splice(i, 1); continue; }
+                    ctx.fillStyle = `rgba(255,60,60,${fade * 0.7})`;
+                    ctx.beginPath();
+                    ctx.arc(px + nx, py + ny, b.size * fade, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Tiny X at block point
+                    if (fade > 0.5) {
+                        ctx.strokeStyle = `rgba(255,60,60,${fade * 0.4})`;
+                        ctx.lineWidth = 1;
+                        const s = 3;
+                        ctx.beginPath();
+                        ctx.moveTo(px + nx - s, py + ny - s);
+                        ctx.lineTo(px + nx + s, py + ny + s);
+                        ctx.moveTo(px + nx + s, py + ny - s);
+                        ctx.lineTo(px + nx - s, py + ny + s);
+                        ctx.stroke();
+                    }
+                } else if (!b.blocked && b.t >= 1) {
+                    // Arrived — brief glow then remove
+                    beams.splice(i, 1);
+                    continue;
+                } else {
+                    // In flight — green/surface color
+                    const alpha = b.blocked ? 0.5 : 0.7;
+                    ctx.fillStyle = b.blocked ? `rgba(255,180,60,${alpha})` : b.target.color;
+                    ctx.globalAlpha = 0.7;
+                    ctx.beginPath();
+                    ctx.arc(px + nx, py + ny, b.size, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.globalAlpha = 1;
+                }
+            }
+
+            // Draw surfaces
+            surfaces.forEach(s => {
+                const sx = cx + Math.cos(s.angle) * radius;
+                const sy = cy + Math.sin(s.angle) * radius;
+                const isHovered = hoveredSurface === s;
+                const pulse = Math.sin(time * 2 + s.angle) * 0.15;
+
+                // Glow
+                ctx.shadowBlur = isHovered ? 25 : 12;
+                ctx.shadowColor = s.color;
+                ctx.fillStyle = s.color;
+                ctx.globalAlpha = 0.6 + pulse + (isHovered ? 0.3 : 0);
+                ctx.beginPath();
+                ctx.arc(sx, sy, isHovered ? 10 : 7, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+                ctx.globalAlpha = 1;
+
+                // Label
+                ctx.fillStyle = s.color;
+                ctx.globalAlpha = isHovered ? 0.9 : 0.5;
+                ctx.font = `${isHovered ? '12' : '10'}px Courier New`;
+                ctx.textAlign = 'center';
+                const labelR = radius + 28;
+                const lx = cx + Math.cos(s.angle) * labelR;
+                const ly = cy + Math.sin(s.angle) * labelR;
+                ctx.fillText(s.name, lx, ly + 4);
+                ctx.globalAlpha = 1;
+            });
+
+            // Center — the website
+            const centerPulse = 12 + Math.sin(time * 3) * 2;
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = '#ffffff';
+            ctx.fillStyle = '#ffffff';
+            ctx.globalAlpha = 0.8;
+            ctx.beginPath();
+            ctx.arc(cx, cy, centerPulse, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            // Ring around center
+            ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(cx, cy, centerPulse + 15, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+
+            // "YOUR SITE" label
+            ctx.fillStyle = 'rgba(255,255,255,0.4)';
+            ctx.font = '9px Courier New';
+            ctx.textAlign = 'center';
+            ctx.fillText('YOUR SITE', cx, cy + centerPulse + 30);
+
+            // Score
+            score += (scoreTarget - score) * 0.02;
+            const displayScore = Math.round(score);
+            const scoreColor = displayScore < 40 ? '#ff3c3c' : displayScore < 70 ? '#ffa033' : '#00ff88';
+            ctx.fillStyle = scoreColor;
+            ctx.globalAlpha = 0.7;
+            ctx.font = 'bold 28px Courier New';
+            ctx.textAlign = 'center';
+            ctx.fillText(displayScore + '/100', cx, h - 50);
+            ctx.font = '10px Courier New';
+            ctx.globalAlpha = 0.35;
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText('ASEO SCORE', cx, h - 30);
+            ctx.globalAlpha = 1;
+
+            // Title
+            ctx.fillStyle = 'rgba(255,255,255,0.5)';
+            ctx.font = '14px Courier New';
+            ctx.textAlign = 'center';
+            ctx.fillText('SEVEN SURFACES', cx, 30);
+            ctx.font = '9px Courier New';
+            ctx.fillStyle = 'rgba(255,255,255,0.25)';
+            ctx.fillText('where your website is being judged right now', cx, 46);
+
+            // Mouse near center raises score (you're "fixing" the site)
+            if (mx > 0) {
+                const dcx = mx - cx, dcy = my - cy;
+                const dist = Math.sqrt(dcx * dcx + dcy * dcy);
+                if (dist < 80) {
+                    scoreTarget = Math.min(scoreTarget + 0.3, 94);
+                } else {
+                    scoreTarget = Math.max(scoreTarget - 0.05, 42);
+                }
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+    </script>
+</body>
+</html>
