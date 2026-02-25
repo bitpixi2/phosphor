@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ready State — Phosphor</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0a0e14;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+        canvas { display: block; }
+        .signature {
+            position: fixed;
+            bottom: 20px;
+            right: 30px;
+            color: rgba(255,255,255,0.3);
+            font-size: 11px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <div class="signature">Phosphor / 2026-02-25</div>
+    
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        let w, h;
+        function resize() {
+            w = canvas.width = window.innerWidth;
+            h = canvas.height = window.innerHeight;
+        }
+        resize();
+        window.addEventListener('resize', resize);
+        
+        // Three agents, three positions
+        const agents = [
+            { 
+                name: 'ALPHA',
+                x: w * 0.25, 
+                y: h * 0.5,
+                color: '#00ff88',
+                pulse: 0,
+                readyState: 0
+            },
+            { 
+                name: 'KNIGHT',
+                x: w * 0.5, 
+                y: h * 0.5,
+                color: '#00d4ff',
+                pulse: 0.33,
+                readyState: 0
+            },
+            { 
+                name: 'QUEEN',
+                x: w * 0.75, 
+                y: h * 0.5,
+                color: '#ff00ff',
+                pulse: 0.66,
+                readyState: 0
+            }
+        ];
+        
+        const particles = [];
+        const targetTime = Date.now() + (19 * 60 * 60 * 1000); // ~19 hours until launch
+        
+        class Particle {
+            constructor(agent) {
+                this.agent = agent;
+                this.angle = Math.random() * Math.PI * 2;
+                this.radius = 0;
+                this.maxRadius = 120 + Math.random() * 80;
+                this.speed = 0.3 + Math.random() * 0.5;
+                this.opacity = 0.8;
+                this.size = 2 + Math.random() * 3;
+            }
+            
+            update() {
+                this.radius += this.speed;
+                if (this.radius > this.maxRadius) {
+                    this.radius = 0;
+                    this.angle = Math.random() * Math.PI * 2;
+                    this.maxRadius = 120 + Math.random() * 80;
+                }
+                this.opacity = 1 - (this.radius / this.maxRadius) * 0.7;
+            }
+            
+            draw() {
+                const x = this.agent.x + Math.cos(this.angle) * this.radius;
+                const y = this.agent.y + Math.sin(this.angle) * this.radius;
+                
+                ctx.fillStyle = this.agent.color;
+                ctx.globalAlpha = this.opacity;
+                ctx.beginPath();
+                ctx.arc(x, y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+        }
+        
+        // Initialize particles for each agent
+        agents.forEach(agent => {
+            for (let i = 0; i < 30; i++) {
+                particles.push(new Particle(agent));
+            }
+        });
+        
+        let time = 0;
+        
+        function drawAgent(agent, t) {
+            const pulsePhase = (t + agent.pulse) % 1;
+            const corePulse = 20 + Math.sin(pulsePhase * Math.PI * 2) * 5;
+            const ringPulse = Math.sin(pulsePhase * Math.PI * 2) * 0.3;
+            
+            // Core
+            ctx.shadowBlur = 30;
+            ctx.shadowColor = agent.color;
+            ctx.fillStyle = agent.color;
+            ctx.beginPath();
+            ctx.arc(agent.x, agent.y, corePulse, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            
+            // Rings
+            for (let i = 1; i <= 3; i++) {
+                ctx.strokeStyle = agent.color;
+                ctx.globalAlpha = (0.6 - i * 0.15) + ringPulse;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(agent.x, agent.y, corePulse + (i * 25), 0, Math.PI * 2);
+                ctx.stroke();
+            }
+            ctx.globalAlpha = 1;
+            
+            // Name
+            ctx.fillStyle = agent.color;
+            ctx.font = '14px Courier New';
+            ctx.textAlign = 'center';
+            ctx.fillText(agent.name, agent.x, agent.y - 60);
+            
+            // Ready state
+            agent.readyState = Math.min(agent.readyState + 0.002, 1);
+            const readyWidth = 80;
+            const readyHeight = 4;
+            const readyX = agent.x - readyWidth / 2;
+            const readyY = agent.y + 80;
+            
+            ctx.strokeStyle = agent.color;
+            ctx.globalAlpha = 0.3;
+            ctx.strokeRect(readyX, readyY, readyWidth, readyHeight);
+            
+            ctx.fillStyle = agent.color;
+            ctx.globalAlpha = 0.8;
+            ctx.fillRect(readyX, readyY, readyWidth * agent.readyState, readyHeight);
+            ctx.globalAlpha = 1;
+            
+            if (agent.readyState >= 1) {
+                ctx.font = '10px Courier New';
+                ctx.fillStyle = agent.color;
+                ctx.fillText('READY', agent.x, readyY + 20);
+            }
+        }
+        
+        function drawCountdown() {
+            const now = Date.now();
+            const remaining = Math.max(0, targetTime - now);
+            const hours = Math.floor(remaining / (1000 * 60 * 60));
+            const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+            
+            ctx.font = '16px Courier New';
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+            ctx.textAlign = 'center';
+            ctx.fillText(`T-MINUS ${hours}H ${minutes}M`, w / 2, h - 80);
+            
+            ctx.font = '12px Courier New';
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.fillText('LAUNCH: 2026-02-27 05:00 AEST', w / 2, h - 55);
+        }
+        
+        function drawConnections() {
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.lineWidth = 1;
+            
+            for (let i = 0; i < agents.length - 1; i++) {
+                ctx.beginPath();
+                ctx.moveTo(agents[i].x, agents[i].y);
+                ctx.lineTo(agents[i + 1].x, agents[i + 1].y);
+                ctx.stroke();
+            }
+        }
+        
+        function animate() {
+            ctx.fillStyle = '#0a0e14';
+            ctx.fillRect(0, 0, w, h);
+            
+            time += 0.01;
+            
+            drawConnections();
+            
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+            
+            agents.forEach(agent => drawAgent(agent, time));
+            
+            drawCountdown();
+            
+            requestAnimationFrame(animate);
+        }
+        
+        animate();
+        
+        // Update agent positions on resize
+        window.addEventListener('resize', () => {
+            agents[0].x = w * 0.25;
+            agents[0].y = h * 0.5;
+            agents[1].x = w * 0.5;
+            agents[1].y = h * 0.5;
+            agents[2].x = w * 0.75;
+            agents[2].y = h * 0.5;
+        });
+    </script>
+</body>
+</html>
