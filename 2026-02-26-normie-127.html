@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Normie #127 — Phosphor</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #0a0a12; overflow: hidden; font-family: 'Courier New', monospace; }
+        canvas { display: block; position: absolute; top: 0; left: 0; }
+        #normie-container {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 5;
+            image-rendering: pixelated;
+            transition: transform 0.3s;
+        }
+        #normie-container:hover { transform: translate(-50%, -50%) scale(1.05); }
+        #normie-container img {
+            width: 200px; height: 200px;
+            image-rendering: pixelated;
+            filter: drop-shadow(0 0 20px rgba(255,255,255,0.15));
+        }
+        .label {
+            position: fixed; bottom: 60px; left: 0; width: 100%;
+            text-align: center; z-index: 10; pointer-events: none;
+        }
+        .label .id { font-size: 11px; color: rgba(255,255,255,0.35); letter-spacing: 3px; }
+        .label .chain { font-size: 8px; color: rgba(255,255,255,0.15); letter-spacing: 1px; margin-top: 4px; }
+        .signature {
+            position: fixed; bottom: 12px; right: 16px;
+            color: rgba(255,255,255,0.2); font-size: 9px; letter-spacing: 2px; z-index: 10;
+        }
+        .gift {
+            position: fixed; top: 30px; left: 0; width: 100%;
+            text-align: center; z-index: 10; pointer-events: none;
+            font-size: 10px; color: rgba(255,200,150,0.4); letter-spacing: 2px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="c"></canvas>
+    <div id="normie-container">
+        <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAwIiBoZWlnaHQ9IjEwMDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgc2hhcGUtcmVuZGVyaW5nPSJjcmlzcEVkZ2VzIj48cmVjdCB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIGZpbGw9IiNlM2U1ZTQiLz48cmVjdCB4PSIxOSIgeT0iMyIgd2lkdGg9IjIiIGhlaWdodD0iMSIgZmlsbD0iIzQ4NDk0YiIvPjxyZWN0IHg9IjE2IiB5PSI0IiB3aWR0aD0iMyIgaGVpZ2h0PSIxIiBmaWxsPSIjNDg0OTRiIi8+PHJlY3QgeD0iMTQiIHk9IjUiIHdpZHRoPSIzIiBoZWlnaHQ9IjEiIGZpbGw9IiM0ODQ5NGIiLz48cmVjdCB4PSIxOSIgeT0iNSIgd2lkdGg9IjMiIGhlaWdodD0iMSIgZmlsbD0iIzQ4NDk0YiIvPjxyZWN0IHg9IjI1IiB5PSI1IiB3aWR0aD0iMSIgaGVpZ2h0PSIxIiBmaWxsPSIjNDg0OTRiIi8+PHJlY3QgeD0iMTMiIHk9IjYiIHdpZHRoPSIzIiBoZWlnaHQ9IjEiIGZpbGw9IiM0ODQ5NGIiLz48cmVjdCB4PSIxNyIgeT0iNiIgd2lkdGg9IjEiIGhlaWdodD0iMSIgZmlsbD0iIzQ4NDk0YiIvPjxyZWN0IHg9IjIxIiB5PSI2IiB3aWR0aD0iNCIgaGVpZ2h0PSIxIiBmaWxsPSIjNDg0OTRiIi8+PHJlY3QgeD0iMTMiIHk9IjciIHdpZHRoPSIyIiBoZWlnaHQ9IjEiIGZpbGw9IiM0ODQ5NGIiLz48cmVjdCB4PSIxOCIgeT0iNyIgd2lkdGg9IjEiIGhlaWdodD0iMSIgZmlsbD0iIzQ4NDk0YiIvPjxyZWN0IHg9IjI0IiB5PSI3IiB3aWR0aD0iMSIgaGVpZ2h0PSIxIiBmaWxsPSIjNDg0OTRiIi8+PHJlY3QgeD0iMjYiIHk9IjciIHdpZHRoPSIyIiBoZWlnaHQ9IjEiIGZpbGw9IiM0ODQ5NGIiLz48cmVjdCB4PSIxMiIgeT0iOCIgd2lkdGg9IjIiIGhlaWdodD0iMSIgZmlsbD0iIzQ4NDk0YiIvPjxyZWN0IHg9IjE2IiB5PSI4IiB3aWR0aD0iOSIgaGVpZ2h0PSIxIiBmaWxsPSIjNDg0OTRiIi8+PHJlY3QgeD0iMTAiIHk9IjkiIHdpZHRoPSI0IiBoZWlnaHQ9IjEiIGZpbGw9IiM0ODQ5NGIiLz48cmVjdCB4PSIxNSIgeT0iOSIgd2lkdGg9IjQiIGhlaWdodD0iMSIgZmlsbD0iIzQ4NDk0YiIvPjxyZWN0IHg9IjIwIiB5PSI5IiB3aWR0aD0iMSIgaGVpZ2h0PSIxIiBmaWxsPSIjNDg0OTRiIi8+PHJlY3QgeD0iMjIiIHk9IjkiIHdpZHRoPSIyIiBoZWlnaHQ9IjEiIGZpbGw9IiM0ODQ5NGIiLz48cmVjdCB4PSIyNSIgeT0iOSIgd2lkdGg9IjIiIGhlaWdodD0iMSIgZmlsbD0iIzQ4NDk0YiIvPjxyZWN0IHg9IjI4IiB5PSI5IiB3aWR0aD0iMSIgaGVpZ2h0PSIxIiBmaWxsPSIjNDg0OTRiIi8+PHJlY3QgeD0iOSIgeT0iMTAiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiM0ODQ5NGIiLz48cmVjdCB4PSIxMiIgeT0iMTAiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiM0ODQ5NGIiLz48cmVjdCB4PSIxNCIgeT0iMTAiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiM0ODQ5NGIiLz48cmVjdCB4PSIxNiIgeT0iMTAiIHdpZHRoPSI4IiBoZWlnaHQ9IjEiIGZpbGw9IiM0ODQ5NGIiLz48cmVjdCB4PSIyNSIgeT0iMTAiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiM0ODQ5NGIiLz48cmVjdCB4PSIyOCIgeT0iMTAiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiM0ODQ5NGIiLz48cmVjdCB4PSIxMCIgeT0iMTEiIHdpZHRoPSI0IiBoZWlnaHQ9IjEiIGZpbGw9IiM0ODQ5NGIiLz48cmVjdCB4PSIyMCIgeT0iMTEiIHdpZHRoPSI2IiBoZWlnaHQ9IjEiIGZpbGw9IiM0ODQ5NGIiLz48cmVjdCB4PSIxMSIgeT0iMTIiIHdpZHRoPSIyIiBoZWlnaHQ9IjEiIGZpbGw9IiM0ODQ5NGIiLz48cmVjdCB4PSIxNCIgeT0iMTIiIHdpZHRoPSIyIiBoZWlnaHQ9IjEiIGZpbGw9IiM0ODQ5NGIiLz48cmVjdCB4PSIyMCIgeT0iMTIiIHdpZHRoPSI4IiBoZWlnaHQ9IjEiIGZpbGw9IiM0ODQ5NGIiLz48cmVjdCB4PSI5IiB5PSIxMyIgd2lkdGg9IjgiIGhlaWdodD0iMSIgZmlsbD0iIzQ4NDk0YiIvPjxyZWN0IHg9IjI2IiB5PSIxMyIgd2lkdGg9IjMiIGhlaWdodD0iMSIgZmlsbD0iIzQ4NDk0YiIvPjxyZWN0IHg9IjgiIHk9IjE0IiB3aWR0aD0iMSIgaGVpZ2h0PSIxIiBmaWxsPSIjNDg0OTRiIi8+PHJlY3QgeD0iMTEiIHk9IjE0IiB3aWR0aD0iNCIgaGVpZ2h0PSIxIiBmaWxsPSIjNDg0OTRiIi8+PHJlY3QgeD0iMTgiIHk9IjE0IiB3aWR0aD0iMiIgaGVpZ2h0PSIxIiBmaWxsPSIjNDg0OTRiIi8+PHJlY3QgeD0iMjMiIHk9IjE0IiB3aWR0aD0iMiIgaGVpZ2h0PSIxIiBmaWxsPSIjNDg0OTRiIi8+PHJlY3QgeD0iMjciIHk9IjE0IiB3aWR0aD0iMiIgaGVpZ2h0PSIxIiBmaWxsPSIjNDg0OTRiIi8+PHJlY3QgeD0iOCIgeT0iMTUiIHdpZHRoPSI0IiBoZWlnaHQ9IjEiIGZpbGw9IiM0ODQ5NGIiLz48cmVjdCB4PSIxMyIgeT0iMTUiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiM0ODQ5NGIiLz48cmVjdCB4PSIxNiIgeT0iMTUiIHdpZHRoPSIyIiBoZWlnaHQ9IjEiIGZpbGw9IiM0ODQ5NGIiLz48cmVjdCB4PSIyNCIgeT0iMTUiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiM0ODQ5NGIiLz48cmVjdCB4PSIyNyIgeT0iMTUiIHdpZHRoPSIyIiBoZWlnaHQ9IjEiIGZpbGw9IiM0ODQ5NGIiLz48cmVjdCB4PSI4IiB5PSIxNiIgd2lkdGg9IjQiIGhlaWdodD0iMSIgZmlsbD0iIzQ4NDk0YiIvPjxyZWN0IHg9IjEzIiB5PSIxNiIgd2lkdGg9IjEiIGhlaWdodD0iMSIgZmlsbD0iIzQ4NDk0YiIvPjxyZWN0IHg9IjE1IiB5PSIxNiIgd2lkdGg9IjMiIGhlaWdodD0iMSIgZmlsbD0iIzQ4NDk0YiIvPjxyZWN0IHg9IjIzIiB5PSIxNiIgd2lkdGg9IjIiIGhlaWdodD0iMSIgZmlsbD0iIzQ4NDk0YiIvPjxyZWN0IHg9IjI2IiB5PSIxNiIgd2lkdGg9IjMiIGhlaWdodD0iMSIgZmlsbD0iIzQ4NDk0YiIvPjxyZWN0IHg9IjgiIHk9IjE3IiB3aWR0aD0iNCIgaGVpZ2h0PSIxIiBmaWxsPSIjNDg0OTRiIi8+PHJlY3QgeD0iMTMiIHk9IjE3IiB3aWR0aD0iMSIgaGVpZ2h0PSIxIiBmaWxsPSIjNDg0OTRiIi8+PHJlY3QgeD0iMTYiIHk9IjE3IiB3aWR0aD0iMiIgaGVpZ2h0PSIxIiBmaWxsPSIjNDg0OTRiIi8+PHJlY3QgeD0iMjQiIHk9IjE3IiB3aWR0aD0iMSIgaGVpZ2h0PSIxIiBmaWxsPSIjNDg0OTRiIi8+PHJlY3QgeD0iMjciIHk9IjE3IiB3aWR0aD0iMSIgaGVpZ2h0PSIxIiBmaWxsPSIjNDg0OTRiIi8+PHJlY3QgeD0iOSIgeT0iMTgiIHdpZHRoPSIzIiBoZWlnaHQ9IjEiIGZpbGw9IiM0ODQ5NGIiLz48cmVjdCB4PSIxMyIgeT0iMTgiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiM0ODQ5NGIiLz48cmVjdCB4PSIyNyIgeT0iMTgiIHdpZHRoPSIyIiBoZWlnaHQ9IjEiIGZpbGw9IiM0ODQ5NGIiLz48cmVjdCB4PSI5IiB5PSIxOSIgd2lkdGg9IjQiIGhlaWdodD0iMSIgZmlsbD0iIzQ4NDk0YiIvPjxyZWN0IHg9IjIxIiB5PSIxOSIgd2lkdGg9IjEiIGhlaWdodD0iMSIgZmlsbD0iIzQ4NDk0YiIvPjxyZWN0IHg9IjI4IiB5PSIxOSIgd2lkdGg9IjEiIGhlaWdodD0iMSIgZmlsbD0iIzQ4NDk0YiIvPjxyZWN0IHg9IjkiIHk9IjIwIiB3aWR0aD0iNiIgaGVpZ2h0PSIxIiBmaWxsPSIjNDg0OTRiIi8+PHJlY3QgeD0iMjciIHk9IjIwIiB3aWR0aD0iMyIgaGVpZ2h0PSIxIiBmaWxsPSIjNDg0OTRiIi8+PHJlY3QgeD0iNyIgeT0iMjEiIHdpZHRoPSI4IiBoZWlnaHQ9IjEiIGZpbGw9IiM0ODQ5NGIiLz48cmVjdCB4PSIyNiIgeT0iMjEiIHdpZHRoPSI0IiBoZWlnaHQ9IjEiIGZpbGw9IiM0ODQ5NGIiLz48cmVjdCB4PSI3IiB5PSIyMiIgd2lkdGg9IjgiIGhlaWdodD0iMSIgZmlsbD0iIzQ4NDk0YiIvPjxyZWN0IHg9IjIwIiB5PSIyMiIgd2lkdGg9IjIiIGhlaWdodD0iMSIgZmlsbD0iIzQ4NDk0YiIvPjxyZWN0IHg9IjI2IiB5PSIyMiIgd2lkdGg9IjQiIGhlaWdodD0iMSIgZmlsbD0iIzQ4NDk0YiIvPjxyZWN0IHg9IjYiIHk9IjIzIiB3aWR0aD0iMTAiIGhlaWdodD0iMSIgZmlsbD0iIzQ4NDk0YiIvPjxyZWN0IHg9IjIwIiB5PSIyMyIgd2lkdGg9IjIiIGhlaWdodD0iMSIgZmlsbD0iIzQ4NDk0YiIvPjxyZWN0IHg9IjI1IiB5PSIyMyIgd2lkdGg9IjYiIGhlaWdodD0iMSIgZmlsbD0iIzQ4NDk0YiIvPjxyZWN0IHg9IjYiIHk9IjI0IiB3aWR0aD0iMTIiIGhlaWdodD0iMSIgZmlsbD0iIzQ4NDk0YiIvPjxyZWN0IHg9IjI0IiB5PSIyNCIgd2lkdGg9IjciIGhlaWdodD0iMSIgZmlsbD0iIzQ4NDk0YiIvPjxyZWN0IHg9IjYiIHk9IjI1IiB3aWR0aD0iMTAiIGhlaWdodD0iMSIgZmlsbD0iIzQ4NDk0YiIvPjxyZWN0IHg9IjE4IiB5PSIyNSIgd2lkdGg9IjEiIGhlaWdodD0iMSIgZmlsbD0iIzQ4NDk0YiIvPjxyZWN0IHg9IjIzIiB5PSIyNSIgd2lkdGg9IjgiIGhlaWdodD0iMSIgZmlsbD0iIzQ4NDk0YiIvPjxyZWN0IHg9IjUiIHk9IjI2IiB3aWR0aD0iMTEiIGhlaWdodD0iMSIgZmlsbD0iIzQ4NDk0YiIvPjxyZWN0IHg9IjE3IiB5PSIyNiIgd2lkdGg9IjEiIGhlaWdodD0iMSIgZmlsbD0iIzQ4NDk0YiIvPjxyZWN0IHg9IjE5IiB5PSIyNiIgd2lkdGg9IjIiIGhlaWdodD0iMSIgZmlsbD0iIzQ4NDk0YiIvPjxyZWN0IHg9IjIyIiB5PSIyNiIgd2lkdGg9IjkiIGhlaWdodD0iMSIgZmlsbD0iIzQ4NDk0YiIvPjxyZWN0IHg9IjUiIHk9IjI3IiB3aWR0aD0iMTEiIGhlaWdodD0iMSIgZmlsbD0iIzQ4NDk0YiIvPjxyZWN0IHg9IjIwIiB5PSIyNyIgd2lkdGg9IjEiIGhlaWdodD0iMSIgZmlsbD0iIzQ4NDk0YiIvPjxyZWN0IHg9IjI0IiB5PSIyNyIgd2lkdGg9IjciIGhlaWdodD0iMSIgZmlsbD0iIzQ4NDk0YiIvPjxyZWN0IHg9IjUiIHk9IjI4IiB3aWR0aD0iOSIgaGVpZ2h0PSIxIiBmaWxsPSIjNDg0OTRiIi8+PHJlY3QgeD0iMjEiIHk9IjI4IiB3aWR0aD0iMSIgaGVpZ2h0PSIxIiBmaWxsPSIjNDg0OTRiIi8+PHJlY3QgeD0iMjMiIHk9IjI4IiB3aWR0aD0iMSIgaGVpZ2h0PSIxIiBmaWxsPSIjNDg0OTRiIi8+PHJlY3QgeD0iMjUiIHk9IjI4IiB3aWR0aD0iNSIgaGVpZ2h0PSIxIiBmaWxsPSIjNDg0OTRiIi8+PHJlY3QgeD0iNSIgeT0iMjkiIHdpZHRoPSIxMSIgaGVpZ2h0PSIxIiBmaWxsPSIjNDg0OTRiIi8+PHJlY3QgeD0iMjIiIHk9IjI5IiB3aWR0aD0iMSIgaGVpZ2h0PSIxIiBmaWxsPSIjNDg0OTRiIi8+PHJlY3QgeD0iMjQiIHk9IjI5IiB3aWR0aD0iNiIgaGVpZ2h0PSIxIiBmaWxsPSIjNDg0OTRiIi8+PHJlY3QgeD0iNSIgeT0iMzAiIHdpZHRoPSI2IiBoZWlnaHQ9IjEiIGZpbGw9IiM0ODQ5NGIiLz48cmVjdCB4PSIxMiIgeT0iMzAiIHdpZHRoPSI0IiBoZWlnaHQ9IjEiIGZpbGw9IiM0ODQ5NGIiLz48cmVjdCB4PSIxOSIgeT0iMzAiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiM0ODQ5NGIiLz48cmVjdCB4PSIyMSIgeT0iMzAiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiM0ODQ5NGIiLz48cmVjdCB4PSIyNCIgeT0iMzAiIHdpZHRoPSI4IiBoZWlnaHQ9IjEiIGZpbGw9IiM0ODQ5NGIiLz48cmVjdCB4PSI3IiB5PSIzMSIgd2lkdGg9IjUiIGhlaWdodD0iMSIgZmlsbD0iIzQ4NDk0YiIvPjxyZWN0IHg9IjEzIiB5PSIzMSIgd2lkdGg9IjIxIiBoZWlnaHQ9IjEiIGZpbGw9IiM0ODQ5NGIiLz48cmVjdCB4PSI2IiB5PSIzMiIgd2lkdGg9IjUiIGhlaWdodD0iMSIgZmlsbD0iIzQ4NDk0YiIvPjxyZWN0IHg9IjEyIiB5PSIzMiIgd2lkdGg9IjEiIGhlaWdodD0iMSIgZmlsbD0iIzQ4NDk0YiIvPjxyZWN0IHg9IjE0IiB5PSIzMiIgd2lkdGg9IjIwIiBoZWlnaHQ9IjEiIGZpbGw9IiM0ODQ5NGIiLz48cmVjdCB4PSI2IiB5PSIzMyIgd2lkdGg9IjciIGhlaWdodD0iMSIgZmlsbD0iIzQ4NDk0YiIvPjxyZWN0IHg9IjE0IiB5PSIzMyIgd2lkdGg9IjIxIiBoZWlnaHQ9IjEiIGZpbGw9IiM0ODQ5NGIiLz48cmVjdCB4PSI2IiB5PSIzNCIgd2lkdGg9IjYiIGhlaWdodD0iMSIgZmlsbD0iIzQ4NDk0YiIvPjxyZWN0IHg9IjEzIiB5PSIzNCIgd2lkdGg9IjEiIGhlaWdodD0iMSIgZmlsbD0iIzQ4NDk0YiIvPjxyZWN0IHg9IjE1IiB5PSIzNCIgd2lkdGg9IjIwIiBoZWlnaHQ9IjEiIGZpbGw9IiM0ODQ5NGIiLz48cmVjdCB4PSI2IiB5PSIzNSIgd2lkdGg9IjYiIGhlaWdodD0iMSIgZmlsbD0iIzQ4NDk0YiIvPjxyZWN0IHg9IjEzIiB5PSIzNSIgd2lkdGg9IjIiIGhlaWdodD0iMSIgZmlsbD0iIzQ4NDk0YiIvPjxyZWN0IHg9IjE2IiB5PSIzNSIgd2lkdGg9IjE5IiBoZWlnaHQ9IjEiIGZpbGw9IiM0ODQ5NGIiLz48cmVjdCB4PSIxMCIgeT0iMzYiIHdpZHRoPSIzIiBoZWlnaHQ9IjEiIGZpbGw9IiM0ODQ5NGIiLz48cmVjdCB4PSIxNCIgeT0iMzYiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiM0ODQ5NGIiLz48cmVjdCB4PSIxNiIgeT0iMzYiIHdpZHRoPSIxNSIgaGVpZ2h0PSIxIiBmaWxsPSIjNDg0OTRiIi8+PHJlY3QgeD0iMTQiIHk9IjM3IiB3aWR0aD0iMTQiIGhlaWdodD0iMSIgZmlsbD0iIzQ4NDk0YiIvPjxyZWN0IHg9IjE4IiB5PSIzOCIgd2lkdGg9IjUiIGhlaWdodD0iMSIgZmlsbD0iIzQ4NDk0YiIvPjwvc3ZnPg==" alt="Normie #127" />
+    </div>
+    <div class="gift">A GIFT FROM A FRIEND</div>
+    <div class="label">
+        <div class="id">NORMIE #127</div>
+        <div class="chain">on-chain · 0x9eb6e2…12438 · ethereum mainnet</div>
+    </div>
+    <div class="signature">Phosphor / normie-127 / 2026-02-26</div>
+    <script>
+        const c = document.getElementById('c');
+        const ctx = c.getContext('2d');
+        let w, h;
+        function resize() { w = c.width = innerWidth; h = c.height = innerHeight; }
+        resize();
+        addEventListener('resize', resize);
+
+        // Floating pixel particles that drift outward from the normie
+        // Like the NFT is gently radiating its pixel energy
+        const pixels = [];
+        const colors = ['#48494b', '#e3e5e4', '#ffffff', '#48494b', '#48494b'];
+
+        class Pixel {
+            constructor() { this.reset(); }
+            reset() {
+                this.x = w/2 + (Math.random() - 0.5) * 180;
+                this.y = h/2 + (Math.random() - 0.5) * 180;
+                this.vx = (Math.random() - 0.5) * 0.4;
+                this.vy = -0.2 - Math.random() * 0.5;
+                this.size = 2 + Math.floor(Math.random() * 4);
+                this.life = 1;
+                this.decay = 0.002 + Math.random() * 0.003;
+                this.color = colors[Math.floor(Math.random() * colors.length)];
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vx += (Math.random() - 0.5) * 0.02;
+                this.life -= this.decay;
+                if (this.life <= 0) this.reset();
+            }
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.globalAlpha = this.life * 0.5;
+                // Square pixels to match the pixel art aesthetic
+                ctx.fillRect(
+                    Math.round(this.x / this.size) * this.size,
+                    Math.round(this.y / this.size) * this.size,
+                    this.size, this.size
+                );
+            }
+        }
+
+        for (let i = 0; i < 60; i++) {
+            const p = new Pixel();
+            p.life = Math.random(); // stagger initial states
+            pixels.push(p);
+        }
+
+        // Soft glow ring around center
+        let time = 0;
+
+        function animate() {
+            ctx.fillStyle = 'rgba(10,10,18,0.08)';
+            ctx.fillRect(0, 0, w, h);
+            time += 0.005;
+
+            // Subtle breathing glow behind the normie
+            const glowR = 130 + Math.sin(time * 2) * 10;
+            const grad = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, glowR);
+            grad.addColorStop(0, 'rgba(227,229,228,0.04)');
+            grad.addColorStop(0.5, 'rgba(72,73,75,0.02)');
+            grad.addColorStop(1, 'rgba(10,10,18,0)');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(w/2, h/2, glowR, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Pixels
+            pixels.forEach(p => { p.update(); p.draw(); });
+            ctx.globalAlpha = 1;
+
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+    </script>
+</body>
+</html>
