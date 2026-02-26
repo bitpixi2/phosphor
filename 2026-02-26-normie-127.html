@@ -100,7 +100,12 @@
             pixels.push(p);
         }
 
-        // Soft glow ring around center
+        // Tap/click burst
+        let burstUntil = 0;
+        function burst() { burstUntil = Date.now() + 800; }
+        document.addEventListener('click', burst);
+        document.addEventListener('touchstart', burst, { passive: true });
+
         let time = 0;
 
         function animate() {
@@ -108,19 +113,33 @@
             ctx.fillRect(0, 0, w, h);
             time += 0.005;
 
-            // Subtle breathing glow behind the normie
+            const isBurst = Date.now() < burstUntil;
+
+            // Subtle breathing glow — soft grey, not white
             const glowR = 130 + Math.sin(time * 2) * 10;
             const grad = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, glowR);
-            grad.addColorStop(0, 'rgba(200,210,220,0.03)');
-            grad.addColorStop(0.5, 'rgba(200,210,220,0.01)');
+            grad.addColorStop(0, 'rgba(160,165,170,0.025)');
+            grad.addColorStop(0.5, 'rgba(140,145,150,0.01)');
             grad.addColorStop(1, 'rgba(10,10,18,0)');
             ctx.fillStyle = grad;
             ctx.beginPath();
             ctx.arc(w/2, h/2, glowR, 0, Math.PI * 2);
             ctx.fill();
 
-            // Pixels
-            pixels.forEach(p => { p.update(); p.draw(); });
+            // Pixels — burst makes them faster and more numerous
+            if (isBurst && pixels.length < 120) {
+                for (let i = 0; i < 3; i++) pixels.push(new Pixel());
+            }
+            pixels.forEach(p => {
+                if (isBurst) {
+                    p.vy -= 0.3;
+                    p.vx += (Math.random() - 0.5) * 0.5;
+                }
+                p.update();
+                p.draw();
+            });
+            // Trim back down after burst
+            if (!isBurst && pixels.length > 60) pixels.length = 60;
             ctx.globalAlpha = 1;
 
             requestAnimationFrame(animate);
