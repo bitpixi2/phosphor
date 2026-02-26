@@ -7,7 +7,7 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            background: #06060e;
+            background: #f5f5f5;
             overflow: hidden;
             font-family: 'Courier New', monospace;
         }
@@ -16,7 +16,7 @@
             position: fixed;
             bottom: 12px;
             right: 16px;
-            color: rgba(255,255,255,0.2);
+            color: rgba(0,0,0,0.25);
             font-size: 9px;
             letter-spacing: 2px;
         }
@@ -86,7 +86,7 @@
 
         function animate() {
             // Fade trail
-            ctx.fillStyle = 'rgba(6,6,14,0.12)';
+            ctx.fillStyle = 'rgba(245,245,245,0.12)';
             ctx.fillRect(0, 0, w, h);
 
             time += 0.005;
@@ -193,8 +193,8 @@
             // Center — the website
             const centerPulse = 12 + Math.sin(time * 3) * 2;
             ctx.shadowBlur = 20;
-            ctx.shadowColor = '#ffffff';
-            ctx.fillStyle = '#ffffff';
+            ctx.shadowColor = '#111111';
+            ctx.fillStyle = '#111111';
             ctx.globalAlpha = 0.8;
             ctx.beginPath();
             ctx.arc(cx, cy, centerPulse, 0, Math.PI * 2);
@@ -202,7 +202,7 @@
             ctx.shadowBlur = 0;
 
             // Ring around center
-            ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+            ctx.strokeStyle = 'rgba(0,0,0,0.12)';
             ctx.lineWidth = 1;
             ctx.beginPath();
             ctx.arc(cx, cy, centerPulse + 15, 0, Math.PI * 2);
@@ -210,7 +210,7 @@
             ctx.globalAlpha = 1;
 
             // "YOUR SITE" label
-            ctx.fillStyle = 'rgba(255,255,255,0.4)';
+            ctx.fillStyle = 'rgba(0,0,0,0.35)';
             ctx.font = '9px Courier New';
             ctx.textAlign = 'center';
             ctx.fillText('YOUR SITE', cx, cy + centerPulse + 30);
@@ -226,17 +226,17 @@
             ctx.fillText(displayScore + '/100', cx, h - 50);
             ctx.font = '10px Courier New';
             ctx.globalAlpha = 0.35;
-            ctx.fillStyle = '#ffffff';
+            ctx.fillStyle = '#111111';
             ctx.fillText('ASEO SCORE', cx, h - 30);
             ctx.globalAlpha = 1;
 
             // Title
-            ctx.fillStyle = 'rgba(255,255,255,0.5)';
+            ctx.fillStyle = 'rgba(0,0,0,0.45)';
             ctx.font = '14px Courier New';
             ctx.textAlign = 'center';
             ctx.fillText('SEVEN SURFACES', cx, 30);
             ctx.font = '9px Courier New';
-            ctx.fillStyle = 'rgba(255,255,255,0.25)';
+            ctx.fillStyle = 'rgba(0,0,0,0.25)';
             ctx.fillText('where your website is being judged right now', cx, 46);
 
             // Mouse near center raises score (you're "fixing" the site)
