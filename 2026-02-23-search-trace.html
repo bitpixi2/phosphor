@@ -29,9 +29,12 @@ canvas { display: block; position: absolute; top: 0; left: 0; }
   ● blue = query in flight<br>
   ― edge thickness = data yield
 </div>
+<script src="art-runtime.js"></script>
 <script>
 const c = document.getElementById('c');
 const ctx = c.getContext('2d');
+const { createClock, frameLerp } = window.PhosphorRuntime;
+const clock = createClock({ baselineFps: 60, minDtSec: 1 / 240, maxDtSec: 0.08 });
 let W, H;
 function resize() { W = c.width = innerWidth; H = c.height = innerHeight; }
 resize();
@@ -229,13 +232,13 @@ function spawnParticle(edge, progress) {
   });
 }
 
-function updateParticles() {
+function updateParticles(frameDelta) {
   for (let i = particles.length - 1; i >= 0; i--) {
     const p = particles[i];
-    p.p += p.speed;
-    p.x = p.x + (p.tx - p.x) * p.speed * 3;
-    p.y = p.y + (p.ty - p.y) * p.speed * 3;
-    p.life -= 0.008;
+    p.p += p.speed * frameDelta;
+    p.x = frameLerp(p.x, p.tx, p.speed * 3, frameDelta);
+    p.y = frameLerp(p.y, p.ty, p.speed * 3, frameDelta);
+    p.life -= 0.008 * frameDelta;
     if (p.life <= 0 || p.p > 1) { particles.splice(i, 1); continue; }
     ctx.beginPath();
     ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
@@ -329,9 +332,10 @@ function drawStats() {
 
 let lastSpawn = {};
 
-function draw() {
+function draw(now) {
+  const { dtSec, frameDelta } = clock.tick(now);
   // Fade trail
-  ctx.fillStyle = 'rgba(10, 10, 18, 0.12)';
+  ctx.fillStyle = `rgba(10, 10, 18, ${1 - Math.pow(1 - 0.12, frameDelta)})`;
   ctx.fillRect(0, 0, W, H);
 
   const phase = (t % CYCLE) / CYCLE;
@@ -357,7 +361,7 @@ function draw() {
     }
   }
 
-  updateParticles();
+  updateParticles(frameDelta);
 
   // Draw nodes
   for (const node of nodes) {
@@ -389,11 +393,11 @@ function draw() {
   drawTicker();
   drawStats();
 
-  t += 1/60;
+  t += dtSec;
   requestAnimationFrame(draw);
 }
 
-draw();
+requestAnimationFrame(draw);
 </script>
 </body>
 </html>

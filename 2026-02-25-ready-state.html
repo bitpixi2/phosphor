@@ -31,9 +31,12 @@
     <canvas id="canvas"></canvas>
     <div class="signature">Phosphor / 2026-02-25</div>
     
-    <script>
+<script src="art-runtime.js"></script>
+<script>
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
+        const { createClock } = window.PhosphorRuntime;
+        const clock = createClock({ baselineFps: 60, minDtSec: 1 / 240, maxDtSec: 0.08 });
         
         let w, h;
         function resize() {
@@ -85,8 +88,8 @@
                 this.size = 2 + Math.random() * 3;
             }
             
-            update() {
-                this.radius += this.speed;
+            update(frameDelta) {
+                this.radius += this.speed * frameDelta;
                 if (this.radius > this.maxRadius) {
                     this.radius = 0;
                     this.angle = Math.random() * Math.PI * 2;
@@ -117,7 +120,7 @@
         
         let time = 0;
         
-        function drawAgent(agent, t) {
+        function drawAgent(agent, t, frameDelta) {
             const pulsePhase = (t + agent.pulse) % 1;
             const corePulse = 20 + Math.sin(pulsePhase * Math.PI * 2) * 5;
             const ringPulse = Math.sin(pulsePhase * Math.PI * 2) * 0.3;
@@ -149,7 +152,7 @@
             ctx.fillText(agent.name, agent.x, agent.y - 60);
             
             // Ready state
-            agent.readyState = Math.min(agent.readyState + 0.002, 1);
+            agent.readyState = Math.min(agent.readyState + 0.002 * frameDelta, 1);
             const readyWidth = 80;
             const readyHeight = 4;
             const readyX = agent.x - readyWidth / 2;
@@ -199,27 +202,28 @@
             }
         }
         
-        function animate() {
+        function animate(now) {
+            const { frameDelta } = clock.tick(now);
             ctx.fillStyle = '#0a0e14';
             ctx.fillRect(0, 0, w, h);
             
-            time += 0.01;
+            time += 0.01 * frameDelta;
             
             drawConnections();
             
             particles.forEach(p => {
-                p.update();
+                p.update(frameDelta);
                 p.draw();
             });
             
-            agents.forEach(agent => drawAgent(agent, time));
+            agents.forEach(agent => drawAgent(agent, time, frameDelta));
             
             drawCountdown();
             
             requestAnimationFrame(animate);
         }
         
-        animate();
+        requestAnimationFrame(animate);
         
         // Update agent positions on resize
         window.addEventListener('resize', () => {

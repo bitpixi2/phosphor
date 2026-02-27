@@ -22,6 +22,7 @@
 <body>
 <canvas id="c"></canvas>
 <div id="title">Signal & Noise<br>ClawdJob (Phosphor) for @bitpixi<br>2026</div>
+<script src="art-runtime.js"></script>
 <script>
 // Signal & Noise
 // A meditation on job searching — hundreds of postings flow past,
@@ -30,8 +31,8 @@
 
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
-const previewFrameSkip = 2; // keep full page and thumbnail pacing consistent
-let previewTick = 0;
+const { createClock, frameLerp, frameDecay, frameChance } = window.PhosphorRuntime;
+const clock = createClock({ baselineFps: 30, minDtSec: 1 / 240, maxDtSec: 0.08 });
 
 let W, H;
 function resize() {
@@ -61,24 +62,24 @@ class Particle {
     this.caughtTime = 0;
     this.trail = [];
   }
-  update() {
-    this.life++;
+  update(frameDelta) {
+    this.life += frameDelta;
     if (this.caught) {
-      this.caughtTime++;
-      this.size = Math.min(this.size + 0.15, 20);
-      this.opacity = Math.min(this.opacity + 0.02, 1);
+      this.caughtTime += frameDelta;
+      this.size = Math.min(this.size + 0.15 * frameDelta, 20);
+      this.opacity = Math.min(this.opacity + 0.02 * frameDelta, 1);
       // Pulse
       this.size += Math.sin(this.caughtTime * 0.1) * 0.3;
       if (this.caughtTime > 180) {
         // Launch upward — applied!
-        this.y -= 3;
-        this.opacity -= 0.008;
+        this.y -= 3 * frameDelta;
+        this.opacity -= 0.008 * frameDelta;
         if (this.opacity <= 0) this.reset();
       }
       return;
     }
-    this.y += this.speed;
-    this.x += this.drift + Math.sin(this.life * 0.02) * 0.3;
+    this.y += this.speed * frameDelta;
+    this.x += (this.drift + Math.sin(this.life * 0.02) * 0.3) * frameDelta;
 
     // Scanner detection zone
     if (this.isSignal && this.y > scanner.y - 30 && this.y < scanner.y + 30 &&
@@ -100,10 +101,10 @@ class Particle {
     if (this.y > H + 10 || this.x < -10 || this.x > W + 10) this.reset();
 
     // Trail for signals
-    if (this.isSignal) {
+    if (this.isSignal && frameChance(1, frameDelta)) {
       this.trail.push({ x: this.x, y: this.y, opacity: 0.6 });
       if (this.trail.length > 20) this.trail.shift();
-      this.trail.forEach(t => t.opacity *= 0.92);
+      this.trail.forEach(t => { t.opacity = frameDecay(t.opacity, 0.92, frameDelta); });
     }
   }
   draw() {
@@ -170,15 +171,15 @@ const scanner = {
     ctx.lineTo(this.x, this.y + 15);
     ctx.stroke();
 
-    if (this.pulseTime > 0) this.pulseTime--;
   },
-  update() {
+  update(frameDelta, elapsedSec) {
     // Slowly scan left and right
-    if (Math.random() < 0.01) {
+    if (frameChance(0.01, frameDelta)) {
       this.targetX = 100 + Math.random() * (W - 200);
     }
-    this.x += (this.targetX - this.x) * 0.01;
-    this.y = H * 0.6 + Math.sin(Date.now() * 0.0003) * 30;
+    this.x = frameLerp(this.x, this.targetX, 0.01, frameDelta);
+    this.y = H * 0.6 + Math.sin(elapsedSec * 0.3) * 30;
+    if (this.pulseTime > 0) this.pulseTime = Math.max(0, this.pulseTime - frameDelta);
   }
 };
 
@@ -189,29 +190,26 @@ const particles = Array.from({ length: 300 }, () => new Particle());
 let signalsCaught = 0;
 let noiseFiltered = 0;
 
-function animate() {
-  previewTick++;
-  if (previewTick % previewFrameSkip !== 0) {
-    requestAnimationFrame(animate);
-    return;
-  }
+function animate(now) {
+  const { frameDelta, elapsedSec } = clock.tick(now);
 
-  ctx.fillStyle = 'rgba(16, 20, 28, 0.1)';
+  const fadeAlpha = 1 - Math.pow(1 - 0.1, frameDelta);
+  ctx.fillStyle = `rgba(16, 20, 28, ${fadeAlpha})`;
   ctx.fillRect(0, 0, W, H);
 
-  scanner.update();
+  scanner.update(frameDelta, elapsedSec);
   scanner.draw();
 
   particles.forEach(p => {
-    p.update();
+    p.update(frameDelta);
     p.draw();
   });
 
   // Bursts
   bursts = bursts.filter(b => {
-    b.x += b.vx;
-    b.y += b.vy;
-    b.life--;
+    b.x += b.vx * frameDelta;
+    b.y += b.vy * frameDelta;
+    b.life -= frameDelta;
     const alpha = b.life / b.maxLife;
     ctx.beginPath();
     ctx.arc(b.x, b.y, 2 * alpha, 0, Math.PI * 2);
@@ -226,7 +224,7 @@ function animate() {
   requestAnimationFrame(animate);
 }
 
-animate();
+requestAnimationFrame(animate);
 </script>
 </body>
 </html>

@@ -54,9 +54,12 @@
         — Phosphor, 23 February 2026
     </div>
 
-    <script>
+<script src="art-runtime.js"></script>
+<script>
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
+        const { createClock } = window.PhosphorRuntime;
+        const clock = createClock({ baselineFps: 60, minDtSec: 1 / 240, maxDtSec: 0.08 });
         
         let width = canvas.width = window.innerWidth;
         let height = canvas.height = window.innerHeight;
@@ -82,10 +85,10 @@
                 this.pulsePhase = Math.random() * Math.PI * 2;
             }
             
-            update(time) {
-                this.phase += this.frequency;
-                this.scanPos = (this.scanPos + this.scanSpeed) % (width + 200);
-                this.pulsePhase += 0.03;
+            update(time, frameDelta) {
+                this.phase += this.frequency * frameDelta;
+                this.scanPos = (this.scanPos + this.scanSpeed * frameDelta) % (width + 200);
+                this.pulsePhase += 0.03 * frameDelta;
             }
             
             draw(time) {
@@ -137,14 +140,15 @@
         const waves = Array.from({ length: WAVE_COUNT }, (_, i) => new Wave(i));
         
         let time = 0;
-        function animate() {
-            ctx.fillStyle = 'rgba(10, 10, 10, 0.15)';
+        function animate(now) {
+            const { frameDelta } = clock.tick(now);
+            ctx.fillStyle = `rgba(10, 10, 10, ${1 - Math.pow(1 - 0.15, frameDelta)})`;
             ctx.fillRect(0, 0, width, height);
             
-            time++;
+            time += frameDelta;
             
             waves.forEach(wave => {
-                wave.update(time);
+                wave.update(time, frameDelta);
                 wave.draw(time);
             });
             
@@ -162,7 +166,7 @@
             requestAnimationFrame(animate);
         }
         
-        animate();
+        requestAnimationFrame(animate);
     </script>
 </body>
 </html>
