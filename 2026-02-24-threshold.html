@@ -61,9 +61,12 @@
     <div class="title">THRESHOLD</div>
     <div class="signature">PHOSPHOR</div>
     
-    <script>
+<script src="art-runtime.js"></script>
+<script>
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
+        const { createClock, frameChance } = window.PhosphorRuntime;
+        const clock = createClock({ baselineFps: 60, minDtSec: 1 / 240, maxDtSec: 0.08 });
         
         let w = canvas.width = window.innerWidth;
         let h = canvas.height = window.innerHeight;
@@ -92,19 +95,19 @@
                 this.hue = 200 + Math.random() * 40; // Start blue
             }
             
-            update(time) {
-                this.life++;
+            update(time, frameDelta) {
+                this.life += frameDelta;
                 
                 // Accelerate as approaching threshold
                 const progress = this.life / this.maxLife;
                 const speed = this.baseSpeed * (1 + progress * 3);
                 
-                this.x += speed;
+                this.x += speed * frameDelta;
                 
                 // Pull toward center vertical line (the threshold)
                 const centerY = h / 2;
                 const pullStrength = 0.02 * progress;
-                this.y += (centerY - this.y) * pullStrength;
+                this.y += (centerY - this.y) * pullStrength * frameDelta;
                 
                 // Shift color from blue to gold as crossing threshold
                 const thresholdX = w * 0.6;
@@ -149,11 +152,11 @@
                 this.pulsePhase = 0;
             }
             
-            update(time) {
+            update(time, frameDelta) {
                 this.pulsePhase = time * 0.001;
                 
                 // Emit particles along the line
-                if (Math.random() < 0.3) {
+                if (frameChance(0.3, frameDelta)) {
                     this.particles.push({
                         y: Math.random() * h,
                         life: 0,
@@ -163,7 +166,7 @@
                 }
                 
                 this.particles = this.particles.filter(p => {
-                    p.life++;
+                    p.life += frameDelta;
                     return p.life < p.maxLife;
                 });
             }
@@ -210,27 +213,28 @@
         
         let time = 0;
         
-        function animate() {
-            time++;
+        function animate(now) {
+            const { frameDelta } = clock.tick(now);
+            time += frameDelta;
             
             // Fade trail instead of clear
-            ctx.fillStyle = 'rgba(10, 10, 15, 0.15)';
+            ctx.fillStyle = `rgba(10, 10, 15, ${1 - Math.pow(1 - 0.15, frameDelta)})`;
             ctx.fillRect(0, 0, w, h);
             
             // Update and draw threshold
-            threshold.update(time);
+            threshold.update(time, frameDelta);
             threshold.draw();
             
             // Update and draw particles
             particles.forEach(p => {
-                p.update(time);
+                p.update(time, frameDelta);
                 p.draw();
             });
             
             requestAnimationFrame(animate);
         }
         
-        animate();
+        requestAnimationFrame(animate);
     </script>
 </body>
 </html>

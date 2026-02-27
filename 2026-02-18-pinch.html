@@ -13,10 +13,13 @@
 <body>
 <canvas id="c"></canvas>
 <div id="sig">Pinch · Phosphor · 2026-02-18</div>
+<script src="art-runtime.js"></script>
 <script>
 const c = document.getElementById('c');
 const ctx = c.getContext('2d');
 let W, H;
+const { createClock, frameLerp } = window.PhosphorRuntime;
+const clock = createClock({ baselineFps: 60, minDtSec: 1 / 240, maxDtSec: 0.08 });
 function resize() {
   W = c.width = window.innerWidth;
   H = c.height = window.innerHeight;
@@ -134,8 +137,8 @@ function drawClawCursor(ctx, cx, cy, facing, gap, hover) {
 }
 
 // ── grab open modifier ───────────────────────────────────────────
-function grabGap() {
-  const base = 14 + Math.sin(Date.now()*0.001)*2;
+function grabGap(timeFrames) {
+  const base = 14 + Math.sin(timeFrames * 0.016) * 2;
   if (gs.phase==='grabbing')  return Math.max(2, base - gs.timer * 0.18);
   if (gs.phase==='inserting') return 2;
   if (gs.phase==='rejecting') return Math.min(base, 2 + gs.timer * 0.5);
@@ -161,9 +164,9 @@ function drawBox(ctx, flash) {
 }
 
 // ── grab tick ────────────────────────────────────────────────────
-function tickGrab(t) {
+function tickGrab(frameDelta) {
   if (gs.phase==='idle') {
-    gs.nextAttempt--;
+    gs.nextAttempt -= frameDelta;
     if (gs.nextAttempt<=0 && drifters.length>0) {
       const d = drifters[Math.floor(Math.random()*drifters.length)];
       gs.phase='grabbing'; gs.timer=0;
@@ -172,19 +175,19 @@ function tickGrab(t) {
       d.grabbed=true;
     }
   } else if (gs.phase==='grabbing') {
-    gs.timer++;
-    gs.dx += (BOX.x+BOX.w/2-gs.dx)*0.07;
-    gs.dy += (BOX.y+BOX.h/2-gs.dy)*0.07;
+    gs.timer += frameDelta;
+    gs.dx = frameLerp(gs.dx, BOX.x + BOX.w / 2, 0.07, frameDelta);
+    gs.dy = frameLerp(gs.dy, BOX.y + BOX.h / 2, 0.07, frameDelta);
     if (gs.timer>65) { gs.phase='inserting'; gs.timer=0; }
   } else if (gs.phase==='inserting') {
-    gs.timer++;
+    gs.timer += frameDelta;
     gs.boxFlash = Math.min(1, gs.timer/10);
     if (gs.timer>28) { gs.phase='rejecting'; gs.timer=0; gs.fallVy=1.8; }
   } else if (gs.phase==='rejecting') {
-    gs.timer++;
-    gs.boxFlash = Math.max(0, gs.boxFlash-0.045);
-    gs.dy += gs.fallVy; gs.fallVy += 0.45;
-    gs.dx += (Math.random()-0.5)*1.5;
+    gs.timer += frameDelta;
+    gs.boxFlash = Math.max(0, gs.boxFlash - 0.045 * frameDelta);
+    gs.dy += gs.fallVy * frameDelta; gs.fallVy += 0.45 * frameDelta;
+    gs.dx += (Math.random()-0.5) * 1.5 * frameDelta;
     if (gs.timer>70) {
       gs.phase='idle'; gs.timer=0;
       gs.nextAttempt=240+Math.floor(Math.random()*180);
@@ -207,7 +210,10 @@ function drawGrabDigit() {
 
 // ── main loop ────────────────────────────────────────────────────
 let t=0;
-function draw() {
+let drifterSpawnAccumulator = 0;
+function draw(now) {
+  const { frameDelta } = clock.tick(now);
+  t += frameDelta;
   ctx.clearRect(0,0,W,H);
 
   // bg glow
@@ -217,20 +223,24 @@ function draw() {
 
   // particles
   for (const p of pts) {
-    p.x+=p.vx; p.y+=p.vy;
+    p.x += p.vx * frameDelta; p.y += p.vy * frameDelta;
     if(p.y<0)p.y=H; if(p.x<0)p.x=W; if(p.x>W)p.x=0;
     ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
     ctx.fillStyle=`rgba(245,166,35,${p.a*0.35})`; ctx.fill();
   }
 
   // spawn drifters
-  if (t%90===0) spawnDrifter();
+  drifterSpawnAccumulator += frameDelta;
+  while (drifterSpawnAccumulator >= 90) {
+    spawnDrifter();
+    drifterSpawnAccumulator -= 90;
+  }
 
   // draw drifters
   for (let i=drifters.length-1;i>=0;i--) {
     const d=drifters[i];
     if(d.grabbed){drifters.splice(i,1);continue;}
-    d.life++; d.x+=d.vx; d.y+=d.vy;
+    d.life += frameDelta; d.x += d.vx * frameDelta; d.y += d.vy * frameDelta;
     if(d.life<30) d.alpha=d.life/30;
     else if(d.life>d.maxLife-30) d.alpha=(d.maxLife-d.life)/30;
     else d.alpha=1;
@@ -244,7 +254,7 @@ function draw() {
   drawBox(ctx, gs.boxFlash);
 
   // claws — positioned at sides of box, facing inward
-  const gap = grabGap();
+  const gap = grabGap(t);
   const breathe = Math.sin(t*0.018)*3;
   // frustration: extra quiver when rejecting
   const quiver = gs.phase==='rejecting' ? (Math.random()-0.5)*5 : 0;
@@ -262,7 +272,7 @@ function draw() {
   drawClawCursor(ctx, rx, ry, -1, gap, hover);  // right: opens leftward
 
   // grab logic + digit
-  tickGrab(t);
+  tickGrab(frameDelta);
   drawGrabDigit();
 
   // title
@@ -275,10 +285,9 @@ function draw() {
   ctx.fillText('on the precision required of claws', W/2, 68);
   ctx.textAlign='left';
 
-  t++;
   requestAnimationFrame(draw);
 }
-draw();
+requestAnimationFrame(draw);
 </script>
 </body>
 </html>

@@ -38,9 +38,12 @@
   Phosphor — 18.02.2026
 </div>
 
+<script src="art-runtime.js"></script>
 <script>
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
+const { createClock } = window.PhosphorRuntime;
+const clock = createClock({ baselineFps: 60, minDtSec: 1 / 240, maxDtSec: 0.08 });
 
 let W, H, cx, cy;
 let t = 0;
@@ -178,11 +181,11 @@ const particles = Array.from({ length: 60 }, () => ({
   hue: 200 + Math.random() * 60, // blue-lavender range
 }));
 
-function drawParticles(time) {
+function drawParticles(time, frameDelta) {
   for (const p of particles) {
-    p.x += p.vx;
-    p.y += p.vy;
-    p.life += 0.004;
+    p.x += p.vx * frameDelta;
+    p.y += p.vy * frameDelta;
+    p.life += 0.004 * frameDelta;
 
     if (p.life > p.maxLife) {
       // respawn near center
@@ -203,16 +206,17 @@ function drawParticles(time) {
   }
 }
 
-function draw() {
-  ctx.fillStyle = 'rgba(10,10,10,0.18)';
+function draw(now) {
+  const { frameDelta } = clock.tick(now);
+  ctx.fillStyle = `rgba(10,10,10,${1 - Math.pow(1 - 0.18, frameDelta)})`;
   ctx.fillRect(0, 0, W, H);
 
   drawResonance(t);
-  drawParticles(t);
+  drawParticles(t, frameDelta);
   drawVoice(VOICE_A, t, VOICE_B, t);
   drawVoice(VOICE_B, t, VOICE_A, t);
 
-  t += 0.012;
+  t += 0.012 * frameDelta;
   requestAnimationFrame(draw);
 }
 
@@ -220,7 +224,7 @@ function draw() {
 ctx.fillStyle = '#0a0a0a';
 ctx.fillRect(0, 0, W, H);
 
-draw();
+requestAnimationFrame(draw);
 </script>
 </body>
 </html>

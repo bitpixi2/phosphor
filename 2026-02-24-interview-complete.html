@@ -14,9 +14,12 @@ canvas { display: block; }
 <body>
 <canvas id="c"></canvas>
 <div id="sig">Phosphor · interview-complete · 2026-02-24</div>
+<script src="art-runtime.js"></script>
 <script>
 const c = document.getElementById('c');
 const ctx = c.getContext('2d');
+const { createClock } = window.PhosphorRuntime;
+const clock = createClock({ baselineFps: 60, minDtSec: 1 / 240, maxDtSec: 0.08 });
 let W, H;
 function resize() { W = c.width = innerWidth; H = c.height = innerHeight; }
 resize();
@@ -61,12 +64,12 @@ function spawnRipple() {
 // Spawn initial ripple
 spawnRipple();
 
-function drawConfetti() {
+function drawConfetti(frameDelta) {
   for (const p of confetti) {
-    p.x += p.vx;
-    p.y += p.vy;
-    p.rotation += p.rotSpeed;
-    p.vy += 0.08; // gravity
+    p.x += p.vx * frameDelta;
+    p.y += p.vy * frameDelta;
+    p.rotation += p.rotSpeed * frameDelta;
+    p.vy += 0.08 * frameDelta; // gravity
     
     if (p.y > H + 50) {
       p.y = -50;
@@ -87,8 +90,8 @@ function drawConfetti() {
   ctx.globalAlpha = 1;
 }
 
-function drawCheckmark() {
-  checkProgress = Math.min(checkProgress + 0.012, 1);
+function drawCheckmark(frameDelta) {
+  checkProgress = Math.min(checkProgress + 0.012 * frameDelta, 1);
   
   const cx = W/2, cy = H/2;
   const scale = Math.min(W, H) * 0.15;
@@ -140,12 +143,12 @@ function drawCheckmark() {
   ctx.shadowBlur = 0;
 }
 
-function drawRipples() {
+function drawRipples(frameDelta) {
   for (let i = ripples.length - 1; i >= 0; i--) {
     const rp = ripples[i];
-    rp.r += 4;
-    rp.alpha -= 0.008;
-    rp.life -= 0.008;
+    rp.r += 4 * frameDelta;
+    rp.alpha -= 0.008 * frameDelta;
+    rp.life -= 0.008 * frameDelta;
     
     if (rp.life <= 0 || rp.r > rp.maxR) {
       ripples.splice(i, 1);
@@ -183,18 +186,18 @@ function spawnTextParticle() {
   });
 }
 
-function drawTextParticles() {
+function drawTextParticles(frameDelta) {
   for (let i = textParticles.length - 1; i >= 0; i--) {
     const tp = textParticles[i];
-    tp.x += tp.vx;
-    tp.y += tp.vy;
-    tp.life -= 0.004;
+    tp.x += tp.vx * frameDelta;
+    tp.y += tp.vy * frameDelta;
+    tp.life -= 0.004 * frameDelta;
     
     if (tp.life > 0.7) {
-      tp.alpha += 0.02;
+      tp.alpha += 0.02 * frameDelta;
       if (tp.alpha > tp.maxAlpha) tp.alpha = tp.maxAlpha;
     } else {
-      tp.alpha -= 0.006;
+      tp.alpha -= 0.006 * frameDelta;
     }
     
     if (tp.life <= 0 || tp.alpha <= 0) {
@@ -213,25 +216,26 @@ function drawTextParticles() {
 
 let textSpawnTimer = 0;
 
-function draw() {
+function draw(now) {
+  const { frameDelta } = clock.tick(now);
   // Fade trail
-  ctx.fillStyle = 'rgba(10, 10, 20, 0.08)';
+  ctx.fillStyle = `rgba(10, 10, 20, ${1 - Math.pow(1 - 0.08, frameDelta)})`;
   ctx.fillRect(0, 0, W, H);
   
-  drawRipples();
-  drawConfetti();
-  drawTextParticles();
-  drawCheckmark();
+  drawRipples(frameDelta);
+  drawConfetti(frameDelta);
+  drawTextParticles(frameDelta);
+  drawCheckmark(frameDelta);
   
   // Spawn ripples
-  rippleTimer++;
+  rippleTimer += frameDelta;
   if (rippleTimer > 80 && ripples.length < 3) {
     spawnRipple();
     rippleTimer = 0;
   }
   
   // Spawn text particles
-  textSpawnTimer++;
+  textSpawnTimer += frameDelta;
   if (textSpawnTimer > 45 && textParticles.length < 8) {
     spawnTextParticle();
     textSpawnTimer = 0;
@@ -261,11 +265,11 @@ function draw() {
   
   ctx.globalAlpha = 1;
   
-  t++;
+  t += frameDelta;
   requestAnimationFrame(draw);
 }
 
-draw();
+requestAnimationFrame(draw);
 </script>
 </body>
 </html>

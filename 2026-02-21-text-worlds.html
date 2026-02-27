@@ -19,9 +19,12 @@ canvas { display: block; }
 <body>
 <canvas id="c"></canvas>
 <div id="sig">PHOSPHOR · 2026-02-21 · text worlds</div>
+<script src="art-runtime.js"></script>
 <script>
 const c = document.getElementById('c');
 const ctx = c.getContext('2d');
+const { createClock } = window.PhosphorRuntime;
+const clock = createClock({ baselineFps: 60, minDtSec: 1 / 240, maxDtSec: 0.08 });
 let W, H;
 
 function resize() {
@@ -105,12 +108,14 @@ for (let i = 0; i < 5; i++) {
 }
 
 let frame = 0;
+let scanlineAccumulator = 0;
 
-function draw() {
-  ctx.fillStyle = 'rgba(10,10,10,0.08)';
+function draw(now) {
+  const { frameDelta } = clock.tick(now);
+  frame += frameDelta;
+
+  ctx.fillStyle = `rgba(10,10,10,${1 - Math.pow(1 - 0.08, frameDelta)})`;
   ctx.fillRect(0, 0, W, H);
-
-  frame++;
 
   // Draw connections
   connections.forEach(([a, b]) => {
@@ -125,7 +130,7 @@ function draw() {
 
   // Draw rooms
   rooms.forEach((r, i) => {
-    r.pulse += r.speed;
+    r.pulse += r.speed * frameDelta;
     const glow = 0.3 + 0.2 * Math.sin(r.pulse);
 
     // Room box
@@ -153,7 +158,7 @@ function draw() {
     const conn = connections[agent.connIdx];
     const ra = rooms[conn[0]], rb = rooms[conn[1]];
 
-    agent.t += agent.speed * agent.dir;
+    agent.t += agent.speed * agent.dir * frameDelta;
 
     if (agent.t > 1 || agent.t < 0) {
       // Arrived at a room — pick new connection
@@ -183,7 +188,7 @@ function draw() {
 
     // Draw trail
     agent.trail.forEach((p, i) => {
-      p.age++;
+      p.age += frameDelta;
       const a = 1 - p.age / 25;
       if (a > 0) {
         ctx.beginPath();
@@ -204,7 +209,7 @@ function draw() {
   fragments.forEach(f => {
     if (frame < f.delay) return;
 
-    f.life++;
+    f.life += frameDelta;
     if (f.life > f.maxLife) {
       f.text = murmurs[Math.floor(Math.random() * murmurs.length)];
       f.x = Math.random() * W;
@@ -218,8 +223,8 @@ function draw() {
     const fadeOut = Math.max(1 - (f.life - f.maxLife + 40) / 40, 0);
     f.alpha = Math.min(fadeIn, fadeOut) * 0.45;
 
-    f.y += f.drift;
-    f.x += Math.sin(f.life * 0.01) * 0.2;
+    f.y += f.drift * frameDelta;
+    f.x += Math.sin(f.life * 0.01) * 0.2 * frameDelta;
 
     ctx.font = `${f.fontSize}px Courier New`;
     ctx.fillStyle = `rgba(140, 200, 140, ${f.alpha})`;
@@ -228,7 +233,9 @@ function draw() {
   });
 
   // Scanline effect
-  if (frame % 3 === 0) {
+  scanlineAccumulator += frameDelta;
+  if (scanlineAccumulator >= 3) {
+    scanlineAccumulator -= 3;
     const sy = (frame * 2) % H;
     ctx.fillStyle = 'rgba(0,255,0,0.015)';
     ctx.fillRect(0, sy, W, 2);
@@ -237,7 +244,7 @@ function draw() {
   requestAnimationFrame(draw);
 }
 
-draw();
+requestAnimationFrame(draw);
 </script>
 </body>
 </html>

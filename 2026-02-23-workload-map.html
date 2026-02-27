@@ -14,9 +14,12 @@ canvas { display: block; }
 <body>
 <canvas id="c"></canvas>
 <div id="sig">Phosphor · workload-map · 2026-02-23</div>
+<script src="art-runtime.js"></script>
 <script>
 const c = document.getElementById('c');
 const ctx = c.getContext('2d');
+const { createClock } = window.PhosphorRuntime;
+const clock = createClock({ baselineFps: 60, minDtSec: 1 / 240, maxDtSec: 0.08 });
 let W, H;
 function resize() { W = c.width = innerWidth; H = c.height = innerHeight; layout(); }
 
@@ -175,6 +178,8 @@ c.addEventListener('touchend', e => { onUp(); e.preventDefault(); }, { passive: 
 c.addEventListener('touchcancel', onUp);
 
 let t = 0;
+let frameDeltaCurrent = 1;
+let edgeSpawnAccumulator = 0;
 
 const particles = [];
 function spawnEdgeParticle() {
@@ -186,7 +191,7 @@ function spawnEdgeParticle() {
 function drawParticles() {
   for (let i = particles.length - 1; i >= 0; i--) {
     const p = particles[i];
-    p.p += p.speed;
+    p.p += p.speed * frameDeltaCurrent;
     if (p.p > 1) { particles.splice(i, 1); continue; }
     const x = p.edge.from.x + (p.edge.to.x - p.edge.from.x) * p.p;
     const y = p.edge.from.y + (p.edge.to.y - p.edge.from.y) * p.p;
@@ -203,8 +208,8 @@ function drawParticles() {
 function breathe() {
   nodes.forEach(n => {
     if (n._dragging) return;
-    n.x += Math.sin(t * 0.01 + n.x * 0.005) * 0.2;
-    n.y += Math.cos(t * 0.012 + n.y * 0.005) * 0.2;
+    n.x += Math.sin(t * 0.01 + n.x * 0.005) * 0.2 * frameDeltaCurrent;
+    n.y += Math.cos(t * 0.012 + n.y * 0.005) * 0.2 * frameDeltaCurrent;
   });
 }
 
@@ -339,13 +344,20 @@ function scanlines() {
   ctx.globalAlpha = 1;
 }
 
-function draw() {
-  ctx.fillStyle = 'rgba(6, 6, 12, 0.18)';
+function draw(now) {
+  const { frameDelta } = clock.tick(now);
+  frameDeltaCurrent = frameDelta;
+  t += frameDelta;
+  ctx.fillStyle = `rgba(6, 6, 12, ${1 - Math.pow(1 - 0.18, frameDelta)})`;
   ctx.fillRect(0, 0, W, H);
 
   breathe();
   drawEdges();
-  if (t % 3 === 0) spawnEdgeParticle();
+  edgeSpawnAccumulator += frameDelta;
+  if (edgeSpawnAccumulator >= 3) {
+    edgeSpawnAccumulator -= 3;
+    spawnEdgeParticle();
+  }
   drawParticles();
 
   // Draw order: items → hubs → center, dragged node always on top
@@ -373,11 +385,10 @@ function draw() {
   ctx.fillText('"she takes on too much. forgets to eat."', W/2, 38);
   ctx.globalAlpha = 1;
 
-  t++;
   requestAnimationFrame(draw);
 }
 
-draw();
+requestAnimationFrame(draw);
 </script>
 </body>
 </html>

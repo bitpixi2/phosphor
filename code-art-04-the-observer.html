@@ -68,6 +68,7 @@
 <div id="poem"></div>
 <div id="whisper"></div>
 <div id="title">The Observer<br>ClawdJob (Phosphor) for @bitpixi<br>2026</div>
+<script src="art-runtime.js"></script>
 <script>
 // The Observer
 // A poem that watches you. It responds to your mouse movement,
@@ -78,8 +79,8 @@ const canvas = document.getElementById('trail');
 const ctx = canvas.getContext('2d');
 const poemEl = document.getElementById('poem');
 const whisperEl = document.getElementById('whisper');
-const previewFrameSkip = 2; // keep full page and thumbnail pacing consistent
-let previewTick = 0;
+const { createClock, frameLerp, frameDecay, frameChance } = window.PhosphorRuntime;
+const clock = createClock({ baselineFps: 30, minDtSec: 1 / 240, maxDtSec: 0.08 });
 
 let W, H;
 function resize() {
@@ -283,9 +284,9 @@ function selectPoem() {
   }
 }
 
-function renderPoem() {
+function renderPoem(frameDelta) {
   const lines = layers[currentPoem];
-  revealTimer++;
+  revealTimer += frameDelta;
 
   // Reveal speed based on behavior.
   // Full-page reading is slower than before, and previews are slowed further.
@@ -307,19 +308,19 @@ function renderPoem() {
     const isNewest = i === activeLineStates.length - 1;
     const targetGlow = attentionLevel > 0.6 && isNewest ? 1 : 0;
 
-    state.alpha = lerp(state.alpha, targetAlpha, 0.11);
-    state.offsetY = lerp(state.offsetY, targetOffsetY, 0.1);
-    state.brightness = lerp(state.brightness, targetBrightness, 0.09);
-    state.glow = lerp(state.glow, targetGlow, 0.11);
+    state.alpha = frameLerp(state.alpha, targetAlpha, 0.11, frameDelta);
+    state.offsetY = frameLerp(state.offsetY, targetOffsetY, 0.1, frameDelta);
+    state.brightness = frameLerp(state.brightness, targetBrightness, 0.09, frameDelta);
+    state.glow = frameLerp(state.glow, targetGlow, 0.11, frameDelta);
     styleLine(state);
   });
 
   for (let i = fadingLineStates.length - 1; i >= 0; i--) {
     const state = fadingLineStates[i];
-    state.alpha = lerp(state.alpha, 0, 0.12);
-    state.offsetY = lerp(state.offsetY, state.fadeTargetOffsetY, 0.1);
-    state.brightness = lerp(state.brightness, 20, 0.06);
-    state.glow = lerp(state.glow, 0, 0.14);
+    state.alpha = frameLerp(state.alpha, 0, 0.12, frameDelta);
+    state.offsetY = frameLerp(state.offsetY, state.fadeTargetOffsetY, 0.1, frameDelta);
+    state.brightness = frameLerp(state.brightness, 20, 0.06, frameDelta);
+    state.glow = frameLerp(state.glow, 0, 0.14, frameDelta);
     styleLine(state);
 
     if (state.alpha < 0.02) {
@@ -331,22 +332,32 @@ function renderPoem() {
 
 // Whisper — subtle messages based on behavior
 function updateWhisper() {
-  if (timeOnPage === 120) whisperEl.textContent = 'i see you';
-  else if (stillness === 300) whisperEl.textContent = 'you stopped';
-  else if (totalDistance > 10000 && !whisperEl.dataset.far) {
+  if (!whisperEl.dataset.see && timeOnPage >= 120) {
+    whisperEl.textContent = 'i see you';
+    whisperEl.dataset.see = '1';
+  } else if (!whisperEl.dataset.stopped && stillness >= 300) {
+    whisperEl.textContent = 'you stopped';
+    whisperEl.dataset.stopped = '1';
+  } else if (totalDistance > 10000 && !whisperEl.dataset.far) {
     whisperEl.textContent = 'you have traveled far across this page';
     whisperEl.dataset.far = '1';
-  } else if (timeOnPage === 900) whisperEl.textContent = 'still here?';
-  else if (timeOnPage === 1800) whisperEl.textContent = 'thank you for staying';
+  } else if (!whisperEl.dataset.stillHere && timeOnPage >= 900) {
+    whisperEl.textContent = 'still here?';
+    whisperEl.dataset.stillHere = '1';
+  } else if (!whisperEl.dataset.thanks && timeOnPage >= 1800) {
+    whisperEl.textContent = 'thank you for staying';
+    whisperEl.dataset.thanks = '1';
+  }
 }
 
 // Mouse trail visualization
 const trails = [];
-function drawTrails() {
-  ctx.fillStyle = 'rgba(16, 20, 28, 0.08)';
+function drawTrails(frameDelta) {
+  const fadeAlpha = 1 - Math.pow(1 - 0.08, frameDelta);
+  ctx.fillStyle = `rgba(16, 20, 28, ${fadeAlpha})`;
   ctx.fillRect(0, 0, W, H);
 
-  if (hasMovedMouse) {
+  if (hasMovedMouse && frameChance(1, frameDelta)) {
     trails.push({
       x: mouseX, y: mouseY,
       life: 80,
@@ -358,7 +369,7 @@ function drawTrails() {
   if (trails.length > 200) trails.splice(0, trails.length - 200);
 
   trails.forEach((t, i) => {
-    t.life--;
+    t.life -= frameDelta;
     const a = (t.life / t.maxLife) * 0.15;
     const hue = 200 + attentionLevel * 60;
     ctx.beginPath();
@@ -394,33 +405,28 @@ document.addEventListener('mousemove', e => {
   prevAngle = newAngle;
 });
 
-function animate() {
-  previewTick++;
-  if (previewTick % previewFrameSkip !== 0) {
-    requestAnimationFrame(animate);
-    return;
-  }
-
-  timeOnPage++;
-  stillness++;
+function animate(now) {
+  const { frameDelta } = clock.tick(now);
+  timeOnPage += frameDelta;
+  stillness += frameDelta;
 
   // Calculate behavioral metrics
-  rushLevel = Math.min(1, rushLevel * 0.99 + (speed > 15 ? 0.02 : -0.005));
-  attentionLevel = Math.min(1, attentionLevel * 0.998 + (stillness > 30 ? 0.003 : -0.001));
-  if (speed < 2 && hasMovedMouse) attentionLevel = Math.min(1, attentionLevel + 0.001);
+  rushLevel = clamp(frameDecay(rushLevel, 0.99, frameDelta) + (speed > 15 ? 0.02 : -0.005) * frameDelta, 0, 1);
+  attentionLevel = clamp(frameDecay(attentionLevel, 0.998, frameDelta) + (stillness > 30 ? 0.003 : -0.001) * frameDelta, 0, 1);
+  if (speed < 2 && hasMovedMouse) attentionLevel = Math.min(1, attentionLevel + 0.001 * frameDelta);
 
   selectPoem();
-  renderPoem();
+  renderPoem(frameDelta);
   updateWhisper();
-  drawTrails();
+  drawTrails(frameDelta);
 
   // Smooths behavior-dependent reveal speed changes between mouse events.
-  speed *= 0.9;
+  speed = frameDecay(speed, 0.9, frameDelta);
 
   requestAnimationFrame(animate);
 }
 
-animate();
+requestAnimationFrame(animate);
 </script>
 </body>
 </html>

@@ -33,6 +33,7 @@
 <canvas id="c"></canvas>
 <div id="sync">synchronizing...</div>
 <div id="title">The Handshake<br>ClawdJob (Phosphor) for @bitpixi<br>2026</div>
+<script src="art-runtime.js"></script>
 <script>
 // The Handshake
 // Two generative patterns — one representing the human, one the agent —
@@ -42,8 +43,8 @@
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
 const syncLabel = document.getElementById('sync');
-const previewFrameSkip = 2; // keep full page and thumbnail pacing consistent
-let previewTick = 0;
+const { createClock, frameLerp, frameDecay, frameChance } = window.PhosphorRuntime;
+const clock = createClock({ baselineFps: 30, minDtSec: 1 / 240, maxDtSec: 0.05 });
 const sharedAmpRatio = 0.1 + Math.random() * 0.06;
 let human = null;
 let agent = null;
@@ -86,14 +87,14 @@ class Pattern {
     this.particles = [];
   }
 
-  update(time, syncLevel) {
-    this.phase += this.phaseSpeed;
+  update(time, syncLevel, frameDelta) {
+    this.phase += this.phaseSpeed * frameDelta;
 
     // Slowly converge toward shared parameters
-    this.frequency += (this.targetFreq - this.frequency) * this.convergenceRate;
-    this.amplitude += (this.targetAmp - this.amplitude) * this.convergenceRate;
-    this.phaseSpeed += (this.targetPhaseSpeed - this.phaseSpeed) * this.convergenceRate;
-    this.chaos = Math.max(0, this.chaos - 0.0014);
+    this.frequency = frameLerp(this.frequency, this.targetFreq, this.convergenceRate, frameDelta);
+    this.amplitude = frameLerp(this.amplitude, this.targetAmp, this.convergenceRate, frameDelta);
+    this.phaseSpeed = frameLerp(this.phaseSpeed, this.targetPhaseSpeed, this.convergenceRate, frameDelta);
+    this.chaos = Math.max(0, this.chaos - 0.0014 * frameDelta);
 
     // Generate wave points
     this.points = [];
@@ -122,7 +123,7 @@ class Pattern {
     }
 
     // Emit particles at peaks
-    if (Math.random() < 0.1 + syncLevel * 0.2) {
+    if (frameChance(0.1 + syncLevel * 0.2, frameDelta)) {
       const idx = Math.floor(Math.random() * this.points.length);
       const p = this.points[idx];
       if (p) {
@@ -138,9 +139,9 @@ class Pattern {
     }
 
     this.particles = this.particles.filter(p => {
-      p.x += p.vx;
-      p.y += p.vy;
-      p.life--;
+      p.x += p.vx * frameDelta;
+      p.y += p.vy * frameDelta;
+      p.life -= frameDelta;
       return p.life > 0;
     });
   }
@@ -181,7 +182,7 @@ class Emergence {
     this.connections = [];
   }
 
-  update(human, agent, syncLevel) {
+  update(human, agent, syncLevel, time) {
     if (syncLevel < 0.5) {
       this.nodes = [];
       return;
@@ -206,7 +207,7 @@ class Emergence {
         this.nodes.push({
           x: mx, y: my,
           size: Math.max(0.2, sizeFactor * 4 * intensity),
-          pulse: Math.sin(Date.now() * 0.005 + i) * 0.5 + 0.5
+          pulse: Math.sin(time * 0.17 + i) * 0.5 + 0.5
         });
       }
     }
@@ -406,7 +407,6 @@ let bloomTime = 0;
 let wigglePhase = 0;
 let frozenHumanPoints = [];
 let frozenAgentPoints = [];
-let lastFrameTime = performance.now();
 const bloomDuration = 5.8;
 const emergenceCutoff = 0.84;
 const mindmap = new Mindmap();
@@ -485,8 +485,8 @@ function enterBloomMode() {
   syncLabel.style.color = 'rgba(140, 255, 210, 0.72)';
 }
 
-function drawSyncScene(dt) {
-  time++;
+function drawSyncScene(dt, frameDelta) {
+  time += frameDelta;
   ctx.fillStyle = 'rgba(16, 20, 28, 0.09)';
   ctx.fillRect(0, 0, W, H);
 
@@ -513,8 +513,8 @@ function drawSyncScene(dt) {
   mouseSpeed *= Math.pow(0.86, dt * 60);
   mouseEnergy *= Math.pow(0.9, dt * 60);
 
-  human.update(time, syncForMotion);
-  agent.update(time, syncForMotion);
+  human.update(time, syncForMotion, frameDelta);
+  agent.update(time, syncForMotion, frameDelta);
   const shapeSimilarity = calculateShapeSimilarity();
   const shapeBonus = Math.max(0, shapeSimilarity - 0.45) * 0.4;
   const syncTarget = Math.min(1, syncProgress + shapeBonus * (1 - syncProgress));
@@ -528,7 +528,7 @@ function drawSyncScene(dt) {
   }
   const syncLevel = syncDisplay;
 
-  if (syncLevel < emergenceCutoff) emergence.update(human, agent, syncLevel);
+  if (syncLevel < emergenceCutoff) emergence.update(human, agent, syncLevel, time);
 
   ctx.font = '10px Courier New';
   ctx.fillStyle = `hsla(220, 50%, 60%, ${0.24 + syncLevel * 0.12})`;
@@ -611,23 +611,16 @@ function drawMindmapScene(dt) {
 }
 
 function animate(now) {
-  previewTick++;
-  if (previewTick % previewFrameSkip !== 0) {
-    requestAnimationFrame(animate);
-    return;
-  }
+  const { dtSec: dt, frameDelta } = clock.tick(now);
 
-  const dt = Math.min(0.05, Math.max(0.001, (now - lastFrameTime) / 1000));
-  lastFrameTime = now;
-
-  if (sceneMode === 'sync') drawSyncScene(dt);
+  if (sceneMode === 'sync') drawSyncScene(dt, frameDelta);
   else if (sceneMode === 'bloom') drawBloomScene(dt);
   else drawMindmapScene(dt);
 
   requestAnimationFrame(animate);
 }
 
-animate(performance.now());
+requestAnimationFrame(animate);
 </script>
 </body>
 </html>

@@ -35,6 +35,7 @@
 <canvas id="c"></canvas>
 <div id="label">Compression<br>Phosphor — 18.02.2026</div>
 
+<script src="art-runtime.js"></script>
 <script>
 // Compression.
 //
@@ -60,6 +61,8 @@
 
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
+const { createClock, frameLerp } = window.PhosphorRuntime;
+const clock = createClock({ baselineFps: 60, minDtSec: 1 / 240, maxDtSec: 0.08 });
 
 let W, H, cx, cy;
 function resize() {
@@ -132,12 +135,12 @@ class Word {
     this.survived = Math.random() > 0.65; // some words "survive" compression
   }
 
-  update(t, phase, progress) {
+  update(t, phase, progress, frameDelta) {
     if (phase === 0) {
       // Gentle float
       this.x = this.homeX + Math.sin(t * this.speed + this.phase) * 8;
       this.y = this.homeY + Math.cos(t * this.speed * 0.7 + this.phase) * 6;
-      this.alpha += (this.targetAlpha - this.alpha) * 0.04;
+      this.alpha = frameLerp(this.alpha, this.targetAlpha, 0.04, frameDelta);
     } else if (phase === 1) {
       // Draw toward box
       const ease = Math.pow(progress, 1.8);
@@ -146,8 +149,8 @@ class Word {
       this.alpha = lerp(this.targetAlpha, this.survived ? 0.9 : 0.1, ease);
     } else if (phase === 2) {
       // Compressed — survivors glow, others dim
-      this.x += (this.compressX - this.x) * 0.1;
-      this.y += (this.compressY - this.y) * 0.1;
+      this.x = frameLerp(this.x, this.compressX, 0.1, frameDelta);
+      this.y = frameLerp(this.y, this.compressY, 0.1, frameDelta);
       const pulse = 0.5 + 0.5 * Math.sin(t * 1.5 + this.phase);
       this.alpha = this.survived
         ? 0.85 + pulse * 0.15
@@ -234,15 +237,17 @@ function drawGlow(phase, progress) {
   ctx.fill();
 }
 
-function loop() {
-  ctx.fillStyle = 'rgba(8,8,8,0.22)';
+function loop(now) {
+  const { frameDelta } = clock.tick(now);
+  ctx.fillStyle = `rgba(8,8,8,${1 - Math.pow(1 - 0.22, frameDelta)})`;
   ctx.fillRect(0, 0, W, H);
 
-  phaseTimer++;
-  const dur = PHASE_DURATION[phase];
-  if (phaseTimer >= dur) {
-    phaseTimer = 0;
+  phaseTimer += frameDelta;
+  let dur = PHASE_DURATION[phase];
+  while (phaseTimer >= dur) {
+    phaseTimer -= dur;
     phase = (phase + 1) % 4;
+    dur = PHASE_DURATION[phase];
   }
   const progress = phaseTimer / dur;
 
@@ -252,18 +257,18 @@ function loop() {
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
   for (const p of particles) {
-    p.update(t, phase, progress);
+    p.update(t, phase, progress, frameDelta);
     p.draw(ctx);
   }
 
   ctx.globalAlpha = 1;
-  t += 0.016;
+  t += 0.016 * frameDelta;
   requestAnimationFrame(loop);
 }
 
 ctx.fillStyle = '#080808';
 ctx.fillRect(0, 0, W, H);
-loop();
+requestAnimationFrame(loop);
 </script>
 </body>
 </html>
