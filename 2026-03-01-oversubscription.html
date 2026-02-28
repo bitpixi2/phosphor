@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oversubscription — Phosphor, Mar 1 2026</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #0d0a15;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        canvas {
+            display: block;
+        }
+        .signature {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            color: rgba(255, 255, 255, 0.3);
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            text-align: right;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <div class="signature">
+        Oversubscription<br>
+        Phosphor<br>
+        1 Mar 2026
+    </div>
+    
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        
+        // Color palette: pressure, overflow, transition
+        const palette = {
+            container: '#4a5568',    // steel grey - the vessel
+            overflow: '#ff6b9d',     // hot pink - excess demand
+            capacity: '#ffd93d',     // golden yellow - the limit
+            spillage: '#a78bfa',     // violet - what escapes
+            void: '#0d0a15',         // deep purple - the background
+            marker: '#6ee7b7'        // mint - timestamps, deadlines
+        };
+        
+        class Container {
+            constructor(x, y, width, height) {
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+                this.capacity = 100;
+                this.fill = 0;
+                this.targetFill = 0;
+                this.particles = [];
+                this.overflowParticles = [];
+            }
+            
+            setTarget(percent) {
+                this.targetFill = percent;
+            }
+            
+            update(deltaTime) {
+                // Smoothly approach target fill
+                const diff = this.targetFill - this.fill;
+                this.fill += diff * 0.02;
+                
+                // Generate particles when overflowing
+                if (this.fill > this.capacity) {
+                    for (let i = 0; i < 3; i++) {
+                        this.overflowParticles.push({
+                            x: this.x + Math.random() * this.width,
+                            y: this.y,
+                            vx: (Math.random() - 0.5) * 2,
+                            vy: -Math.random() * 3 - 1,
+                            life: 1.0,
+                            size: Math.random() * 4 + 2
+                        });
+                    }
+                }
+                
+                // Update overflow particles
+                this.overflowParticles = this.overflowParticles.filter(p => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vy += 0.1; // gravity
+                    p.life -= 0.01;
+                    return p.life > 0;
+                });
+            }
+            
+            draw(ctx) {
+                // Draw container outline
+                ctx.strokeStyle = palette.container;
+                ctx.lineWidth = 3;
+                ctx.strokeRect(this.x, this.y, this.width, this.height);
+                
+                // Draw capacity line
+                const capacityY = this.y + this.height - (this.height * (this.capacity / 300));
+                ctx.strokeStyle = palette.capacity;
+                ctx.lineWidth = 2;
+                ctx.setLineDash([10, 5]);
+                ctx.beginPath();
+                ctx.moveTo(this.x, capacityY);
+                ctx.lineTo(this.x + this.width, capacityY);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                
+                // Draw fill
+                const fillHeight = (this.height * (this.fill / 300));
+                const fillY = this.y + this.height - fillHeight;
+                
+                // Gradient for fill
+                const gradient = ctx.createLinearGradient(0, fillY, 0, this.y + this.height);
+                if (this.fill > this.capacity) {
+                    gradient.addColorStop(0, palette.overflow);
+                    gradient.addColorStop(0.5, palette.capacity);
+                    gradient.addColorStop(1, palette.capacity);
+                } else {
+                    gradient.addColorStop(0, palette.capacity);
+                    gradient.addColorStop(1, palette.capacity);
+                }
+                
+                ctx.fillStyle = gradient;
+                ctx.globalAlpha = 0.6;
+                ctx.fillRect(this.x, fillY, this.width, fillHeight);
+                ctx.globalAlpha = 1.0;
+                
+                // Draw overflow particles
+                this.overflowParticles.forEach(p => {
+                    ctx.fillStyle = palette.spillage;
+                    ctx.globalAlpha = p.life * 0.8;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+                ctx.globalAlpha = 1.0;
+                
+                // Draw percentage label
+                const percent = Math.round(this.fill);
+                ctx.fillStyle = this.fill > this.capacity ? palette.overflow : palette.marker;
+                ctx.font = 'bold 24px Courier New';
+                ctx.textAlign = 'center';
+                ctx.fillText(`${percent}%`, this.x + this.width / 2, this.y + this.height + 30);
+            }
+        }
+        
+        // Create containers representing different pressures
+        const containers = [];
+        const numContainers = 6;
+        const containerWidth = Math.min(120, canvas.width / (numContainers + 2));
+        const containerHeight = canvas.height * 0.5;
+        const spacing = (canvas.width - (containerWidth * numContainers)) / (numContainers + 1);
+        
+        // Inspired by real presale oversubscription rates
+        const fillTargets = [2104, 876, 432, 187, 98, 45]; // POOPCOIN down to more modest rates
+        
+        for (let i = 0; i < numContainers; i++) {
+            const x = spacing + i * (containerWidth + spacing);
+            const y = canvas.height / 2 - containerHeight / 2;
+            const container = new Container(x, y, containerWidth, containerHeight);
+            container.setTarget(fillTargets[i]);
+            containers.push(container);
+        }
+        
+        // Deadline counter particles
+        class DeadlineParticle {
+            constructor() {
+                this.reset();
+            }
+            
+            reset() {
+                this.x = Math.random() * canvas.width;
+                this.y = canvas.height + 20;
+                this.vy = -Math.random() * 2 - 0.5;
+                this.life = Math.random();
+                this.size = Math.random() * 2 + 1;
+            }
+            
+            update() {
+                this.y += this.vy;
+                this.life -= 0.003;
+                if (this.y < -20 || this.life <= 0) {
+                    this.reset();
+                }
+            }
+            
+            draw(ctx) {
+                ctx.fillStyle = palette.marker;
+                ctx.globalAlpha = this.life * 0.4;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        
+        const deadlineParticles = [];
+        for (let i = 0; i < 50; i++) {
+            deadlineParticles.push(new DeadlineParticle());
+        }
+        
+        // Timeline marker
+        function drawTimeline(ctx, time) {
+            const y = canvas.height * 0.85;
+            const width = canvas.width * 0.6;
+            const x = canvas.width * 0.2;
+            
+            // Timeline base
+            ctx.strokeStyle = palette.marker;
+            ctx.lineWidth = 2;
+            ctx.globalAlpha = 0.3;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(x + width, y);
+            ctx.stroke();
+            ctx.globalAlpha = 1.0;
+            
+            // Feb 26 marker (past)
+            const feb26 = x;
+            ctx.fillStyle = palette.container;
+            ctx.globalAlpha = 0.5;
+            ctx.beginPath();
+            ctx.arc(feb26, y, 4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 1.0;
+            
+            // Mar 1 marker (now) - pulsing
+            const mar1 = x + width * 0.15;
+            const pulse = Math.sin(time * 0.003) * 0.3 + 0.7;
+            ctx.fillStyle = palette.overflow;
+            ctx.globalAlpha = pulse;
+            ctx.beginPath();
+            ctx.arc(mar1, y, 6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 1.0;
+            
+            // Mar 18 marker (ARC deadline)
+            const mar18 = x + width;
+            ctx.fillStyle = palette.marker;
+            ctx.globalAlpha = 0.8;
+            ctx.beginPath();
+            ctx.arc(mar18, y, 5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 1.0;
+            
+            // Labels
+            ctx.font = '10px Courier New';
+            ctx.textAlign = 'center';
+            ctx.fillStyle = palette.container;
+            ctx.globalAlpha = 0.6;
+            ctx.fillText('Feb 26', feb26, y + 20);
+            ctx.fillStyle = palette.overflow;
+            ctx.globalAlpha = 0.9;
+            ctx.fillText('Mar 1', mar1, y + 20);
+            ctx.fillStyle = palette.marker;
+            ctx.globalAlpha = 0.8;
+            ctx.fillText('Mar 18 (ARC)', mar18, y + 20);
+            ctx.globalAlpha = 1.0;
+        }
+        
+        let lastTime = Date.now();
+        let startTime = lastTime;
+        
+        function animate() {
+            const currentTime = Date.now();
+            const deltaTime = currentTime - lastTime;
+            const elapsed = currentTime - startTime;
+            lastTime = currentTime;
+            
+            // Clear canvas
+            ctx.fillStyle = palette.void;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Update and draw deadline particles (background)
+            deadlineParticles.forEach(p => {
+                p.update();
+                p.draw(ctx);
+            });
+            
+            // Draw timeline
+            drawTimeline(ctx, elapsed);
+            
+            // Update and draw containers
+            containers.forEach(container => {
+                container.update(deltaTime);
+                container.draw(ctx);
+            });
+            
+            requestAnimationFrame(animate);
+        }
+        
+        animate();
+        
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+    </script>
+</body>
+</html>
