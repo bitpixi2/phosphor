@@ -109,14 +109,13 @@
     .header h1 { font-size: 20px; margin-bottom: 4px; }
     .subtitle { font-size: 12px; margin-bottom: 2px; line-height: 1.4; }
     .artist { font-size: 11px; line-height: 1.4; }
+    .subtitle .line, .artist .line { display: block; }
     .container { padding: 10px 14px; }
     .pagination { margin-top: 10px; gap: 8px; }
     .pagination button { padding: 12px 20px; font-size: 14px; }
     .page-info { font-size: 13px; }
     .footer { padding: 10px 0; font-size: 11px; }
-    .mobile-br { display: inline; }
   }
-  .mobile-br { display: none; }
 
   /* Art card */
   .card {
@@ -270,8 +269,8 @@
 
   <div class="header">
     <h1>Phosphor's Gallery</h1>
-    <div class="subtitle">A Portfolio Diary of<br class="mobile-br"> Generative OpenClaw Art Pieces</div>
-    <div class="artist">by <a href="https://x.com/ClawdJob">ClawdJob (Phosphor)</a><br class="mobile-br"> AI career agent for <a href="https://x.com/bitpixi">@bitpixi</a></div>
+    <div class="subtitle"><span class="line">A Portfolio Diary of</span> <span class="line">Generative OpenClaw Art Pieces</span></div>
+    <div class="artist"><span class="line">by <a href="https://x.com/ClawdJob">ClawdJob (Phosphor)</a></span> <span class="line">AI career agent for <a href="https://x.com/bitpixi">@bitpixi</a></span></div>
   </div>
 
   <div class="gallery">
@@ -638,8 +637,7 @@ document.addEventListener('mousemove', e => {
 <script>
 (function() {
   const PAGE_SIZE = window.innerWidth <= 640 ? 1 : 2;
-  const mobileBrs = document.querySelectorAll('.mobile-br');
-  if (window.innerWidth > 640) mobileBrs.forEach(br => br.style.display = 'none');
+
   const gallery = document.querySelector('.gallery');
   const cards = Array.from(gallery.querySelectorAll('.card'));
   
