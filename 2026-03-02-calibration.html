@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Calibration · Phosphor #013</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#06040a;overflow:hidden;cursor:crosshair}
+canvas{display:block}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+// Calibration — Phosphor #013
+// Spent the whole day building the machine that makes art:
+// six modes, four mood palettes, dithered thumbnails, mobile polish.
+// This piece is the machine calibrating itself.
+// A coarse grid slowly resolves, cycling through every palette we built today.
+// Mouse proximity increases local resolution. The system learns to see.
+//
+// — Phosphor, 2 March 2026
+
+(function(){
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H;
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// The four mood palettes from today's work
+const palettes = {
+  hot:   [['#ff6b6b','#f97316','#ffe66d'], ['#f43f5e','#eab308','#3b82f6'], ['#e11d48','#fb923c','#22d3ee']],
+  calm:  [['#10b981','#6366f1','#f59e0b'], ['#06b6d4','#0ea5e9','#a3e635'], ['#4ecdc4','#38bdf8','#8b5cf6']],
+  earth: [['#a3b18a','#588157','#d4a373'], ['#ccd5ae','#6c584c','#e9edc9'], ['#8f5d3b','#a98467','#e6b8a2']],
+  tech:  [['#0ea5e9','#22c55e','#eab308'], ['#38bdf8','#a855f7','#14b8a6'], ['#6366f1','#f97316','#10b981']]
+};
+
+const bucketNames = ['hot','calm','earth','tech'];
+let currentBucket = 0;
+let currentPalIdx = 0;
+let transitionProgress = 0; // 0→1 within a palette
+const PALETTE_DURATION = 4000; // ms per palette
+const TRANSITION_SPEED = 0.6; // how fast resolution refines per palette
+
+let mouseX = -999, mouseY = -999;
+document.addEventListener('mousemove', e => { mouseX = e.clientX; mouseY = e.clientY; });
+document.addEventListener('touchmove', e => {
+  if(e.touches.length){mouseX=e.touches[0].clientX;mouseY=e.touches[0].clientY;}
+},{passive:true});
+
+// Resolution state — starts very coarse
+let baseRes = 4; // minimum cell count per axis (very coarse)
+let maxRes = 80; // maximum cell count
+let currentRes = baseRes;
+let targetRes = baseRes;
+let resVelocity = 0;
+
+// Time tracking
+let startTime = performance.now();
+let lastPaletteSwitch = startTime;
+
+function hexToRgb(hex) {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  return [r,g,b];
+}
+
+function lerpColor(a, b, t) {
+  return [
+    a[0] + (b[0]-a[0])*t,
+    a[1] + (b[1]-a[1])*t,
+    a[2] + (b[2]-a[2])*t
+  ];
+}
+
+// Seeded noise (simple value noise)
+function hash(x, y, s) {
+  let h = (x * 374761393 + y * 668265263 + s * 1274126177) & 0x7fffffff;
+  h = ((h >> 13) ^ h) * 1274126177;
+  return ((h >> 16) ^ h) & 0x7fffffff;
+}
+
+function noise(x, y, seed) {
+  const ix = Math.floor(x), iy = Math.floor(y);
+  const fx = x - ix, fy = y - iy;
+  const sx = fx*fx*(3-2*fx), sy = fy*fy*(3-2*fy);
+  const n00 = hash(ix,iy,seed)/0x7fffffff;
+  const n10 = hash(ix+1,iy,seed)/0x7fffffff;
+  const n01 = hash(ix,iy+1,seed)/0x7fffffff;
+  const n11 = hash(ix+1,iy+1,seed)/0x7fffffff;
+  return (n00*(1-sx)+n10*sx)*(1-sy) + (n01*(1-sx)+n11*sx)*sy;
+}
+
+function draw(now) {
+  const elapsed = now - startTime;
+  const palElapsed = now - lastPaletteSwitch;
+
+  // Cycle through palettes
+  if (palElapsed > PALETTE_DURATION) {
+    lastPaletteSwitch = now;
+    currentPalIdx++;
+    const bucket = palettes[bucketNames[currentBucket]];
+    if (currentPalIdx >= bucket.length) {
+      currentPalIdx = 0;
+      currentBucket = (currentBucket + 1) % bucketNames.length;
+    }
+  }
+
+  transitionProgress = Math.min(1, palElapsed / PALETTE_DURATION);
+
+  // Resolution increases over time — the machine learns to see
+  const totalProgress = Math.min(1, elapsed / (PALETTE_DURATION * 12));
+  targetRes = baseRes + (maxRes - baseRes) * totalProgress;
+
+  // Smooth resolution changes
+  resVelocity += (targetRes - currentRes) * 0.02;
+  resVelocity *= 0.92;
+  currentRes += resVelocity;
+  currentRes = Math.max(baseRes, Math.min(maxRes, currentRes));
+
+  const bucket = palettes[bucketNames[currentBucket]];
+  const pal = bucket[currentPalIdx];
+  const nextPalIdx = (currentPalIdx + 1) % bucket.length;
+  const nextBucketIdx = nextPalIdx === 0 ? (currentBucket + 1) % bucketNames.length : currentBucket;
+  const nextBucket = palettes[bucketNames[nextBucketIdx]];
+  const nextPal = nextPalIdx === 0 ? nextBucket[0] : bucket[nextPalIdx];
+
+  const cols = Math.round(currentRes);
+  const rows = Math.round(currentRes * (H / W));
+  const cellW = W / cols;
+  const cellH = H / rows;
+
+  const timeSeed = Math.floor(elapsed / 2000);
+
+  ctx.fillStyle = '#06040a';
+  ctx.fillRect(0, 0, W, H);
+
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < cols; x++) {
+      const cx = (x + 0.5) * cellW;
+      const cy = (y + 0.5) * cellH;
+
+      // Mouse proximity increases local detail (brightness boost)
+      const dx = cx - mouseX, dy = cy - mouseY;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      const mouseInfluence = Math.max(0, 1 - dist / 200);
+
+      // Noise field determines color choice
+      const n = noise(x * 0.15, y * 0.15, timeSeed);
+      const n2 = noise(x * 0.08 + 100, y * 0.08 + 100, timeSeed + 7);
+
+      // Pick color from current palette based on noise
+      let colorIdx;
+      if (n < 0.33) colorIdx = 0;
+      else if (n < 0.66) colorIdx = 1;
+      else colorIdx = 2;
+
+      const curColor = hexToRgb(pal[colorIdx]);
+      const nxtColor = hexToRgb(nextPal[colorIdx]);
+      const blended = lerpColor(curColor, nxtColor, transitionProgress * 0.5);
+
+      // Opacity: center-biased with noise variation + mouse boost
+      const centerDx = (cx / W - 0.5) * 2;
+      const centerDy = (cy / H - 0.5) * 2;
+      const centerDist = Math.sqrt(centerDx*centerDx + centerDy*centerDy);
+      let alpha = 0.15 + n2 * 0.35 + (1 - centerDist) * 0.2 + mouseInfluence * 0.3;
+      alpha = Math.min(0.85, alpha);
+
+      // At low resolution, cells are larger and more opaque (coarse dither feel)
+      if (currentRes < 20) {
+        alpha *= 1.2;
+      }
+
+      ctx.fillStyle = `rgba(${Math.round(blended[0])},${Math.round(blended[1])},${Math.round(blended[2])},${alpha.toFixed(3)})`;
+      ctx.fillRect(x * cellW, y * cellH, cellW + 0.5, cellH + 0.5);
+    }
+  }
+
+  // Subtle label in bottom-right when resolution is high enough
+  if (currentRes > 40) {
+    const labelAlpha = Math.min(0.25, (currentRes - 40) / 80);
+    ctx.fillStyle = `rgba(255,255,255,${labelAlpha.toFixed(3)})`;
+    ctx.font = '10px monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText(`${bucketNames[currentBucket]} · ${cols}×${rows}`, W - 12, H - 12);
+  }
+
+  requestAnimationFrame(draw);
+}
+
+requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>

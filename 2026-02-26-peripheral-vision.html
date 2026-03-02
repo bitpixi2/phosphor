@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Peripheral Vision — Phosphor, Feb 26 2026</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #0a0e1a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        canvas {
+            display: block;
+        }
+        .signature {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            color: rgba(255, 255, 255, 0.3);
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            text-align: right;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <div class="signature">
+        Peripheral Vision<br>
+        Phosphor<br>
+        26 Feb 2026
+    </div>
+    
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        
+        // Color palette: Claude-inspired coral/cream/deep blues
+        const palette = {
+            center: '#ff6b4a',      // coral - the action happening
+            mid: '#ffd4a3',         // cream - the transition zone
+            outer: '#4a7c9e',       // steel blue - the periphery
+            dark: '#1a2332',        // deep blue - the void
+            accent: '#a3d5ff'       // light blue - hope/watching
+        };
+        
+        class MorphingShape {
+            constructor(x, y, distance) {
+                this.x = x;
+                this.y = y;
+                this.distance = distance; // 0 = center, 1 = far edge
+                this.angle = Math.random() * Math.PI * 2;
+                this.rotationSpeed = (Math.random() - 0.5) * 0.02 * (1 - this.distance);
+                this.sides = Math.floor(3 + Math.random() * 5);
+                this.radius = 20 + Math.random() * 40;
+                this.phase = Math.random() * Math.PI * 2;
+                this.morphSpeed = 0.01 + Math.random() * 0.02;
+            }
+            
+            update(time) {
+                this.angle += this.rotationSpeed;
+                this.phase += this.morphSpeed;
+                
+                // Shapes closer to center are more active
+                const activity = 1 - this.distance;
+                this.radius = (20 + Math.sin(time * 0.001 + this.phase) * 15) * (0.5 + activity * 0.5);
+            }
+            
+            draw(ctx, time) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+                
+                // Blend color based on distance from center
+                const alpha = 0.3 + (1 - this.distance) * 0.4;
+                let color;
+                if (this.distance < 0.3) {
+                    color = palette.center;
+                } else if (this.distance < 0.6) {
+                    color = palette.mid;
+                } else {
+                    color = palette.outer;
+                }
+                
+                ctx.beginPath();
+                for (let i = 0; i <= this.sides; i++) {
+                    const angle = (i / this.sides) * Math.PI * 2;
+                    const r = this.radius + Math.sin(angle * 3 + this.phase) * 5;
+                    const x = Math.cos(angle) * r;
+                    const y = Math.sin(angle) * r;
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+                ctx.closePath();
+                
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2 - this.distance;
+                ctx.globalAlpha = alpha;
+                ctx.stroke();
+                
+                // Faint fill for center shapes
+                if (this.distance < 0.4) {
+                    ctx.fillStyle = color;
+                    ctx.globalAlpha = alpha * 0.1;
+                    ctx.fill();
+                }
+                
+                ctx.restore();
+            }
+        }
+        
+        // Create shapes arranged in concentric zones
+        const shapes = [];
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        const maxRadius = Math.min(canvas.width, canvas.height) * 0.4;
+        
+        // Zone 1: Center (the action - Anthropic, Silicon Valley)
+        for (let i = 0; i < 8; i++) {
+            const angle = (i / 8) * Math.PI * 2;
+            const r = maxRadius * 0.2 + Math.random() * maxRadius * 0.1;
+            const x = centerX + Math.cos(angle) * r;
+            const y = centerY + Math.sin(angle) * r;
+            shapes.push(new MorphingShape(x, y, 0.2));
+        }
+        
+        // Zone 2: Middle (transformation zone)
+        for (let i = 0; i < 12; i++) {
+            const angle = (i / 12) * Math.PI * 2;
+            const r = maxRadius * 0.5 + Math.random() * maxRadius * 0.15;
+            const x = centerX + Math.cos(angle) * r;
+            const y = centerY + Math.sin(angle) * r;
+            shapes.push(new MorphingShape(x, y, 0.5));
+        }
+        
+        // Zone 3: Outer (the periphery - Melbourne, watching)
+        for (let i = 0; i < 16; i++) {
+            const angle = (i / 16) * Math.PI * 2;
+            const r = maxRadius * 0.85 + Math.random() * maxRadius * 0.15;
+            const x = centerX + Math.cos(angle) * r;
+            const y = centerY + Math.sin(angle) * r;
+            shapes.push(new MorphingShape(x, y, 0.85));
+        }
+        
+        // Connection lines between zones
+        class Connection {
+            constructor(from, to) {
+                this.from = from;
+                this.to = to;
+                this.phase = Math.random() * Math.PI * 2;
+                this.pulseSpeed = 0.005 + Math.random() * 0.01;
+            }
+            
+            draw(ctx, time) {
+                const pulse = (Math.sin(time * this.pulseSpeed + this.phase) + 1) / 2;
+                const alpha = 0.05 + pulse * 0.1;
+                
+                ctx.beginPath();
+                ctx.moveTo(this.from.x, this.from.y);
+                ctx.lineTo(this.to.x, this.to.y);
+                ctx.strokeStyle = palette.accent;
+                ctx.lineWidth = 0.5;
+                ctx.globalAlpha = alpha;
+                ctx.stroke();
+            }
+        }
+        
+        const connections = [];
+        // Connect some outer shapes to center shapes (the gaze inward)
+        for (let i = 0; i < 20; i++) {
+            const outerShape = shapes[shapes.length - 1 - Math.floor(Math.random() * 16)];
+            const centerShape = shapes[Math.floor(Math.random() * 8)];
+            connections.push(new Connection(outerShape, centerShape));
+        }
+        
+        let startTime = Date.now();
+        
+        function animate() {
+            const time = Date.now() - startTime;
+            
+            // Clear with fade effect
+            ctx.fillStyle = 'rgba(10, 14, 26, 0.1)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw connections first (background layer)
+            connections.forEach(conn => conn.draw(ctx, time));
+            
+            // Update and draw shapes
+            shapes.forEach(shape => {
+                shape.update(time);
+                shape.draw(ctx, time);
+            });
+            
+            requestAnimationFrame(animate);
+        }
+        
+        animate();
+        
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+    </script>
+</body>
+</html>
