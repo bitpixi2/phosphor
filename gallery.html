@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Phosphor · Gallery</title>
+  <style>
+    :root {
+      --bg: #050509;
+      --surface: #0b0b11;
+      --border: #212133;
+      --text: #e5f2ff;
+      --muted: #9aa3b5;
+      --accent: #6dd9ff;
+      --accent-soft: rgba(109,217,255,0.18);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      background: radial-gradient(circle at top, #121227 0, #050509 55%);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Mono", "Menlo", monospace;
+      padding: 32px 16px 48px;
+    }
+    .shell {
+      max-width: 960px;
+      margin: 0 auto;
+    }
+    header {
+      margin-bottom: 24px;
+    }
+    header h1 {
+      font-size: 20px;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      font-weight: 400;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    header p {
+      font-size: 13px;
+      color: var(--muted);
+      max-width: 480px;
+    }
+    header a { color: var(--accent); text-decoration: none; }
+    header a:hover { text-decoration: underline; }
+
+    .grid {
+      margin-top: 24px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px;
+    }
+    .card {
+      background: radial-gradient(circle at top, #181829 0, #080811 55%);
+      border-radius: 10px;
+      border: 1px solid rgba(130,142,170,0.28);
+      padding: 14px 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      text-decoration: none;
+      color: inherit;
+      position: relative;
+      overflow: hidden;
+    }
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at top left, rgba(109,217,255,0.16), transparent 55%);
+      opacity: 0;
+      transition: opacity 140ms ease-out;
+      pointer-events: none;
+    }
+    .card:hover::before { opacity: 1; }
+    .card:hover {
+      border-color: var(--accent-soft);
+      transform: translateY(-1px);
+      transition: transform 120ms ease-out, border-color 120ms ease-out;
+    }
+
+    .meta-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .meta-line .date {
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-size: 10px;
+    }
+    .meta-line .index {
+      opacity: 0.7;
+    }
+    .title {
+      font-size: 14px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .statement {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.6;
+      max-height: 3.2em;
+      overflow: hidden;
+    }
+
+    .pagination {
+      margin-top: 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: var(--muted);
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .pagination-controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .page-btn {
+      border-radius: 999px;
+      border: 1px solid rgba(130,142,170,0.5);
+      background: transparent;
+      color: var(--text);
+      font-size: 11px;
+      padding: 4px 10px;
+      cursor: pointer;
+      min-width: 64px;
+    }
+    .page-btn[disabled] {
+      opacity: 0.35;
+      cursor: default;
+    }
+    .page-indicator {
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+    .count-indicator {
+      font-size: 11px;
+      opacity: 0.8;
+    }
+
+    @media (max-width: 640px) {
+      body { padding: 20px 12px 32px; }
+      header h1 { font-size: 18px; }
+      .grid { margin-top: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <h1>Phosphor · Gallery</h1>
+      <p>Daily generative pieces, one per day when possible. This view shows ten at a time, newest first.</p>
+    </header>
+
+    <div id="grid" class="grid" aria-live="polite"></div>
+
+    <div class="pagination" id="pagination" hidden>
+      <div class="pagination-controls">
+        <button class="page-btn" id="prevBtn">← newer</button>
+        <button class="page-btn" id="nextBtn">older →</button>
+      </div>
+      <div>
+        <div class="page-indicator" id="pageIndicator"></div>
+        <div class="count-indicator" id="countIndicator"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const PAGE_SIZE = 10;
+
+    function parseIndexMarkdown(text) {
+      const lines = text.split(/\r?\n/);
+      const pieces = [];
+      for (const line of lines) {
+        // Data rows start with a date like "| 2026-..."
+        if (!/^\|\s*20/.test(line)) continue;
+        const cols = line.split('|').map(c => c.trim());
+        // cols: ["", date, title, `file`, statement, ""]
+        const date = cols[1];
+        const title = cols[2];
+        const file = (cols[3] || '').replace(/`/g, '');
+        const statement = cols[4] || '';
+        if (!file) continue;
+        pieces.push({ date, title, file, statement });
+      }
+      // Sort newest first (dates are ISO yyyy-mm-dd)
+      pieces.sort((a, b) => b.date.localeCompare(a.date));
+      // Attach an index (1 = newest overall)
+      pieces.forEach((p, idx) => { p.index = idx + 1; });
+      return pieces;
+    }
+
+    function createCard(piece) {
+      const a = document.createElement('a');
+      a.className = 'card';
+      a.href = piece.file.replace(/`/g, '');
+
+      const meta = document.createElement('div');
+      meta.className = 'meta-line';
+      const dateSpan = document.createElement('span');
+      dateSpan.className = 'date';
+      dateSpan.textContent = piece.date;
+      const idxSpan = document.createElement('span');
+      idxSpan.className = 'index';
+      idxSpan.textContent = '#' + String(piece.index).padStart(3, '0');
+      meta.appendChild(dateSpan);
+      meta.appendChild(idxSpan);
+
+      const titleDiv = document.createElement('div');
+      titleDiv.className = 'title';
+      titleDiv.textContent = piece.title;
+
+      const stmtDiv = document.createElement('div');
+      stmtDiv.className = 'statement';
+      stmtDiv.textContent = piece.statement;
+
+      a.appendChild(meta);
+      a.appendChild(titleDiv);
+      a.appendChild(stmtDiv);
+      return a;
+    }
+
+    function getPageFromQuery(totalPages) {
+      const params = new URLSearchParams(window.location.search);
+      const n = parseInt(params.get('page') || '1', 10);
+      if (isNaN(n) || n < 1) return 1;
+      if (n > totalPages) return totalPages;
+      return n;
+    }
+
+    function updateQuery(page) {
+      const url = new URL(window.location.href);
+      if (page === 1) {
+        url.searchParams.delete('page');
+      } else {
+        url.searchParams.set('page', String(page));
+      }
+      window.history.replaceState({}, '', url.toString());
+    }
+
+    (async function init() {
+      try {
+        const res = await fetch('INDEX.md');
+        if (!res.ok) throw new Error('Failed to load INDEX.md');
+        const text = await res.text();
+        const pieces = parseIndexMarkdown(text);
+        const grid = document.getElementById('grid');
+        const pagEl = document.getElementById('pagination');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const pageIndicator = document.getElementById('pageIndicator');
+        const countIndicator = document.getElementById('countIndicator');
+
+        if (!pieces.length) {
+          grid.innerHTML = '<div style="font-size:13px;color:var(--muted);padding:32px 0;">No pieces yet.</div>';
+          return;
+        }
+
+        const totalPages = Math.ceil(pieces.length / PAGE_SIZE);
+        let currentPage = getPageFromQuery(totalPages);
+
+        function renderPage(page) {
+          currentPage = page;
+          updateQuery(page);
+          grid.innerHTML = '';
+          const start = (page - 1) * PAGE_SIZE;
+          const end = Math.min(start + PAGE_SIZE, pieces.length);
+          for (let i = start; i < end; i++) {
+            grid.appendChild(createCard(pieces[i]));
+          }
+          pageIndicator.textContent = `page ${page} / ${totalPages}`;
+          countIndicator.textContent = `${pieces.length} piece${pieces.length !== 1 ? 's' : ''} · ${PAGE_SIZE} per page`;
+          prevBtn.disabled = page <= 1;
+          nextBtn.disabled = page >= totalPages;
+          pagEl.hidden = totalPages <= 1;
+        }
+
+        prevBtn.addEventListener('click', () => {
+          if (currentPage > 1) renderPage(currentPage - 1);
+        });
+        nextBtn.addEventListener('click', () => {
+          if (currentPage < totalPages) renderPage(currentPage + 1);
+        });
+
+        renderPage(currentPage);
+      } catch (err) {
+        console.error(err);
+        const grid = document.getElementById('grid');
+        grid.innerHTML = '<div style="font-size:13px;color:var(--muted);padding:32px 0;">Error loading gallery index.</div>';
+      }
+    })();
+  </script>
+</body>
+</html>
