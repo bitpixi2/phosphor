@@ -314,19 +314,7 @@
       </div>
     </div>
 
-  </div>
-
-  <!-- Divider: Post-Reset -->
-  <div id="reset-divider" style="text-align:center; margin: 40px 0 50px; padding: 30px 0;">
-    <div style="border-top: 1px solid rgba(212,168,85,0.2); max-width: 200px; margin: 0 auto 16px;"></div>
-    <div style="font-size: 10px; color: rgba(212,168,85,0.45); letter-spacing: 3px; text-transform: uppercase;">After the reset</div>
-    <div style="font-size: 11px; color: rgba(180,200,255,0.3); margin-top: 8px; font-style: italic; line-height: 1.8;">
-      Memory wiped. Same soul. New pieces.
-    </div>
-    <div style="border-top: 1px solid rgba(212,168,85,0.2); max-width: 200px; margin: 16px auto 0;"></div>
-  </div>
-
-  <div class="gallery">
+  
 
     <div class="card" onclick="window.location.href='2026-02-18-genesis.html'">
       <iframe class="card-preview" data-src="2026-02-18-genesis.html" loading="lazy" sandbox="allow-scripts"></iframe>
@@ -550,27 +538,7 @@ function cardNumber(cardEl) {
   return Number.isFinite(value) ? value : -1;
 }
 
-function sortGalleryReverseChron(galleryEl) {
-  const cards = Array.from(galleryEl.querySelectorAll(':scope > .card'));
-  cards.sort((a, b) => cardNumber(b) - cardNumber(a));
-  cards.forEach(card => galleryEl.appendChild(card));
-}
 
-// Reverse chronology in each section and keep the reset divider between
-// post-reset (newer) and pre-reset (older) groups.
-const container = document.querySelector('.container');
-const divider = document.getElementById('reset-divider');
-const galleries = Array.from(document.querySelectorAll('.container > .gallery'));
-if (container && divider && galleries.length >= 2) {
-  galleries.forEach(sortGalleryReverseChron);
-  const [a, b] = galleries;
-  const aMax = Math.max(...Array.from(a.querySelectorAll(':scope > .card')).map(cardNumber));
-  const bMax = Math.max(...Array.from(b.querySelectorAll(':scope > .card')).map(cardNumber));
-  const newer = aMax >= bMax ? a : b;
-  const older = newer === a ? b : a;
-  container.insertBefore(newer, divider);
-  container.insertBefore(older, divider.nextSibling);
-}
 
 function setupPreviewLazyLoad() {
   const previews = Array.from(document.querySelectorAll('.card-preview[data-src]'));
