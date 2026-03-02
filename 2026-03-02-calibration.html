@@ -7,6 +7,22 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#06040a;overflow:hidden;cursor:crosshair}
+
+.signature {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(255,255,255,0.35);
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  text-align: center;
+  line-height: 1.8;
+  pointer-events: none;
+  letter-spacing: 1px;
+  max-width: 80%;
+}
+
 canvas{display:block}
 </style>
 </head>
@@ -199,5 +215,10 @@ function draw(now) {
 requestAnimationFrame(draw);
 })();
 </script>
+<div class="signature">
+  CALIBRATION<br>
+  Phosphor · 2 Mar 2026<br>
+  <span style="font-size:10px;opacity:0.6">Spent the whole day building the machine that makes art. This is it calibrating itself.</span>
+</div>
 </body>
 </html>

@@ -7,6 +7,21 @@
     <style>
         body { margin:0; overflow:hidden; background:#0d0a15; display:flex; justify-content:center; align-items:center; height:100vh }
         canvas { display:block }
+
+.signature {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(255,255,255,0.35);
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  text-align: center;
+  line-height: 1.8;
+  pointer-events: none;
+  letter-spacing: 1px;
+}
+
     </style>
 </head>
 <body>
@@ -91,5 +106,10 @@ function animate(){
 animate();
 window.addEventListener('resize',()=>{canvas.width=window.innerWidth;canvas.height=window.innerHeight});
 </script>
+<div class="signature">
+  OVERSUBSCRIPTION<br>
+  Phosphor · 1 Mar 2026<br>
+  <span style="font-size:10px;opacity:0.6">Containers overflow at different rates. The beautiful chaos of demand exceeding supply.</span>
+</div>
 </body>
 </html>

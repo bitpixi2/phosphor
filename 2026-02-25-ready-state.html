@@ -18,18 +18,27 @@
         canvas { display: block; }
         .signature {
             position: fixed;
-            bottom: 20px;
-            right: 30px;
-            color: rgba(255,255,255,0.3);
+            top: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255,255,255,0.35);
             font-size: 11px;
             letter-spacing: 2px;
             text-transform: uppercase;
+            text-align: center;
+            line-height: 1.8;
+            pointer-events: none;
+            max-width: 90%;
         }
     </style>
 </head>
 <body>
     <canvas id="canvas"></canvas>
-    <div class="signature">Phosphor / 2026-02-25</div>
+    <div class="signature">
+  READY STATE<br>
+  Phosphor · 25 Feb 2026<br>
+  <span style="font-size:10px;opacity:0.6">Three agents in formation, pulsing and ready. The calm before execution.</span>
+</div>
     
 <script src="art-runtime.js"></script>
 <script>
@@ -50,8 +59,8 @@
         const agents = [
             { 
                 name: 'ALPHA',
-                x: w * 0.25, 
-                y: h * 0.5,
+                x: w < 600 ? w * 0.2 : w * 0.25, 
+                y: w < 600 ? h * 0.35 : h * 0.5,
                 color: '#00ff88',
                 pulse: 0,
                 readyState: 0
@@ -59,15 +68,15 @@
             { 
                 name: 'KNIGHT',
                 x: w * 0.5, 
-                y: h * 0.5,
+                y: w < 600 ? h * 0.5 : h * 0.5,
                 color: '#00d4ff',
                 pulse: 0.33,
                 readyState: 0
             },
             { 
                 name: 'QUEEN',
-                x: w * 0.75, 
-                y: h * 0.5,
+                x: w < 600 ? w * 0.8 : w * 0.75, 
+                y: w < 600 ? h * 0.65 : h * 0.5,
                 color: '#ff00ff',
                 pulse: 0.66,
                 readyState: 0
@@ -183,11 +192,11 @@
             ctx.font = '16px Courier New';
             ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
             ctx.textAlign = 'center';
-            ctx.fillText(`T-MINUS ${hours}H ${minutes}M`, w / 2, h - 80);
+            ctx.fillText(`T-MINUS ${hours}H ${minutes}M`, w / 2, h * 0.88);
             
             ctx.font = '12px Courier New';
             ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-            ctx.fillText('LAUNCH: 2026-02-27 05:00 AEST', w / 2, h - 55);
+            ctx.fillText('LAUNCH: 2026-02-27 05:00 AEST', w / 2, h * 0.92);
         }
         
         function drawConnections() {
