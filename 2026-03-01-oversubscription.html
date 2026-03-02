@@ -7,107 +7,257 @@
     <style>
         body { margin:0; overflow:hidden; background:#0d0a15; display:flex; justify-content:center; align-items:center; height:100vh }
         canvas { display:block }
-
-.signature {
-  position: fixed;
-  top: 20px;
-  right: 24px;
-  color: rgba(255,255,255,0.35);
-  font-family: 'Courier New', monospace;
-  font-size: 11px;
-  text-align: right;
-  line-height: 1.8;
-  pointer-events: none;
-  letter-spacing: 1px;
-}
-
+        .signature {
+          position: fixed;
+          top: 20px;
+          right: 24px;
+          color: rgba(255,255,255,0.35);
+          font-family: 'Courier New', monospace;
+          font-size: 11px;
+          text-align: right;
+          line-height: 1.8;
+          pointer-events: none;
+          letter-spacing: 1px;
+        }
     </style>
 </head>
 <body>
 <canvas id="canvas"></canvas>
+<div class="signature">
+  OVERSUBSCRIPTION<br>
+  Phosphor · 1 Mar 2026
+</div>
 <script>
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+let W, H;
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
 
 const palette = {
   container: '#6b5b8a',
   overflow: '#c4b5d4',
   capacity: '#9678b4',
   spillage: '#d8c4e8',
+  tears: '#7dd3fc',
   void: '#0d0a15',
   marker: '#a78bfa'
 };
 
 class Container {
-  constructor(x,y,w,h){this.x=x;this.y=y;this.width=w;this.height=h;this.capacity=100;this.fill=0;this.targetFill=0;this.overflowParticles=[]}
-  setTarget(p){this.targetFill=p}
-  update(){
-    this.fill+=(this.targetFill-this.fill)*0.02;
-    if(this.fill>this.capacity){for(let i=0;i<2;i++)this.overflowParticles.push({x:this.x+Math.random()*this.width,y:this.y,vx:(Math.random()-0.5)*1.5,vy:-Math.random()*2.5-0.8,life:1,size:Math.random()*3+1.5})}
-    this.overflowParticles=this.overflowParticles.filter(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=0.08;p.life-=0.01;return p.life>0})
+  constructor(idx, total) {
+    this.idx = idx;
+    this.total = total;
+    this.capacity = 100;
+    this.fill = 0;
+    this.targetFill = 0;
+    this.overflowParticles = [];
   }
-  draw(ctx){
-    ctx.strokeStyle=palette.container;ctx.lineWidth=2;ctx.strokeRect(this.x,this.y,this.width,this.height);
-    const capY=this.y+this.height-(this.height*(this.capacity/300));
-    ctx.strokeStyle=palette.capacity;ctx.lineWidth=1;ctx.setLineDash([8,6]);ctx.beginPath();ctx.moveTo(this.x,capY);ctx.lineTo(this.x+this.width,capY);ctx.stroke();ctx.setLineDash([]);
-    const fH=this.height*(this.fill/300),fY=this.y+this.height-fH;
-    const g=ctx.createLinearGradient(0,fY,0,this.y+this.height);
-    g.addColorStop(0,this.fill>this.capacity?palette.overflow:palette.capacity);g.addColorStop(1,palette.capacity);
-    ctx.fillStyle=g;ctx.globalAlpha=0.45;ctx.fillRect(this.x,fY,this.width,fH);ctx.globalAlpha=1;
-    this.overflowParticles.forEach(p=>{ctx.fillStyle=palette.spillage;ctx.globalAlpha=p.life*0.6;ctx.beginPath();ctx.arc(p.x,p.y,p.size,0,Math.PI*2);ctx.fill()});
-    ctx.globalAlpha=1;
-    ctx.fillStyle=this.fill>this.capacity?palette.overflow:palette.marker;ctx.globalAlpha=0.7;ctx.font='20px Courier New';ctx.textAlign='center';
-    ctx.fillText(Math.round(this.fill)+'%',this.x+this.width/2,this.y+this.height+28);ctx.globalAlpha=1;
+  setTarget(p) { this.targetFill = p; }
+
+  getLayout() {
+    const n = this.total;
+    const cW = Math.min(120, W / (n + 2));
+    const cH = H * 0.38;
+    const sp = (W - (cW * n)) / (n + 1);
+    const x = sp + this.idx * (cW + sp);
+    // Push containers to lower half — bottom of container at 82% of viewport
+    const bottomY = H * 0.82;
+    const y = bottomY - cH;
+    return { x, y, w: cW, h: cH };
+  }
+
+  update() {
+    this.fill += (this.targetFill - this.fill) * 0.02;
+    const { x, y, w } = this.getLayout();
+
+    if (this.fill > this.capacity) {
+      for (let i = 0; i < 2; i++) {
+        // Alternate between spillage (lavender) and tears (light blue)
+        const isTear = Math.random() > 0.5;
+        this.overflowParticles.push({
+          x: x + Math.random() * w,
+          y: y,
+          vx: (Math.random() - 0.5) * 1.5,
+          vy: -Math.random() * 2.5 - 0.8,
+          life: 1,
+          size: Math.random() * 3 + 1.5,
+          color: isTear ? palette.tears : palette.spillage
+        });
+      }
+    }
+
+    this.overflowParticles = this.overflowParticles.filter(p => {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.08;
+      p.life -= 0.01;
+      return p.life > 0;
+    });
+  }
+
+  draw(ctx) {
+    const { x, y, w, h } = this.getLayout();
+
+    // Container outline
+    ctx.strokeStyle = palette.container;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x, y, w, h);
+
+    // Capacity dashed line
+    const capY = y + h - (h * (this.capacity / 300));
+    ctx.strokeStyle = palette.capacity;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([8, 6]);
+    ctx.beginPath();
+    ctx.moveTo(x, capY);
+    ctx.lineTo(x + w, capY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Fill with gradient — purple to light blue tears
+    const fH = h * (this.fill / 300);
+    const fY = y + h - fH;
+    const g = ctx.createLinearGradient(0, fY, 0, y + h);
+    if (this.fill > this.capacity) {
+      g.addColorStop(0, palette.tears);
+      g.addColorStop(0.4, palette.overflow);
+      g.addColorStop(1, palette.capacity);
+    } else {
+      g.addColorStop(0, palette.capacity);
+      g.addColorStop(1, palette.capacity);
+    }
+    ctx.fillStyle = g;
+    ctx.globalAlpha = 0.45;
+    ctx.fillRect(x, fY, w, fH);
+    ctx.globalAlpha = 1;
+
+    // Overflow particles (mix of lavender and light blue)
+    this.overflowParticles.forEach(p => {
+      ctx.fillStyle = p.color;
+      ctx.globalAlpha = p.life * 0.6;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+
+    // Percentage label
+    ctx.fillStyle = this.fill > this.capacity ? palette.overflow : palette.marker;
+    ctx.globalAlpha = 0.7;
+    ctx.font = '20px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText(Math.round(this.fill) + '%', x + w / 2, y + h + 28);
+    ctx.globalAlpha = 1;
   }
 }
 
-const n=6,cW=Math.min(120,canvas.width/(n+2)),cH=canvas.height*0.5,sp=(canvas.width-(cW*n))/(n+1);
-const targets=[2104,876,432,187,98,45];
-const containers=[];
-for(let i=0;i<n;i++){const c=new Container(sp+i*(cW+sp),canvas.height/2-cH/2,cW,cH);c.setTarget(targets[i]);containers.push(c)}
-
-class Floater{
-  constructor(){this.reset()}
-  reset(){this.x=Math.random()*canvas.width;this.y=canvas.height+20;this.vy=-Math.random()*1.5-0.4;this.life=Math.random();this.size=Math.random()*1.5+0.8}
-  update(){this.y+=this.vy;this.life-=0.003;if(this.y<-20||this.life<=0)this.reset()}
-  draw(ctx){ctx.fillStyle=palette.marker;ctx.globalAlpha=this.life*0.3;ctx.beginPath();ctx.arc(this.x,this.y,this.size,0,Math.PI*2);ctx.fill()}
+const targets = [2104, 876, 432, 187, 98, 45];
+const containers = [];
+for (let i = 0; i < targets.length; i++) {
+  const c = new Container(i, targets.length);
+  c.setTarget(targets[i]);
+  containers.push(c);
 }
-const floaters=[];for(let i=0;i<40;i++)floaters.push(new Floater());
 
-function drawTimeline(ctx,time){
-  const y=canvas.height*0.85,w=canvas.width*0.6,x=canvas.width*0.2;
-  ctx.strokeStyle=palette.marker;ctx.lineWidth=1;ctx.globalAlpha=0.25;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+w,y);ctx.stroke();ctx.globalAlpha=1;
+class Floater {
+  constructor() { this.reset(); }
+  reset() {
+    this.x = Math.random() * W;
+    this.y = H + 20;
+    this.vy = -Math.random() * 1.5 - 0.4;
+    this.life = Math.random();
+    this.size = Math.random() * 1.5 + 0.8;
+    this.color = Math.random() > 0.4 ? palette.marker : palette.tears;
+  }
+  update() {
+    this.y += this.vy;
+    this.life -= 0.003;
+    if (this.y < -20 || this.life <= 0) this.reset();
+  }
+  draw(ctx) {
+    ctx.fillStyle = this.color;
+    ctx.globalAlpha = this.life * 0.3;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+const floaters = [];
+for (let i = 0; i < 40; i++) floaters.push(new Floater());
+
+// Timeline sits at the very bottom
+function drawTimeline(ctx, time) {
+  const y = H * 0.94;
+  const w = W * 0.6;
+  const x = W * 0.2;
+
+  ctx.strokeStyle = palette.marker;
+  ctx.lineWidth = 1;
+  ctx.globalAlpha = 0.25;
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x + w, y);
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+
   // Feb 26
-  ctx.fillStyle=palette.container;ctx.globalAlpha=0.4;ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
-  // Mar 1 (now)
-  const m1=x+w*0.35,pulse=Math.sin(time*0.003)*0.25+0.55;
-  ctx.fillStyle=palette.overflow;ctx.globalAlpha=pulse;ctx.beginPath();ctx.arc(m1,y,5,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
+  ctx.fillStyle = palette.container;
+  ctx.globalAlpha = 0.4;
+  ctx.beginPath();
+  ctx.arc(x, y, 3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // Mar 1 (now) — pulsing
+  const m1 = x + w * 0.35;
+  const pulse = Math.sin(time * 0.003) * 0.25 + 0.55;
+  ctx.fillStyle = palette.overflow;
+  ctx.globalAlpha = pulse;
+  ctx.beginPath();
+  ctx.arc(m1, y, 5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
   // Mar 9 (JS technical)
-  ctx.fillStyle=palette.marker;ctx.globalAlpha=0.7;ctx.beginPath();ctx.arc(x+w,y,4,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
+  ctx.fillStyle = palette.marker;
+  ctx.globalAlpha = 0.7;
+  ctx.beginPath();
+  ctx.arc(x + w, y, 4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
   // Labels
-  ctx.font='10px Courier New';ctx.textAlign='center';
-  ctx.fillStyle=palette.container;ctx.globalAlpha=0.5;ctx.fillText('Feb 26',x,y+18);
-  ctx.fillStyle=palette.overflow;ctx.globalAlpha=0.7;ctx.fillText('Mar 1',m1,y+18);
-  ctx.fillStyle=palette.marker;ctx.globalAlpha=0.7;ctx.fillText('Mar 9 (JS)',x+w,y+18);ctx.globalAlpha=1;
+  ctx.font = '10px Courier New';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = palette.container;
+  ctx.globalAlpha = 0.5;
+  ctx.fillText('Feb 26', x, y + 16);
+  ctx.fillStyle = palette.overflow;
+  ctx.globalAlpha = 0.7;
+  ctx.fillText('Mar 1', m1, y + 16);
+  ctx.fillStyle = palette.marker;
+  ctx.globalAlpha = 0.7;
+  ctx.fillText('Mar 9 (JS)', x + w, y + 16);
+  ctx.globalAlpha = 1;
 }
 
-let startTime=Date.now();
-function animate(){
-  const elapsed=Date.now()-startTime;
-  ctx.fillStyle=palette.void;ctx.fillRect(0,0,canvas.width,canvas.height);
-  floaters.forEach(p=>{p.update();p.draw(ctx)});
-  drawTimeline(ctx,elapsed);
-  containers.forEach(c=>{c.update();c.draw(ctx)});
+let startTime = Date.now();
+function animate() {
+  const elapsed = Date.now() - startTime;
+  ctx.fillStyle = palette.void;
+  ctx.fillRect(0, 0, W, H);
+  floaters.forEach(p => { p.update(); p.draw(ctx); });
+  drawTimeline(ctx, elapsed);
+  containers.forEach(c => { c.update(); c.draw(ctx); });
   requestAnimationFrame(animate);
 }
 animate();
-window.addEventListener('resize',()=>{canvas.width=window.innerWidth;canvas.height=window.innerHeight});
 </script>
-<div class="signature">
-  OVERSUBSCRIPTION<br>
-  Phosphor · 1 Mar 2026
-</div>
 </body>
 </html>
