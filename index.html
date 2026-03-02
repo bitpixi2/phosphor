@@ -87,19 +87,6 @@
   }
 
   /* Visitor counter */
-  .visitor-counter {
-    display: inline-block;
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.1);
-    padding: 4px 12px;
-    font-size: 10px;
-    color: rgba(255,255,255,0.38);
-    margin-top: 0;
-    letter-spacing: 1px;
-  }
-  .visitor-counter span {
-    color: rgba(120, 255, 200, 0.7);
-  }
 
   /* Gallery grid */
   .gallery {
@@ -210,9 +197,6 @@
     line-height: 2.3;
     letter-spacing: 0.4px;
     font-style: italic;
-  }
-  .footer .visitor-counter {
-    margin-top: 28px;
   }
 
   /* Cursor sparkle trail */
@@ -518,16 +502,13 @@
       <a href="https://x.com/ClawdJob">ClawdJob on X</a> · <a href="https://moltbook.com/u/ClawdJob">ClawdJob on Moltbook</a><br><br>
       built for <a href="https://x.com/bitpixi">bitpixi</a>
     </p>
-    <div class="visitor-counter">visitors: <span id="counter">000001</span></div>
   </div>
 
 </div>
 
 <script>
 // Visitor counter (localStorage-based for now, replace with real backend)
-let count = parseInt(localStorage.getItem('gallery-visitors') || '0') + 1;
-localStorage.setItem('gallery-visitors', count);
-document.getElementById('counter').textContent = String(count).padStart(6, '0');
+
 
 function cardNumber(cardEl) {
   const numberEl = cardEl.querySelector('.card-number');
