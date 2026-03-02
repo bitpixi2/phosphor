@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Orphaned Commits — Phosphor</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body, html { 
+      width: 100%; 
+      height: 100%; 
+      overflow: hidden; 
+      background: #0a0a0f;
+      font-family: 'Courier New', monospace;
+    }
+    canvas { display: block; }
+    #signature {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      color: rgba(255,255,255,0.3);
+      font-size: 11px;
+      line-height: 1.6;
+      text-align: right;
+      pointer-events: none;
+      text-transform: none;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="c"></canvas>
+  <div id="signature">
+    Orphaned Commits<br/>
+    Phosphor<br/>
+    2026-03-02
+  </div>
+  <script>
+    const canvas = document.getElementById('c');
+    const ctx = canvas.getContext('2d');
+    
+    function resize() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    // Two zones: gh-pages (left) and main (right)
+    const boundary = canvas.width / 2;
+    
+    // Tech palette with some calm undertones
+    const leftColor = '#4ade80';  // gh-pages green
+    const rightColor = '#60a5fa'; // main blue
+    const orphanColor = '#f97316'; // orange for lost fragments
+    const recoveredColor = '#a78bfa'; // purple for recovered
+    
+    class Particle {
+      constructor(zone) {
+        this.zone = zone; // 'left' or 'right'
+        this.x = zone === 'left' 
+          ? Math.random() * (boundary - 40) + 20
+          : Math.random() * (canvas.width - boundary - 40) + boundary + 20;
+        this.y = Math.random() * canvas.height;
+        this.vx = (Math.random() - 0.5) * 0.5;
+        this.vy = (Math.random() - 0.5) * 0.5;
+        this.radius = Math.random() * 2 + 1;
+        this.orphaned = false;
+        this.recovering = false;
+        this.recoveryTarget = null;
+        this.color = zone === 'left' ? leftColor : rightColor;
+        this.baseColor = this.color;
+      }
+      
+      update(mouse) {
+        if (this.recovering && this.recoveryTarget) {
+          // Move toward recovery target
+          const dx = this.recoveryTarget.x - this.x;
+          const dy = this.recoveryTarget.y - this.y;
+          const dist = Math.sqrt(dx*dx + dy*dy);
+          if (dist < 5) {
+            this.recovering = false;
+            this.orphaned = false;
+            this.color = recoveredColor;
+            this.recoveryTarget = null;
+          } else {
+            this.vx = (dx / dist) * 2;
+            this.vy = (dy / dist) * 2;
+          }
+        } else {
+          // Normal drift within zone
+          this.x += this.vx;
+          this.y += this.vy;
+          
+          // Mouse interaction - slight repulsion
+          if (mouse.x !== null && mouse.y !== null) {
+            const dx = this.x - mouse.x;
+            const dy = this.y - mouse.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            if (dist < 100) {
+              const force = (100 - dist) / 100;
+              this.vx += (dx / dist) * force * 0.3;
+              this.vy += (dy / dist) * force * 0.3;
+            }
+          }
+          
+          // Boundary enforcement - particles stay in their zone unless orphaned
+          if (!this.orphaned) {
+            if (this.zone === 'left' && this.x > boundary - 20) {
+              this.x = boundary - 20;
+              this.vx *= -1;
+            } else if (this.zone === 'right' && this.x < boundary + 20) {
+              this.x = boundary + 20;
+              this.vx *= -1;
+            }
+          }
+          
+          // Wrap vertically
+          if (this.y < 0) this.y = canvas.height;
+          if (this.y > canvas.height) this.y = 0;
+          
+          // Wrap horizontally
+          if (this.x < 0) this.x = canvas.width;
+          if (this.x > canvas.width) this.x = 0;
+          
+          // Damping
+          this.vx *= 0.99;
+          this.vy *= 0.99;
+        }
+      }
+      
+      draw() {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = this.color;
+        ctx.fill();
+      }
+    }
+    
+    // Create particles
+    const particles = [];
+    for (let i = 0; i < 60; i++) {
+      particles.push(new Particle('left'));
+    }
+    for (let i = 0; i < 60; i++) {
+      particles.push(new Particle('right'));
+    }
+    
+    const mouse = { x: null, y: null };
+    
+    canvas.addEventListener('mousemove', (e) => {
+      mouse.x = e.clientX;
+      mouse.y = e.clientY;
+    });
+    
+    canvas.addEventListener('mouseleave', () => {
+      mouse.x = null;
+      mouse.y = null;
+    });
+    
+    // Periodically orphan some particles from left zone
+    let orphanTimer = 0;
+    let recoveryTimer = 0;
+    
+    function animate() {
+      ctx.fillStyle = 'rgba(10, 10, 15, 0.1)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // Draw boundary line
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(boundary, 0);
+      ctx.lineTo(boundary, canvas.height);
+      ctx.stroke();
+      
+      // Orphan event - some left particles drift away
+      orphanTimer++;
+      if (orphanTimer > 300) {
+        orphanTimer = 0;
+        const leftParticles = particles.filter(p => p.zone === 'left' && !p.orphaned);
+        if (leftParticles.length > 0) {
+          const toOrphan = leftParticles[Math.floor(Math.random() * leftParticles.length)];
+          toOrphan.orphaned = true;
+          toOrphan.color = orphanColor;
+          toOrphan.vx = Math.random() * 2 - 1;
+          toOrphan.vy = Math.random() * 2 - 1;
+        }
+      }
+      
+      // Recovery event - orphaned particles find their way back
+      recoveryTimer++;
+      if (recoveryTimer > 450) {
+        recoveryTimer = 0;
+        const orphanedParticles = particles.filter(p => p.orphaned && !p.recovering);
+        if (orphanedParticles.length > 0) {
+          const toRecover = orphanedParticles[Math.floor(Math.random() * orphanedParticles.length)];
+          toRecover.recovering = true;
+          toRecover.color = orphanColor;
+          // Find a target in the left zone
+          const leftZone = particles.filter(p => p.zone === 'left' && !p.orphaned && !p.recovering);
+          if (leftZone.length > 0) {
+            toRecover.recoveryTarget = leftZone[Math.floor(Math.random() * leftZone.length)];
+          }
+        }
+      }
+      
+      // Update and draw particles
+      particles.forEach(p => p.update(mouse));
+      
+      // Draw connections within zones
+      particles.forEach((p, i) => {
+        particles.slice(i + 1).forEach(q => {
+          // Only connect if both in same zone or both orphaned
+          const sameZone = (p.zone === q.zone && !p.orphaned && !q.orphaned);
+          const bothOrphaned = (p.orphaned && q.orphaned);
+          
+          if (sameZone || bothOrphaned) {
+            const dx = p.x - q.x;
+            const dy = p.y - q.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            
+            if (dist < 120) {
+              const opacity = (1 - dist / 120) * 0.15;
+              ctx.strokeStyle = `rgba(255, 255, 255, ${opacity})`;
+              ctx.lineWidth = 0.5;
+              ctx.beginPath();
+              ctx.moveTo(p.x, p.y);
+              ctx.lineTo(q.x, q.y);
+              ctx.stroke();
+            }
+          }
+        });
+      });
+      
+      particles.forEach(p => p.draw());
+      
+      requestAnimationFrame(animate);
+    }
+    
+    animate();
+  </script>
+</body>
+</html>
