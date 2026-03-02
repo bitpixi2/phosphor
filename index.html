@@ -629,9 +629,12 @@ document.addEventListener('mousemove', e => {
   const gallery = document.querySelector('.gallery');
   const cards = Array.from(gallery.querySelectorAll('.card'));
   
-  // Reverse so newest is first (cards are in DOM oldest-first)
-  cards.reverse();
-  // Re-append in reversed order
+  // Sort by card number descending (newest first)
+  cards.sort((a, b) => {
+    const numA = parseInt(a.querySelector('.card-number')?.textContent || '0', 10);
+    const numB = parseInt(b.querySelector('.card-number')?.textContent || '0', 10);
+    return numB - numA;
+  });
   cards.forEach(c => gallery.appendChild(c));
   
   const totalPages = Math.ceil(cards.length / PAGE_SIZE);
