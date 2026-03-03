@@ -74,7 +74,7 @@ const digitColors = [
 ];
 
 // Height scale — taller = bigger digit
-function digitHeight(d) { return 28 + d * 14; }
+function digitHeight(d) { return 16 + d * 8; }
 
 // Bankers rounding visualization
 function bankersRound(n) {
@@ -110,7 +110,7 @@ function spawnNumber() {
     vy: -0.25 - Math.random() * 0.5,
     vx: (Math.random() - 0.5) * 0.15,
     phase: Math.random() * Math.PI * 2,
-    scale: 0.6 + Math.random() * 0.6,
+    scale: 0.4 + Math.random() * 0.4,
     life: 1,
     age: 0,
     played: false,
@@ -127,16 +127,48 @@ for (let i = 0; i < NUM_COUNT; i++) {
 let t = 0;
 let interacted = false;
 
-// Click/tap to init audio and trigger haptics
-c.addEventListener('click', () => {
+// Click/tap on numbers — play their tones, feel their digits
+c.addEventListener('click', (e) => {
   initAudio();
   interacted = true;
-  // Play a quick scale
-  for (let i = 0; i < 5; i++) {
-    setTimeout(() => playTone(i * 2, 0.3), i * 120);
+  const rect = c.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  
+  let hit = false;
+  for (const n of numbers) {
+    const str = n.hasDecimal ? n.value.toFixed(1) : String(n.value);
+    const nw = str.length * 14 * n.scale;
+    const nh = 40 * n.scale;
+    if (mx > n.x - nw/2 - 20 && mx < n.x + nw/2 + 20 &&
+        my > n.y - nh - 10 && my < n.y + nh + 10) {
+      // Play each digit as a chord
+      for (let i = 0; i < n.digits.length; i++) {
+        const d = parseInt(n.digits[i]);
+        setTimeout(() => playTone(d, 0.4), i * 80);
+      }
+      hapticDigit(n.digits.length * 2);
+      // Visual burst — boost scale briefly
+      n.scale *= 1.4;
+      setTimeout(() => { n.scale /= 1.4; }, 300);
+      hit = true;
+      break;
+    }
   }
-  hapticDigit(5);
+  
+  if (!hit) {
+    // Tapped empty space — play a soft click
+    playTone(0, 0.15);
+    hapticDigit(1);
+  }
 });
+
+// Touch support for mobile
+c.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  const touch = e.touches[0];
+  c.dispatchEvent(new MouseEvent('click', { clientX: touch.clientX, clientY: touch.clientY }));
+}, { passive: false });
 
 function drawNumber(n) {
   const wobble = Math.sin(t * 0.02 + n.phase) * 8;
