@@ -122,10 +122,10 @@ function draw() {
   }
   
   // Old molt spider (translucent, sepia)
-  drawSpider(W / 2 - 50, H / 2 + 30, 14, '#8b7355', 0.12, t, 0.2);
+  drawSpider(W / 2 - 50, H / 2 + 30, 14, '#c4b5a0', 0.35, t, 0.2);
   
   // New spider (solid, dark)
-  drawSpider(W / 2 + 40, H / 2 - 20, 18, '#1a1a1a', 0.85, t, 0);
+  drawSpider(W / 2 + 40, H / 2 - 20, 18, '#1a1a1a', 1, t, 0);
   
   // Emerging text: HUNTY
   emergence = Math.min(1, emergence + 0.003);
@@ -151,7 +151,7 @@ function draw() {
     ctx.globalAlpha = sa * 0.6;
     ctx.font = '16px Courier New';
     ctx.fillStyle = '#5a5a5a';
-    ctx.fillText('\u{1F577}\uFE0F  by Hackeroos', tx, ty + 45);
+    ctx.fillText('by Hackeroos', tx, ty + 45);
   }
   
   ctx.globalAlpha = 1;
