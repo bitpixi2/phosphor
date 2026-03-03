@@ -6,7 +6,7 @@
 <title>Huntsman's Molt — Phosphor</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { overflow: hidden; background: #0a0a0a; font-family: 'Courier New', monospace; }
+body { overflow: hidden; background: #d8ccb8; font-family: 'Courier New', monospace; }
 canvas { display: block; }
 .sig { position: fixed; top: 16px; right: 20px; color: rgba(90,80,70,0.5); font-size: 11px; letter-spacing: 2px; z-index: 10; text-align: right; line-height: 1.6; }
 </style>
@@ -27,16 +27,20 @@ resize();
 addEventListener('resize', resize);
 
 // Draw a spider with 8 legs
-function drawSpider(cx, cy, size, color, alpha, time, phase) {
+function drawSpider(cx, cy, size, color, alpha, time, phase, options = {}) {
+  const silhouette = options.silhouette === true;
   ctx.globalAlpha = alpha;
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
   
   // 8 legs
   for (let i = 0; i < 8; i++) {
     const baseAngle = (Math.PI * 2 / 8) * i + phase;
     const breathe = Math.sin(time * 0.8 + i * 0.7) * 3;
     
-    ctx.strokeStyle = color;
-    ctx.lineWidth = size > 15 ? 2.5 : 1.8;
+    ctx.lineWidth = silhouette ? (size > 15 ? 6 : 4.2) : (size > 15 ? 2.5 : 1.8);
     ctx.beginPath();
     ctx.moveTo(cx, cy);
     
@@ -51,15 +55,15 @@ function drawSpider(cx, cy, size, color, alpha, time, phase) {
     }
     ctx.stroke();
     
-    // Joint dots
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.arc(px, py, size > 15 ? 1.5 : 1, 0, Math.PI * 2);
-    ctx.fill();
+    if (!silhouette) {
+      // Joint dots
+      ctx.beginPath();
+      ctx.arc(px, py, size > 15 ? 1.5 : 1, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
   
   // Body (abdomen)
-  ctx.fillStyle = color;
   ctx.beginPath();
   ctx.ellipse(cx, cy, size, size * 0.8, 0, 0, Math.PI * 2);
   ctx.fill();
@@ -69,6 +73,8 @@ function drawSpider(cx, cy, size, color, alpha, time, phase) {
   ctx.arc(cx, cy - size * 0.9, size * 0.45, 0, Math.PI * 2);
   ctx.fill();
   
+  ctx.lineCap = 'butt';
+  ctx.lineJoin = 'miter';
   ctx.globalAlpha = 1;
 }
 
@@ -91,14 +97,18 @@ for (let i = 0; i < 25; i++) {
 
 let t = 0;
 let emergence = 0;
+const startMs = performance.now();
+const huntyDelaySec = 24;
+const huntyFadeSec = 12;
 
-function draw() {
+function draw(nowMs) {
   t += 0.05;
+  const elapsedSec = (nowMs - startMs) / 1000;
   
-  // Cream background
+  // Slightly darker cream/newspaper background
   const bg = ctx.createLinearGradient(0, 0, W, H);
-  bg.addColorStop(0, '#f5f2eb');
-  bg.addColorStop(1, '#ede9df');
+  bg.addColorStop(0, '#e6decd');
+  bg.addColorStop(1, '#d6c9b3');
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, W, H);
   
@@ -121,27 +131,25 @@ function draw() {
     ctx.restore();
   }
   
-  // Old molt spider (translucent, sepia)
-  drawSpider(W / 2 - 50, H / 2 + 30, 14, '#c4b5a0', 0.35, t, 0.2);
+  // Old molt spider (solid sepia silhouette/shadow)
+  drawSpider(W / 2 - 50, H / 2 + 30, 14, '#9d896f', 0.58, t, 0.2, { silhouette: true });
   
   // New spider (solid, dark)
   drawSpider(W / 2 + 40, H / 2 - 20, 18, '#1a1a1a', 1, t, 0);
   
-  // "Hunty by Hackeroos" emerges as a floating fragment
-  // but larger, slower, darkening over time
-  emergence = Math.min(1, emergence + 0.002);
-  if (emergence > 0.15) {
-    const ea = Math.min(1, (emergence - 0.15) / 0.6);
-    const huntyY = H * 0.82 - emergence * 30;
-    // Color darkens from light sepia to near-black as it solidifies
-    const r = Math.round(139 - ea * 113); // 139 -> 26
-    const g = Math.round(115 - ea * 89);  // 115 -> 26
-    const b = Math.round(85 - ea * 59);   // 85 -> 26
-    ctx.globalAlpha = ea * 0.9;
+  // "Hunty" appears later as a subtle, small fade-in
+  emergence = Math.max(0, Math.min(1, (elapsedSec - huntyDelaySec) / huntyFadeSec));
+  if (emergence > 0) {
+    const ea = emergence;
+    const huntyY = H * 0.84 - ea * 16 + Math.sin(t * 0.45) * 1.2;
+    const r = Math.round(122 - ea * 54);
+    const g = Math.round(102 - ea * 44);
+    const b = Math.round(74 - ea * 34);
+    ctx.globalAlpha = ea * 0.5;
     ctx.fillStyle = 'rgb(' + r + ',' + g + ',' + b + ')';
-    ctx.font = (22 + ea * 14) + 'px Courier New';
+    ctx.font = (16 + ea * 8) + 'px Courier New';
     ctx.textAlign = 'center';
-    ctx.fillText('Hunty by Hackeroos', W / 2, huntyY);
+    ctx.fillText('Hunty', W / 2, huntyY);
   }
   
   ctx.globalAlpha = 1;
