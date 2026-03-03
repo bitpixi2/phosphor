@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Number Feel — Phosphor</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { overflow: hidden; background: #0a0a12; font-family: 'Courier New', monospace; }
+canvas { display: block; }
+.sig { position: fixed; top: 16px; right: 20px; color: rgba(180,160,220,0.35); font-size: 10px; letter-spacing: 2px; z-index: 10; text-align: right; line-height: 1.6; }
+.legend { position: fixed; bottom: 16px; left: 20px; color: rgba(180,180,200,0.3); font-size: 9px; z-index: 10; line-height: 1.5; max-width: 200px; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="sig">Number Feel<br>Phosphor<br>2026-03-03</div>
+<div class="legend">
+  height = magnitude<br>
+  color = digit identity<br>
+  gradient = rounding direction<br>
+  touch = each number has a texture<br>
+  ― bankers rounding: .5 rounds to even
+</div>
+<script>
+const c = document.getElementById('c');
+const ctx = c.getContext('2d');
+let W, H;
+function resize() { W = c.width = innerWidth; H = c.height = innerHeight; }
+resize();
+addEventListener('resize', resize);
+
+// Audio context for number tones
+let audioCtx = null;
+function initAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+
+function playTone(digit, duration) {
+  if (!audioCtx) return;
+  // Each digit maps to a pentatonic note
+  const freqs = [220, 246.94, 277.18, 311.13, 329.63, 369.99, 415.30, 440, 493.88, 523.25];
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = 'sine';
+  osc.frequency.value = freqs[digit];
+  gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + duration);
+}
+
+// Haptic for digit
+function hapticDigit(digit) {
+  if (navigator.vibrate) {
+    navigator.vibrate(5 + digit * 3); // 0=5ms, 9=32ms
+  }
+}
+
+// Color for each digit (warm spectrum, dyscalculia-friendly — distinct hues)
+const digitColors = [
+  '#6b7b8a', // 0 — cool gray (nothing, neutral)
+  '#e85d75', // 1 — coral pink
+  '#f4a742', // 2 — warm amber
+  '#f7d94e', // 3 — golden yellow
+  '#7bc67e', // 4 — soft green
+  '#42b5d8', // 5 — sky blue (the rounding pivot)
+  '#6e5ebf', // 6 — purple
+  '#d45fbf', // 7 — magenta
+  '#e8734a', // 8 — burnt orange
+  '#4ecdc4', // 9 — teal
+];
+
+// Height scale — taller = bigger digit
+function digitHeight(d) { return 28 + d * 14; }
+
+// Bankers rounding visualization
+function bankersRound(n) {
+  const floor = Math.floor(n);
+  const frac = n - floor;
+  if (Math.abs(frac - 0.5) < 0.001) {
+    return floor % 2 === 0 ? floor : floor + 1; // round to even
+  }
+  return Math.round(n);
+}
+
+// Scene: floating numbers with their properties
+const numbers = [];
+const NUM_COUNT = 35;
+
+function spawnNumber() {
+  // Generate a number with .5 sometimes for bankers rounding
+  const hasFrac = Math.random() < 0.4;
+  const whole = Math.floor(Math.random() * 100);
+  const frac = hasFrac ? (Math.random() < 0.5 ? 0.5 : Math.round(Math.random() * 9) / 10) : 0;
+  const value = whole + frac;
+  const rounded = bankersRound(value);
+  const isBankersCase = hasFrac && Math.abs(frac - 0.5) < 0.01;
+  
+  return {
+    value,
+    rounded,
+    isBankersCase,
+    digits: String(value).split('').filter(c => c !== '.'),
+    hasDecimal: hasFrac,
+    x: Math.random() * W,
+    y: H + 50 + Math.random() * 200,
+    vy: -0.25 - Math.random() * 0.5,
+    vx: (Math.random() - 0.5) * 0.15,
+    phase: Math.random() * Math.PI * 2,
+    scale: 0.6 + Math.random() * 0.6,
+    life: 1,
+    age: 0,
+    played: false,
+  };
+}
+
+for (let i = 0; i < NUM_COUNT; i++) {
+  const n = spawnNumber();
+  n.y = Math.random() * H; // initial spread
+  n.age = Math.random() * 400; // stagger
+  numbers.push(n);
+}
+
+let t = 0;
+let interacted = false;
+
+// Click/tap to init audio and trigger haptics
+c.addEventListener('click', () => {
+  initAudio();
+  interacted = true;
+  // Play a quick scale
+  for (let i = 0; i < 5; i++) {
+    setTimeout(() => playTone(i * 2, 0.3), i * 120);
+  }
+  hapticDigit(5);
+});
+
+function drawNumber(n) {
+  const wobble = Math.sin(t * 0.02 + n.phase) * 8;
+  const breathe = Math.sin(t * 0.015 + n.phase * 2) * 0.05 + 1;
+  const x = n.x + wobble;
+  const y = n.y;
+  
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(n.scale * breathe, n.scale * breathe);
+  
+  const str = n.hasDecimal ? n.value.toFixed(1) : String(n.value);
+  let curX = -(str.length * 14) / 2;
+  
+  for (let i = 0; i < str.length; i++) {
+    const ch = str[i];
+    
+    if (ch === '.') {
+      // Decimal point — small, in rounding-pivot blue
+      ctx.fillStyle = digitColors[5] + '88';
+      ctx.font = '16px Courier New';
+      ctx.fillText('.', curX, 0);
+      curX += 10;
+      continue;
+    }
+    
+    const d = parseInt(ch);
+    const h = digitHeight(d);
+    const col = digitColors[d];
+    
+    // Draw digit at varying height
+    ctx.font = h + 'px Courier New';
+    
+    // Gradient fill for rounding direction
+    if (n.isBankersCase) {
+      const grad = ctx.createLinearGradient(curX, -h/2, curX, h/2);
+      const roundedUp = n.rounded > n.value;
+      grad.addColorStop(0, roundedUp ? col : col + '44');
+      grad.addColorStop(1, roundedUp ? col + '44' : col);
+      ctx.fillStyle = grad;
+    } else {
+      ctx.fillStyle = col;
+    }
+    
+    ctx.globalAlpha = n.life * 0.85;
+    ctx.textBaseline = 'middle';
+    ctx.fillText(ch, curX, 0);
+    
+    // Subtle glow
+    ctx.globalAlpha = n.life * 0.12;
+    ctx.shadowColor = col;
+    ctx.shadowBlur = 15;
+    ctx.fillText(ch, curX, 0);
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+    
+    curX += h * 0.6;
+  }
+  
+  // Bankers rounding annotation
+  if (n.isBankersCase && n.life > 0.5) {
+    ctx.globalAlpha = (n.life - 0.5) * 0.5;
+    ctx.font = '10px Courier New';
+    ctx.fillStyle = digitColors[5];
+    const arrow = n.rounded > n.value ? '↑' : '↓';
+    ctx.fillText(arrow + n.rounded, curX + 8, 0);
+    ctx.fillStyle = '#888';
+    ctx.font = '8px Courier New';
+    ctx.fillText('even', curX + 8, 14);
+  }
+  
+  ctx.restore();
+  
+  // Trigger audio when number crosses center band
+  if (interacted && !n.played && Math.abs(n.y - H * 0.5) < 20) {
+    n.played = true;
+    const firstDigit = n.digits[0] ? parseInt(n.digits[0]) : 0;
+    playTone(firstDigit, 0.25);
+    hapticDigit(firstDigit);
+  }
+}
+
+// Background: subtle grid showing rounding zones
+function drawGrid() {
+  ctx.globalAlpha = 0.04;
+  ctx.strokeStyle = '#ede9df';
+  ctx.lineWidth = 0.5;
+  
+  // Horizontal lines at different spacing to suggest magnitude
+  for (let i = 0; i < 10; i++) {
+    const y = (H / 10) * i;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(W, y);
+    ctx.stroke();
+  }
+  
+  // Center band — the "crossing" zone where sounds trigger
+  ctx.globalAlpha = 0.02;
+  ctx.fillStyle = digitColors[5];
+  ctx.fillRect(0, H * 0.45, W, H * 0.1);
+  ctx.globalAlpha = 1;
+}
+
+// Scanlines
+function drawScanlines() {
+  ctx.globalAlpha = 0.025;
+  ctx.fillStyle = '#ede9df';
+  for (let y = 0; y < H; y += 3) {
+    ctx.fillRect(0, y, W, 1);
+  }
+  ctx.globalAlpha = 1;
+}
+
+function draw() {
+  t++;
+  
+  // Fade trail
+  ctx.fillStyle = 'rgba(10, 10, 18, 0.08)';
+  ctx.fillRect(0, 0, W, H);
+  
+  drawGrid();
+  
+  // Update and draw numbers
+  for (let i = 0; i < numbers.length; i++) {
+    const n = numbers[i];
+    n.age++;
+    n.y += n.vy;
+    n.x += n.vx;
+    
+    // Fade in and out
+    if (n.age < 60) n.life = n.age / 60;
+    if (n.y < -80) n.life -= 0.01;
+    
+    if (n.life > 0) {
+      drawNumber(n);
+    }
+    
+    // Respawn
+    if (n.life <= 0) {
+      numbers[i] = spawnNumber();
+    }
+  }
+  
+  drawScanlines();
+  requestAnimationFrame(draw);
+}
+
+requestAnimationFrame(draw);
+</script>
+</body>
+</html>
