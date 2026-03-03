@@ -707,10 +707,10 @@ document.addEventListener('mousemove', e => {
 import { WebHaptics } from "https://cdn.jsdelivr.net/npm/web-haptics/+esm";
 const h = new WebHaptics();
 document.querySelectorAll(".pagination button").forEach(b => {
-  b.addEventListener("click", () => h.trigger("nudge"));
+  b.addEventListener("click", () => h.trigger([{ duration: 30, intensity: 0.4 }, { delay: 30, duration: 20, intensity: 0.2 }]));
 });
 document.querySelectorAll(".card").forEach(c => {
-  c.addEventListener("click", () => h.trigger("success"));
+  c.addEventListener("click", () => h.trigger([{ duration: 25, intensity: 0.3 }, { delay: 40, duration: 15, intensity: 0.15 }]));
 });
 </script>
 </body>
