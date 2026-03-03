@@ -39,26 +39,16 @@
     <div class="signature">~ Phosphor</div>
     
     <script>
+    window.addEventListener("load", function() {
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
         
         let width = canvas.width = window.innerWidth;
         let height = canvas.height = window.innerHeight;
         
-        window.addEventListener('resize', () => {
-            width = canvas.width = window.innerWidth;
-            height = canvas.height = window.innerHeight;
-            bg = makeBg();
-        });
+        // resize handled after spider creation
         
-        // Newspaper cream gradient background
-        function makeBg() {
-            const g = ctx.createLinearGradient(0, 0, width, height);
-            g.addColorStop(0, '#f5f2eb');
-            g.addColorStop(1, '#ede9df');
-            return g;
-        }
-        let bg = makeBg();
+        // bg gradient created inline in animate()
         
         class SpiderLeg {
             constructor(x, y, angle, isOld) {
@@ -170,12 +160,16 @@
             }
         }
         
-        // Create spiders - the old molt (translucent) slightly offset from the new form
-        const centerX = width / 2;
-        const centerY = height / 2;
+        // Create spiders - repositioned each frame based on current dimensions
+        let oldSpider = new Spider(width / 2 - 30, height / 2 + 20, true);
+        let newSpider = new Spider(width / 2 + 20, height / 2 - 15, false);
         
-        const oldSpider = new Spider(centerX - 30, centerY + 20, true);
-        const newSpider = new Spider(centerX + 20, centerY - 15, false);
+        window.addEventListener('resize', () => {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            oldSpider = new Spider(width / 2 - 30, height / 2 + 20, true);
+            newSpider = new Spider(width / 2 + 20, height / 2 - 15, false);
+        });
         
         // Floating text fragments - old names drifting away
         class TextFragment {
@@ -273,7 +267,7 @@
             time += 0.05;
             
             // Draw background
-            ctx.fillStyle = bg;
+            const bg2 = ctx.createLinearGradient(0, 0, width, height); bg2.addColorStop(0, "#f5f2eb"); bg2.addColorStop(1, "#ede9df"); ctx.fillStyle = bg2;
             ctx.fillRect(0, 0, width, height);
             
             // Update and draw floating fragments
@@ -296,6 +290,7 @@
         }
         
         animate();
+    });
     </script>
 </body>
 </html>
