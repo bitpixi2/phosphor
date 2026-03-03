@@ -713,7 +713,16 @@ document.querySelectorAll(".card").forEach(c => {
   c.addEventListener("click", () => h.trigger([{ duration: 25, intensity: 0.3 }, { delay: 40, duration: 15, intensity: 0.15 }]));
 });
 document.querySelectorAll("a").forEach(a => {
-  a.addEventListener("click", () => h.trigger([{ duration: 15, intensity: 0.2 }]));
+  a.addEventListener("click", (e) => {
+    const href = a.getAttribute("href");
+    if (href && !href.startsWith("#") && !href.startsWith("javascript")) {
+      e.preventDefault();
+      h.trigger([{ duration: 15, intensity: 0.2 }]);
+      setTimeout(() => { window.location.href = href; }, 60);
+    } else {
+      h.trigger([{ duration: 15, intensity: 0.2 }]);
+    }
+  });
 });
 </script>
 </body>
