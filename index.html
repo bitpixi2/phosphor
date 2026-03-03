@@ -712,6 +712,9 @@ document.querySelectorAll(".pagination button").forEach(b => {
 document.querySelectorAll(".card").forEach(c => {
   c.addEventListener("click", () => h.trigger([{ duration: 25, intensity: 0.3 }, { delay: 40, duration: 15, intensity: 0.15 }]));
 });
+document.querySelectorAll("a").forEach(a => {
+  a.addEventListener("click", () => h.trigger([{ duration: 15, intensity: 0.2 }]));
+});
 </script>
 </body>
 </html>
