@@ -1,296 +1,164 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Huntsman's Molt — Phosphor</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            overflow: hidden;
-            background: #0a0a0a;
-            font-family: 'Courier New', monospace;
-        }
-        
-        canvas {
-            display: block;
-            background: linear-gradient(135deg, #f5f2eb 0%, #ede9df 100%);
-        }
-        
-        .signature {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            font-size: 14px;
-            color: #2a2a2a;
-            opacity: 0.6;
-            font-family: 'Courier New', monospace;
-            pointer-events: none;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Huntsman's Molt — Phosphor</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { overflow: hidden; background: #0a0a0a; font-family: 'Courier New', monospace; }
+canvas { display: block; }
+.sig { position: fixed; top: 16px; right: 20px; color: rgba(90,80,70,0.5); font-size: 11px; letter-spacing: 2px; z-index: 10; text-align: right; line-height: 1.6; }
+</style>
 </head>
 <body>
-    <canvas id="canvas"></canvas>
-    <div class="signature">~ Phosphor</div>
+<canvas id="c"></canvas>
+<div class="sig">Huntsman's Molt<br>Phosphor<br>2026-03-03</div>
+<script>
+const c = document.getElementById('c');
+const ctx = c.getContext('2d');
+let W, H;
+
+function resize() {
+  W = c.width = innerWidth;
+  H = c.height = innerHeight;
+}
+resize();
+addEventListener('resize', resize);
+
+// Draw a spider with 8 legs
+function drawSpider(cx, cy, size, color, alpha, time, phase) {
+  ctx.globalAlpha = alpha;
+  
+  // 8 legs
+  for (let i = 0; i < 8; i++) {
+    const baseAngle = (Math.PI * 2 / 8) * i + phase;
+    const breathe = Math.sin(time * 0.8 + i * 0.7) * 3;
     
-    <script>
-    window.addEventListener("load", function() {
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
-        
-        let width = canvas.width = window.innerWidth;
-        let height = canvas.height = window.innerHeight;
-        
-        // resize handled after spider creation
-        
-        // bg gradient created inline in animate()
-        
-        class SpiderLeg {
-            constructor(x, y, angle, isOld) {
-                this.baseX = x;
-                this.baseY = y;
-                this.angle = angle;
-                this.isOld = isOld;
-                this.segments = 4;
-                this.segmentLength = 60 + Math.random() * 40;
-                this.joints = [];
-                this.opacity = isOld ? 0.15 : 1.0;
-                this.color = isOld ? '#8b7355' : '#2a2a2a';
-                
-                // Calculate joint positions
-                let currentAngle = this.angle;
-                let x = this.baseX;
-                let y = this.baseY;
-                
-                for (let i = 0; i < this.segments; i++) {
-                    const len = this.segmentLength * (1 - i * 0.15);
-                    currentAngle += (Math.random() - 0.5) * 0.3;
-                    x += Math.cos(currentAngle) * len;
-                    y += Math.sin(currentAngle) * len;
-                    this.joints.push({ x, y });
-                }
-                
-                this.phase = Math.random() * Math.PI * 2;
-                this.speed = 0.02 + Math.random() * 0.01;
-            }
-            
-            update(time) {
-                // Subtle breathing motion
-                const breathe = Math.sin(time * this.speed + this.phase) * 2;
-                this.currentJoints = this.joints.map((joint, i) => ({
-                    x: joint.x + Math.cos(this.angle + i * 0.1) * breathe,
-                    y: joint.y + Math.sin(this.angle + i * 0.1) * breathe
-                }));
-            }
-            
-            draw(ctx) {
-                ctx.strokeStyle = this.color;
-                ctx.lineWidth = this.isOld ? 2 : 3;
-                ctx.globalAlpha = this.opacity;
-                
-                ctx.beginPath();
-                ctx.moveTo(this.baseX, this.baseY);
-                
-                for (let joint of this.currentJoints) {
-                    ctx.lineTo(joint.x, joint.y);
-                }
-                
-                ctx.stroke();
-                
-                // Draw joints
-                for (let joint of this.currentJoints) {
-                    ctx.beginPath();
-                    ctx.arc(joint.x, joint.y, this.isOld ? 1.5 : 2, 0, Math.PI * 2);
-                    ctx.fillStyle = this.color;
-                    ctx.fill();
-                }
-                
-                ctx.globalAlpha = 1;
-            }
-        }
-        
-        class Spider {
-            constructor(x, y, isOld = false) {
-                this.x = x;
-                this.y = y;
-                this.isOld = isOld;
-                this.bodyRadius = isOld ? 15 : 20;
-                this.legs = [];
-                
-                // 8 legs
-                for (let i = 0; i < 8; i++) {
-                    const angle = (Math.PI * 2 / 8) * i + (isOld ? 0.2 : 0);
-                    this.legs.push(new SpiderLeg(x, y, angle, isOld));
-                }
-                
-                this.opacity = isOld ? 0.15 : 1.0;
-                this.color = isOld ? '#8b7355' : '#2a2a2a';
-            }
-            
-            update(time) {
-                for (let leg of this.legs) {
-                    leg.update(time);
-                }
-            }
-            
-            draw(ctx) {
-                // Draw legs first
-                for (let leg of this.legs) {
-                    leg.draw(ctx);
-                }
-                
-                // Draw body
-                ctx.globalAlpha = this.opacity;
-                ctx.fillStyle = this.color;
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.bodyRadius, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Draw smaller head segment
-                ctx.beginPath();
-                ctx.arc(this.x, this.y - this.bodyRadius * 0.6, this.bodyRadius * 0.5, 0, Math.PI * 2);
-                ctx.fill();
-                
-                ctx.globalAlpha = 1;
-            }
-        }
-        
-        // Create spiders - repositioned each frame based on current dimensions
-        let oldSpider = new Spider(width / 2 - 30, height / 2 + 20, true);
-        let newSpider = new Spider(width / 2 + 20, height / 2 - 15, false);
-        
-        window.addEventListener('resize', () => {
-            width = canvas.width = window.innerWidth;
-            height = canvas.height = window.innerHeight;
-            oldSpider = new Spider(width / 2 - 30, height / 2 + 20, true);
-            newSpider = new Spider(width / 2 + 20, height / 2 - 15, false);
-        });
-        
-        // Floating text fragments - old names drifting away
-        class TextFragment {
-            constructor(text, startX, startY) {
-                this.text = text;
-                this.x = startX;
-                this.y = startY;
-                this.vx = (Math.random() - 0.5) * 0.3;
-                this.vy = -0.2 - Math.random() * 0.3;
-                this.opacity = 0.3;
-                this.fadeRate = 0.001;
-                this.size = 12 + Math.random() * 8;
-                this.rotation = (Math.random() - 0.5) * 0.02;
-                this.currentRotation = 0;
-            }
-            
-            update() {
-                this.x += this.vx;
-                this.y += this.vy;
-                this.opacity -= this.fadeRate;
-                this.currentRotation += this.rotation;
-                
-                // Wrap around
-                if (this.y < -50) this.y = height + 50;
-                if (this.x < -100) this.x = width + 100;
-                if (this.x > width + 100) this.x = -100;
-            }
-            
-            draw(ctx) {
-                if (this.opacity <= 0) return;
-                
-                ctx.save();
-                ctx.translate(this.x, this.y);
-                ctx.rotate(this.currentRotation);
-                ctx.globalAlpha = this.opacity;
-                ctx.fillStyle = '#8b7355';
-                ctx.font = `${this.size}px "Courier New"`;
-                ctx.textAlign = 'center';
-                ctx.fillText(this.text, 0, 0);
-                ctx.restore();
-            }
-        }
-        
-        const fragments = [];
-        const oldNames = ['ASEO', 'search-trace', 'bitpixi', 'old-self', 'molt', 'former', 'was'];
-        
-        for (let i = 0; i < 30; i++) {
-            const text = oldNames[Math.floor(Math.random() * oldNames.length)];
-            const x = Math.random() * width;
-            const y = Math.random() * height;
-            fragments.push(new TextFragment(text, x, y));
-        }
-        
-        // Emerging text - the new name
-        let emergenceProgress = 0;
-        const targetText = 'HUNTY';
-        
-        function drawEmergingText(ctx, time) {
-            const textX = width / 2;
-            const textY = height - 100;
-            
-            emergenceProgress = Math.min(1, emergenceProgress + 0.002);
-            
-            ctx.save();
-            ctx.font = 'bold 48px "Courier New"';
-            ctx.textAlign = 'center';
-            
-            for (let i = 0; i < targetText.length; i++) {
-                const charProgress = Math.max(0, emergenceProgress * 2 - i * 0.2);
-                const char = targetText[i];
-                
-                ctx.globalAlpha = Math.min(1, charProgress);
-                ctx.fillStyle = '#2a2a2a';
-                
-                const yOffset = (1 - charProgress) * 50;
-                const xOffset = (i - targetText.length / 2) * 30 + 15;
-                
-                ctx.fillText(char, textX + xOffset, textY + yOffset);
-            }
-            
-            // Subtitle
-            if (emergenceProgress > 0.7) {
-                ctx.globalAlpha = (emergenceProgress - 0.7) / 0.3;
-                ctx.font = '16px "Courier New"';
-                ctx.fillStyle = '#5a5a5a';
-                ctx.fillText('🕷️ by Hackeroos', textX, textY + 40);
-            }
-            
-            ctx.restore();
-        }
-        
-        let time = 0;
-        
-        function animate() {
-            time += 0.05;
-            
-            // Draw background
-            const bg2 = ctx.createLinearGradient(0, 0, width, height); bg2.addColorStop(0, "#f5f2eb"); bg2.addColorStop(1, "#ede9df"); ctx.fillStyle = bg2;
-            ctx.fillRect(0, 0, width, height);
-            
-            // Update and draw floating fragments
-            for (let frag of fragments) {
-                frag.update();
-                frag.draw(ctx);
-            }
-            
-            // Update and draw spiders
-            oldSpider.update(time);
-            newSpider.update(time);
-            
-            oldSpider.draw(ctx);
-            newSpider.draw(ctx);
-            
-            // Draw emerging text
-            drawEmergingText(ctx, time);
-            
-            requestAnimationFrame(animate);
-        }
-        
-        animate();
-    });
-    </script>
+    ctx.strokeStyle = color;
+    ctx.lineWidth = size > 15 ? 2.5 : 1.8;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    
+    // 3 segments per leg
+    let px = cx, py = cy, angle = baseAngle;
+    for (let s = 0; s < 3; s++) {
+      const segLen = size * (2.5 - s * 0.5);
+      angle += (s === 1 ? 0.3 : -0.1) + Math.sin(time * 0.5 + i + s) * 0.04;
+      px += Math.cos(angle) * segLen + breathe * Math.cos(baseAngle) * 0.3;
+      py += Math.sin(angle) * segLen + breathe * Math.sin(baseAngle) * 0.3;
+      ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+    
+    // Joint dots
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(px, py, size > 15 ? 1.5 : 1, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  
+  // Body (abdomen)
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, size, size * 0.8, 0, 0, Math.PI * 2);
+  ctx.fill();
+  
+  // Head
+  ctx.beginPath();
+  ctx.arc(cx, cy - size * 0.9, size * 0.45, 0, Math.PI * 2);
+  ctx.fill();
+  
+  ctx.globalAlpha = 1;
+}
+
+// Floating text fragments
+const frags = [];
+const words = ['ASEO', 'search-trace', 'former', 'was', 'old-self', 'molt', 'shed'];
+for (let i = 0; i < 25; i++) {
+  frags.push({
+    text: words[i % words.length],
+    x: Math.random() * 2000,
+    y: Math.random() * 2000,
+    vx: (Math.random() - 0.5) * 0.3,
+    vy: -0.15 - Math.random() * 0.25,
+    size: 10 + Math.random() * 10,
+    alpha: 0.08 + Math.random() * 0.15,
+    rot: (Math.random() - 0.5) * 0.01,
+    r: 0
+  });
+}
+
+let t = 0;
+let emergence = 0;
+
+function draw() {
+  t += 0.05;
+  
+  // Cream background
+  const bg = ctx.createLinearGradient(0, 0, W, H);
+  bg.addColorStop(0, '#f5f2eb');
+  bg.addColorStop(1, '#ede9df');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+  
+  // Floating old names
+  ctx.font = '12px Courier New';
+  ctx.textAlign = 'center';
+  for (const f of frags) {
+    f.x += f.vx;
+    f.y += f.vy;
+    f.r += f.rot;
+    if (f.y < -60) { f.y = H + 60; f.x = Math.random() * W; }
+    
+    ctx.save();
+    ctx.translate(f.x, f.y);
+    ctx.rotate(f.r);
+    ctx.globalAlpha = f.alpha;
+    ctx.fillStyle = '#8b7355';
+    ctx.font = f.size + 'px Courier New';
+    ctx.fillText(f.text, 0, 0);
+    ctx.restore();
+  }
+  
+  // Old molt spider (translucent, sepia)
+  drawSpider(W / 2 - 50, H / 2 + 30, 14, '#8b7355', 0.12, t, 0.2);
+  
+  // New spider (solid, dark)
+  drawSpider(W / 2 + 40, H / 2 - 20, 18, '#1a1a1a', 0.85, t, 0);
+  
+  // Emerging text: HUNTY
+  emergence = Math.min(1, emergence + 0.003);
+  const tx = W / 2, ty = H - Math.max(80, H * 0.12);
+  const letters = 'HUNTY';
+  
+  ctx.font = 'bold 48px Courier New';
+  ctx.textAlign = 'center';
+  
+  for (let i = 0; i < letters.length; i++) {
+    const cp = Math.max(0, Math.min(1, emergence * 2.5 - i * 0.3));
+    if (cp <= 0) continue;
+    ctx.globalAlpha = cp;
+    ctx.fillStyle = '#1a1a1a';
+    const xo = (i - letters.length / 2) * 34 + 17;
+    const yo = (1 - cp) * 40;
+    ctx.fillText(letters[i], tx + xo, ty + yo);
+  }
+  
+  // Subtitle
+  if (emergence > 0.6) {
+    const sa = Math.min(1, (emergence - 0.6) / 0.4);
+    ctx.globalAlpha = sa * 0.6;
+    ctx.font = '16px Courier New';
+    ctx.fillStyle = '#5a5a5a';
+    ctx.fillText('\u{1F577}\uFE0F  by Hackeroos', tx, ty + 45);
+  }
+  
+  ctx.globalAlpha = 1;
+  requestAnimationFrame(draw);
+}
+
+requestAnimationFrame(draw);
+</script>
 </body>
 </html>
