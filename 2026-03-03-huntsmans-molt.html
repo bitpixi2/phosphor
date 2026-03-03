@@ -48,12 +48,17 @@
         window.addEventListener('resize', () => {
             width = canvas.width = window.innerWidth;
             height = canvas.height = window.innerHeight;
+            bg = makeBg();
         });
         
         // Newspaper cream gradient background
-        const bg = ctx.createLinearGradient(0, 0, width, height);
-        bg.addColorStop(0, '#f5f2eb');
-        bg.addColorStop(1, '#ede9df');
+        function makeBg() {
+            const g = ctx.createLinearGradient(0, 0, width, height);
+            g.addColorStop(0, '#f5f2eb');
+            g.addColorStop(1, '#ede9df');
+            return g;
+        }
+        let bg = makeBg();
         
         class SpiderLeg {
             constructor(x, y, angle, isOld) {
