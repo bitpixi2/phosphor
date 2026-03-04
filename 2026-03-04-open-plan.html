@@ -69,6 +69,17 @@ const WORKERS = [
 
 let selectedCubicle = null;
 let selectFade = 0;
+let _workerIdx = 0;
+
+// Shuffle workers so each run is different but no dupes
+function shuffleWorkers() {
+  for (let i = WORKERS.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [WORKERS[i], WORKERS[j]] = [WORKERS[j], WORKERS[i]];
+  }
+  _workerIdx = 0;
+}
+shuffleWorkers();
 
 // Each cubicle has: desk, chair, monitor, maybe plant, maybe mug, screen animation
 function makeCubicle(gx, gy, x, y, w, h) {
@@ -82,7 +93,7 @@ function makeCubicle(gx, gy, x, y, w, h) {
   const screenPhase = Math.random() * Math.PI * 2;
   const screenType = Math.floor(Math.random() * 5); // different "work" on each screen
   
-  const worker = WORKERS[Math.floor(Math.random() * WORKERS.length)];
+  const worker = WORKERS[_workerIdx++ % WORKERS.length];
   return {
     gx, gy, x, y, w, h,
     hasPlant, hasMug, hasPhoto,
@@ -106,6 +117,7 @@ function generate() {
   cubH = (H - MARGIN * 2 - (rows - 1) * CUBICLE_PAD) / rows;
   
   cubicles = [];
+  shuffleWorkers();
   for (let gy = 0; gy < rows; gy++) {
     for (let gx = 0; gx < cols; gx++) {
       // Leave gaps for "aisles"
@@ -372,12 +384,12 @@ function drawInfoPanel() {
   const cy = H / 2;
 
   ctx.save();
-  ctx.globalAlpha = selectFade * 0.85;
+  ctx.globalAlpha = selectFade;
 
   // Background card
   const cardW = Math.min(220, W * 0.5);
   const cardH = 80;
-  ctx.fillStyle = 'rgba(244, 240, 232, 0.92)';
+  ctx.fillStyle = 'rgba(244, 240, 232, 0.97)';
   ctx.shadowColor = 'rgba(0,0,0,0.12)';
   ctx.shadowBlur = 15;
   ctx.fillRect(cx - cardW / 2, cy - cardH / 2, cardW, cardH);
