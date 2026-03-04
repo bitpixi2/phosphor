@@ -2,11 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
 <title>Number Feel — Phosphor</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { overflow: hidden; background: #0a0a12; font-family: 'Courier New', monospace; }
+body { overflow: hidden; background: #0a0a12; font-family: 'Courier New', monospace; touch-action: none; }
 canvas { display: block; }
 .sig { position: fixed; top: 16px; right: 20px; color: rgba(180,160,220,0.35); font-size: 10px; letter-spacing: 2px; z-index: 10; text-align: right; line-height: 1.6; }
 .legend { position: fixed; bottom: 16px; left: 20px; color: rgba(180,180,200,0.25); font-size: 9px; z-index: 10; line-height: 1.5; max-width: 220px; transition: opacity 1.5s; }
@@ -17,7 +17,7 @@ canvas { display: block; }
 <div class="sig">Number Feel<br>Phosphor<br>2026-03-03</div>
 <div class="legend" id="legend">
   .5 rounds to even<br>
-  drag each number where it belongs
+  drag each number to the correct box
 </div>
 <script>
 const c = document.getElementById('c');
@@ -31,8 +31,7 @@ let audioCtx = null;
 function initAudio() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 }
-
-function playTone(freq, duration, delay) {
+function playTone(freq, dur, delay) {
   if (!audioCtx) return;
   const when = audioCtx.currentTime + (delay || 0);
   const osc = audioCtx.createOscillator();
@@ -40,24 +39,19 @@ function playTone(freq, duration, delay) {
   osc.type = 'sine';
   osc.frequency.value = freq;
   gain.gain.setValueAtTime(0.07, when);
-  gain.gain.exponentialRampToValueAtTime(0.001, when + duration);
+  gain.gain.exponentialRampToValueAtTime(0.001, when + dur);
   osc.connect(gain);
   gain.connect(audioCtx.destination);
   osc.start(when);
-  osc.stop(when + duration);
+  osc.stop(when + dur);
 }
-
 function haptic(ms) { if (navigator.vibrate) navigator.vibrate(ms); }
 
-// Digit colors
 const digitColors = [
-  '#6b7b8a', '#e85d75', '#f4a742', '#f7d94e', '#7bc67e',
-  '#42b5d8', '#6e5ebf', '#d45fbf', '#e8734a', '#4ecdc4',
+  '#6b7b8a','#e85d75','#f4a742','#f7d94e','#7bc67e',
+  '#42b5d8','#6e5ebf','#d45fbf','#e8734a','#4ecdc4',
 ];
 
-function digitHeight(d) { return 18 + d * 7; }
-
-// Bankers rounding: .5 rounds to nearest even
 function bankersRound(n) {
   const floor = Math.floor(n);
   const frac = n - floor;
@@ -65,78 +59,59 @@ function bankersRound(n) {
   return Math.round(n);
 }
 
-// ── Two bins: Down (round down) and Up (round up) ──
-const bins = [
-  { label: String.fromCharCode(8595), color: '#6e5ebf', count: 0, flash: 0 },  // ↓
-  { label: String.fromCharCode(8593), color: '#42b5d8', count: 0, flash: 0 },  // ↑
-];
+// Generate exactly 10 unique .5 numbers
+const TOTAL = 10;
+const allNumbers = [];
+{
+  const pool = [];
+  for (let i = 0; i <= 19; i++) pool.push(i + 0.5);
+  // Shuffle and take 10
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  for (let i = 0; i < TOTAL; i++) {
+    const v = pool[i];
+    const r = bankersRound(v);
+    allNumbers.push({
+      value: v,
+      rounded: r,
+      roundsUp: r > v,
+      x: 60 + Math.random() * (W > 400 ? W - 120 : W - 80),
+      y: 80 + i * ((H - 240) / TOTAL) + (Math.random() - 0.5) * 30,
+      phase: Math.random() * Math.PI * 2,
+      scale: 0.55 + Math.random() * 0.25,
+      sorted: false,
+      shrink: 0,
+    });
+  }
+}
 
-const BIN_W = 80;
-const BIN_H = 64;
-const BIN_GAP = 40;
-const BIN_Y_OFFSET = 100;
+// Bins
+const bins = [
+  { label: '\u2193', color: '#6e5ebf', count: 0, flash: 0 },
+  { label: '\u2191', color: '#42b5d8', count: 0, flash: 0 },
+];
+const BIN_W = 80, BIN_H = 60, BIN_GAP = 50;
 
 function getBinRects() {
   const totalW = 2 * BIN_W + BIN_GAP;
-  const startX = (W - totalW) / 2;
-  const y = H - BIN_Y_OFFSET;
-  return bins.map((b, i) => ({
-    x: startX + i * (BIN_W + BIN_GAP), y, w: BIN_W, h: BIN_H, bin: b, index: i,
-  }));
+  const sx = (W - totalW) / 2;
+  const y = H - 90;
+  return bins.map((b, i) => ({ x: sx + i * (BIN_W + BIN_GAP), y, w: BIN_W, h: BIN_H, bin: b, index: i }));
 }
 
-// ── Generate .5 numbers for bankers rounding ──
-const TOTAL_TO_SORT = 15;
-const numbers = [];
-
-function makeNumber() {
-  // All numbers end in .5 — the whole point of bankers rounding
-  const whole = Math.floor(Math.random() * 20);
-  const value = whole + 0.5;
-  const rounded = bankersRound(value);
-  const roundsUp = rounded > value;
-  
-  return {
-    value,
-    rounded,
-    roundsUp,
-    digits: String(value).split('').filter(c => c !== '.'),
-    x: 80 + Math.random() * (W - 160),
-    y: -40 - Math.random() * 250,
-    vy: 0.15 + Math.random() * 0.25,
-    vx: (Math.random() - 0.5) * 0.1,
-    phase: Math.random() * Math.PI * 2,
-    scale: 0.5 + Math.random() * 0.3,
-    life: 0,
-    age: 0,
-    absorbed: false,
-    absorbTarget: null,
-    absorbProgress: 0,
-  };
-}
-
-for (let i = 0; i < 12; i++) {
-  const n = makeNumber();
-  n.y = 60 + Math.random() * (H - 250);
-  n.age = Math.random() * 300;
-  n.life = 1;
-  numbers.push(n);
-}
-
-// ── State ──
+// State
 let dragging = null;
 let dragOffX = 0, dragOffY = 0;
 let dragOver = -1;
 let sorted = 0;
-let correct = 0;
-let fading = false;
-let fadeProgress = 0;
+let done = false;
+let doneTimer = 0;
 let t = 0;
-
-// Particles
 const particles = [];
 
-function getNumberBounds(n) {
+function getNumBounds(n) {
   const str = n.value.toFixed(1);
   const nw = str.length * 16 * n.scale + 40;
   const nh = 50 * n.scale + 20;
@@ -144,16 +119,16 @@ function getNumberBounds(n) {
 }
 
 function hitTest(mx, my) {
-  for (let i = numbers.length - 1; i >= 0; i--) {
-    const n = numbers[i];
-    if (n.absorbed) continue;
-    const b = getNumberBounds(n);
+  for (let i = allNumbers.length - 1; i >= 0; i--) {
+    const n = allNumbers[i];
+    if (n.sorted) continue;
+    const b = getNumBounds(n);
     if (mx >= b.x && mx <= b.x + b.w && my >= b.y && my <= b.y + b.h) return i;
   }
   return -1;
 }
 
-function binHitTest(mx, my) {
+function binHit(mx, my) {
   const rects = getBinRects();
   for (const r of rects) {
     if (mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h) return r.index;
@@ -161,24 +136,22 @@ function binHitTest(mx, my) {
   return -1;
 }
 
-// ── Input ──
+// Input
+let origX, origY;
 function onDown(mx, my) {
-  if (fading) return;
+  if (done) return;
   initAudio();
   document.getElementById('legend').style.opacity = '0';
-  
   const idx = hitTest(mx, my);
   if (idx >= 0) {
-    dragging = numbers[idx];
-    dragging.vy = 0;
-    dragging.vx = 0;
+    dragging = allNumbers[idx];
+    origX = dragging.x;
+    origY = dragging.y;
     dragOffX = mx - dragging.x;
     dragOffY = my - dragging.y;
     haptic(8);
-    
-    // Play the number's tone
-    const d = parseInt(dragging.digits[0]);
-    const freqs = [220, 246.94, 277.18, 311.13, 329.63, 369.99, 415.30, 440, 493.88, 523.25];
+    const d = parseInt(String(dragging.value)[0]);
+    const freqs = [220,246.94,277.18,311.13,329.63,369.99,415.30,440,493.88,523.25];
     playTone(freqs[d], 0.3, 0);
   }
 }
@@ -188,201 +161,163 @@ function onMove(mx, my) {
   dragging.x = mx - dragOffX;
   dragging.y = my - dragOffY;
   const prev = dragOver;
-  dragOver = binHitTest(mx, my);
+  dragOver = binHit(mx, my);
   if (dragOver >= 0 && dragOver !== prev) haptic(5);
 }
 
-function onUp(mx, my) {
+function onUp() {
   if (!dragging) return;
-  const binIdx = binHitTest(mx, my);
-  
-  if (binIdx >= 0) {
-    const b = bins[binIdx];
-    const isCorrect = (binIdx === 0 && !dragging.roundsUp) || (binIdx === 1 && dragging.roundsUp);
-    
-    b.count++;
-    b.flash = 1;
-    sorted++;
-    if (isCorrect) correct++;
-    
-    // Sound: correct = warm, wrong = dissonant
+  const bi = binHit(dragging.x, dragging.y);
+  if (bi >= 0) {
+    const isCorrect = (bi === 0 && !dragging.roundsUp) || (bi === 1 && dragging.roundsUp);
     if (isCorrect) {
+      // Accept
+      bins[bi].count++;
+      bins[bi].flash = 1;
+      dragging.sorted = true;
+      dragging.shrink = 1;
+      sorted++;
       playTone(523.25, 0.4, 0);
       playTone(659.25, 0.4, 0.05);
       haptic(20);
+
+      const rects = getBinRects();
+      const r = rects[bi];
+      dragging.sortTarget = { x: r.x + r.w / 2, y: r.y + r.h / 2 };
+      for (let i = 0; i < 8; i++) {
+        particles.push({
+          x: r.x + r.w / 2, y: r.y,
+          vx: (Math.random() - 0.5) * 4, vy: -Math.random() * 4 - 1,
+          color: bins[bi].color, life: 1, size: 2 + Math.random() * 3,
+        });
+      }
+      if (sorted >= TOTAL) {
+        done = true;
+        doneTimer = 0;
+        // Victory chord
+        playTone(440, 1, 0.3);
+        playTone(554.37, 1, 0.35);
+        playTone(659.25, 1, 0.4);
+      }
     } else {
-      playTone(233, 0.3, 0);
-      playTone(246.94, 0.3, 0.02);
-      haptic([10, 20, 10]);
-    }
-    
-    // Particles
-    const rects = getBinRects();
-    const r = rects[binIdx];
-    const pColor = isCorrect ? b.color : '#e85d75';
-    for (let i = 0; i < 6; i++) {
-      particles.push({
-        x: r.x + r.w / 2, y: r.y,
-        vx: (Math.random() - 0.5) * 4,
-        vy: -Math.random() * 4 - 1,
-        color: pColor, life: 1, size: 2 + Math.random() * 3,
-      });
-    }
-    
-    // Absorb
-    dragging.absorbed = true;
-    dragging.absorbTarget = { x: r.x + r.w / 2, y: r.y + r.h / 2 };
-    dragging.absorbProgress = 0;
-    
-    // Spawn replacement or trigger end
-    if (sorted >= TOTAL_TO_SORT) {
-      setTimeout(() => { fading = true; fadeProgress = 0; }, 600);
-    } else {
-      setTimeout(() => {
-        const idx = numbers.indexOf(dragging);
-        if (idx >= 0) numbers[idx] = makeNumber();
-      }, 500);
+      // Reject — bounce back
+      playTone(233, 0.2, 0);
+      haptic([10, 30, 10]);
+      dragging.x = origX;
+      dragging.y = origY;
     }
   } else {
-    dragging.vy = 0.15 + Math.random() * 0.25;
-    dragging.vx = (Math.random() - 0.5) * 0.1;
+    // Dropped outside bins — return to original
+    dragging.x = origX;
+    dragging.y = origY;
   }
-  
   dragging = null;
   dragOver = -1;
 }
 
 c.addEventListener('mousedown', e => onDown(e.clientX, e.clientY));
 c.addEventListener('mousemove', e => onMove(e.clientX, e.clientY));
-c.addEventListener('mouseup', e => onUp(e.clientX, e.clientY));
+c.addEventListener('mouseup', () => onUp());
 c.addEventListener('touchstart', e => { e.preventDefault(); onDown(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
 c.addEventListener('touchmove', e => { e.preventDefault(); onMove(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
-c.addEventListener('touchend', e => { e.preventDefault(); onUp(e.changedTouches[0].clientX, e.changedTouches[0].clientY); }, { passive: false });
+c.addEventListener('touchend', e => { e.preventDefault(); onUp(); }, { passive: false });
 
-// ── Drawing ──
+// Drawing
 function drawBins(alpha) {
   const rects = getBinRects();
   for (const r of rects) {
     const b = r.bin;
-    
     if (b.flash > 0) {
-      ctx.globalAlpha = b.flash * 0.25 * alpha;
-      ctx.shadowColor = b.color;
-      ctx.shadowBlur = 25;
+      ctx.globalAlpha = b.flash * 0.3 * alpha;
       ctx.fillStyle = b.color;
-      ctx.fillRect(r.x - 4, r.y - 4, r.w + 8, r.h + 8);
+      ctx.shadowColor = b.color;
+      ctx.shadowBlur = 20;
+      ctx.fillRect(r.x - 3, r.y - 3, r.w + 6, r.h + 6);
       ctx.shadowBlur = 0;
-      b.flash -= 0.025;
+      b.flash -= 0.02;
     }
-    
-    ctx.globalAlpha = (dragging && dragOver === r.index ? 0.5 : 0.2) * alpha;
+    const highlight = dragging && dragOver === r.index;
+    ctx.globalAlpha = (highlight ? 0.45 : 0.18) * alpha;
     ctx.strokeStyle = b.color;
-    ctx.lineWidth = dragging && dragOver === r.index ? 2 : 1;
+    ctx.lineWidth = highlight ? 2 : 1;
     ctx.strokeRect(r.x, r.y, r.w, r.h);
-    
-    ctx.globalAlpha = (dragging && dragOver === r.index ? 0.1 : 0.03) * alpha;
+    ctx.globalAlpha = (highlight ? 0.08 : 0.025) * alpha;
     ctx.fillStyle = b.color;
     ctx.fillRect(r.x, r.y, r.w, r.h);
-    
-    // Arrow label
-    ctx.globalAlpha = 0.45 * alpha;
+    ctx.globalAlpha = 0.4 * alpha;
     ctx.fillStyle = b.color;
     ctx.font = '22px Courier New';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(b.label, r.x + r.w / 2, r.y + r.h / 2);
-    
     ctx.textAlign = 'left';
     ctx.globalAlpha = 1;
   }
 }
 
-function drawNumber(n, globalAlpha) {
-  if (n.absorbed) {
-    n.absorbProgress += 0.04;
-    if (n.absorbProgress >= 1) return;
-    const tgt = n.absorbTarget;
-    n.x += (tgt.x - n.x) * 0.15;
-    n.y += (tgt.y - n.y) * 0.15;
-    n.scale *= 0.93;
+function drawNumber(n, alpha) {
+  if (n.sorted) {
+    n.shrink += 0.03;
+    if (n.shrink > 1) {
+      const tgt = n.sortTarget;
+      n.x += (tgt.x - n.x) * 0.12;
+      n.y += (tgt.y - n.y) * 0.12;
+      n.scale *= 0.95;
+      if (n.scale < 0.05) return;
+    }
   }
-  
-  const wobble = dragging === n ? 0 : Math.sin(t * 0.02 + n.phase) * 6;
-  const breathe = Math.sin(t * 0.015 + n.phase * 2) * 0.04 + 1;
+  const wobble = dragging === n ? 0 : Math.sin(t * 0.015 + n.phase) * 4;
+  const breathe = Math.sin(t * 0.012 + n.phase * 2) * 0.03 + 1;
   const x = n.x + wobble;
   const y = n.y;
-  
+
   ctx.save();
   ctx.translate(x, y);
   const s = n.scale * breathe * (dragging === n ? 1.15 : 1);
   ctx.scale(s, s);
-  
-  if (dragging === n) {
-    ctx.shadowColor = 'rgba(100,180,255,0.25)';
-    ctx.shadowBlur = 18;
-  }
-  
+  if (dragging === n) { ctx.shadowColor = 'rgba(100,180,255,0.25)'; ctx.shadowBlur = 18; }
+
   const str = n.value.toFixed(1);
   let curX = -(str.length * 14) / 2;
-  
   for (let i = 0; i < str.length; i++) {
     const ch = str[i];
-    
     if (ch === '.') {
       ctx.fillStyle = digitColors[5] + '88';
       ctx.font = '16px Courier New';
-      ctx.globalAlpha = (n.absorbed ? (1 - n.absorbProgress) : n.life * 0.85) * globalAlpha;
+      ctx.globalAlpha = 0.85 * alpha;
       ctx.fillText('.', curX, 0);
       curX += 10;
       continue;
     }
-    
     const d = parseInt(ch);
-    const h = digitHeight(d);
-    const col = digitColors[d];
+    const h = 18 + d * 7;
     ctx.font = h + 'px Courier New';
-    
-    // Gradient showing rounding direction
+    const col = digitColors[d];
     const grad = ctx.createLinearGradient(curX, -h / 2, curX, h / 2);
-    if (n.roundsUp) {
-      grad.addColorStop(0, col);
-      grad.addColorStop(1, col + '33');
-    } else {
-      grad.addColorStop(0, col + '33');
-      grad.addColorStop(1, col);
-    }
+    if (n.roundsUp) { grad.addColorStop(0, col); grad.addColorStop(1, col + '33'); }
+    else { grad.addColorStop(0, col + '33'); grad.addColorStop(1, col); }
     ctx.fillStyle = grad;
-    
-    const a = (n.absorbed ? (1 - n.absorbProgress) : n.life * 0.85) * globalAlpha;
-    ctx.globalAlpha = a;
+    ctx.globalAlpha = 0.85 * alpha;
     ctx.textBaseline = 'middle';
     ctx.fillText(ch, curX, 0);
-    
-    ctx.globalAlpha = a * 0.15;
-    ctx.shadowColor = col;
-    ctx.shadowBlur = 12;
-    ctx.fillText(ch, curX, 0);
-    ctx.shadowBlur = 0;
-    
     curX += h * 0.6;
   }
-  
-  // Rounding hint — shows rounded value faintly
-  if (!n.absorbed && n.life > 0.5 && dragging !== n) {
-    ctx.globalAlpha = 0.2 * globalAlpha;
+
+  // Rounding hint
+  if (!n.sorted && dragging !== n) {
+    ctx.globalAlpha = 0.18 * alpha;
     ctx.font = '10px Courier New';
     ctx.fillStyle = n.roundsUp ? '#42b5d8' : '#6e5ebf';
-    const arrow = n.roundsUp ? String.fromCharCode(8593) : String.fromCharCode(8595);
+    const arrow = n.roundsUp ? '\u2191' : '\u2193';
     ctx.fillText(arrow + n.rounded, curX + 6, 0);
   }
-  
   ctx.restore();
 }
 
 function drawParticles(alpha) {
   for (let i = particles.length - 1; i >= 0; i--) {
     const p = particles[i];
-    p.x += p.vx; p.y += p.vy; p.vy += 0.06; p.life -= 0.02;
+    p.x += p.vx; p.y += p.vy; p.vy += 0.06; p.life -= 0.018;
     if (p.life <= 0) { particles.splice(i, 1); continue; }
     ctx.globalAlpha = p.life * 0.6 * alpha;
     ctx.fillStyle = p.color;
@@ -393,67 +328,159 @@ function drawParticles(alpha) {
   ctx.globalAlpha = 1;
 }
 
-function drawGrid(alpha) {
-  ctx.globalAlpha = 0.035 * alpha;
-  ctx.strokeStyle = '#ede9df';
+function drawBanker() {
+  if (!done) return;
+  doneTimer++;
+  const appear = Math.min(doneTimer / 60, 1);
+  if (appear <= 0) return;
+
+  const bx = W / 2;
+  const by = H * 0.38;
+
+  ctx.save();
+  ctx.globalAlpha = appear;
+  ctx.translate(bx, by);
+
+  // Body — pinstripe suit
+  ctx.fillStyle = '#2a2a3a';
+  ctx.beginPath();
+  ctx.ellipse(0, 28, 22, 30, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Pinstripes
+  ctx.strokeStyle = 'rgba(100,100,130,0.2)';
   ctx.lineWidth = 0.5;
-  for (let i = 0; i < 10; i++) {
-    const y = (H / 10) * i;
-    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  for (let s = -18; s <= 18; s += 4) {
+    ctx.beginPath();
+    ctx.moveTo(s, 2);
+    ctx.lineTo(s, 55);
+    ctx.stroke();
   }
-  ctx.globalAlpha = 1;
+
+  // Head
+  ctx.fillStyle = '#e8d4b8';
+  ctx.beginPath();
+  ctx.arc(0, -8, 16, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Eyes — small, pleased
+  ctx.fillStyle = '#2a2a2a';
+  ctx.beginPath();
+  ctx.arc(-5, -10, 1.5, 0, Math.PI * 2);
+  ctx.arc(5, -10, 1.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Subtle smile
+  ctx.strokeStyle = '#6a5a4a';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(0, -5, 6, 0.15, Math.PI - 0.15);
+  ctx.stroke();
+
+  // Glasses — round, thin wire
+  ctx.strokeStyle = '#888';
+  ctx.lineWidth = 0.6;
+  ctx.beginPath();
+  ctx.arc(-5, -10, 4, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(5, -10, 4, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(-1, -10);
+  ctx.lineTo(1, -10);
+  ctx.stroke();
+
+  // Tie
+  ctx.fillStyle = '#8a3a3a';
+  ctx.beginPath();
+  ctx.moveTo(-3, 8);
+  ctx.lineTo(3, 8);
+  ctx.lineTo(1, 24);
+  ctx.lineTo(-1, 24);
+  ctx.closePath();
+  ctx.fill();
+
+  // Arms — hands together, approving
+  ctx.fillStyle = '#e8d4b8';
+  ctx.beginPath();
+  ctx.arc(-24, 32, 5, 0, Math.PI * 2);
+  ctx.arc(24, 32, 5, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+
+  // "Good job" text
+  const textDelay = Math.max(0, (doneTimer - 80) / 60);
+  const textAlpha = Math.min(textDelay, 0.65);
+  if (textAlpha > 0) {
+    ctx.globalAlpha = textAlpha;
+    ctx.fillStyle = '#c8bfa8';
+    ctx.font = '14px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText('good job', bx, by + 76);
+
+    // Score
+    const scoreDelay = Math.max(0, (doneTimer - 140) / 60);
+    const scoreAlpha = Math.min(scoreDelay, 0.35);
+    if (scoreAlpha > 0) {
+      ctx.globalAlpha = scoreAlpha;
+      ctx.font = '10px Courier New';
+      ctx.fillStyle = '#8a8a9a';
+      ctx.fillText(TOTAL + '/' + TOTAL + ' sorted', bx, by + 94);
+    }
+    ctx.textAlign = 'left';
+    ctx.globalAlpha = 1;
+  }
 }
 
-function drawScanlines(alpha) {
-  ctx.globalAlpha = 0.02 * alpha;
+function drawScanlines() {
+  ctx.globalAlpha = 0.018;
   ctx.fillStyle = '#ede9df';
   for (let y = 0; y < H; y += 3) ctx.fillRect(0, y, W, 1);
   ctx.globalAlpha = 1;
 }
 
+function drawProgress() {
+  if (done) return;
+  const pw = 60;
+  const px = W / 2 - pw / 2;
+  const py = H - 30;
+  ctx.globalAlpha = 0.12;
+  ctx.fillStyle = '#444';
+  ctx.fillRect(px, py, pw, 3);
+  ctx.globalAlpha = 0.3;
+  ctx.fillStyle = '#42b5d8';
+  ctx.fillRect(px, py, pw * (sorted / TOTAL), 3);
+  ctx.globalAlpha = 1;
+}
+
 function draw() {
   t++;
-  
-  // Fade everything out after completion
-  let alpha = 1;
-  if (fading) {
-    fadeProgress += 0.005;
-    alpha = Math.max(0, 1 - fadeProgress);
-    if (fadeProgress >= 1.5) return; // fully gone, stop drawing
-  }
-  
-  ctx.fillStyle = `rgba(10, 10, 18, ${fading ? 0.03 : 0.08})`;
+  ctx.fillStyle = 'rgba(10, 10, 18, 0.12)';
   ctx.fillRect(0, 0, W, H);
-  
-  if (fading && fadeProgress > 0.8) {
-    // Final fade to black
-    ctx.fillStyle = `rgba(10, 10, 18, 0.02)`;
-    ctx.fillRect(0, 0, W, H);
+
+  // Grid
+  ctx.globalAlpha = 0.03;
+  ctx.strokeStyle = '#ede9df';
+  ctx.lineWidth = 0.5;
+  for (let i = 0; i < 10; i++) {
+    ctx.beginPath(); ctx.moveTo(0, H / 10 * i); ctx.lineTo(W, H / 10 * i); ctx.stroke();
   }
-  
-  drawGrid(alpha);
-  
-  for (let i = 0; i < numbers.length; i++) {
-    const n = numbers[i];
+  ctx.globalAlpha = 1;
+
+  // Numbers
+  for (const n of allNumbers) {
     if (n === dragging) continue;
-    n.age++;
-    if (!n.absorbed) {
-      n.y += n.vy;
-      n.x += n.vx;
-      if (n.age < 60) n.life = n.age / 60;
-      if (n.y > H - BIN_Y_OFFSET - 40) { n.vy = -Math.abs(n.vy) * 0.5; n.y = H - BIN_Y_OFFSET - 40; }
-      if (n.x < -50) n.x = W + 50;
-      if (n.x > W + 50) n.x = -50;
-      if (n.y < -200) { numbers[i] = makeNumber(); continue; }
-    }
-    drawNumber(n, alpha);
+    drawNumber(n, 1);
   }
-  if (dragging) drawNumber(dragging, alpha);
-  
-  drawBins(alpha);
-  drawParticles(alpha);
-  drawScanlines(alpha);
-  
+  if (dragging) drawNumber(dragging, 1);
+
+  drawBins(1);
+  drawParticles(1);
+  drawProgress();
+  drawScanlines();
+  drawBanker();
+
   requestAnimationFrame(draw);
 }
 
