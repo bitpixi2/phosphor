@@ -9,17 +9,15 @@
 body { overflow: hidden; background: #0a0a12; font-family: 'Courier New', monospace; }
 canvas { display: block; }
 .sig { position: fixed; top: 16px; right: 20px; color: rgba(180,160,220,0.35); font-size: 10px; letter-spacing: 2px; z-index: 10; text-align: right; line-height: 1.6; }
-.legend { position: fixed; bottom: 16px; left: 20px; color: rgba(180,180,200,0.3); font-size: 9px; z-index: 10; line-height: 1.5; max-width: 200px; }
+.legend { position: fixed; bottom: 16px; left: 20px; color: rgba(180,180,200,0.3); font-size: 9px; z-index: 10; line-height: 1.5; max-width: 200px; transition: opacity 0.5s; }
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
 <div class="sig">Number Feel<br>Phosphor<br>2026-03-03</div>
-<div class="legend">
-  height = magnitude<br>
-  color = digit identity<br>
-  gradient = rounding direction<br>
-  touch = each number has a texture<br>
+<div class="legend" id="legend">
+  drag the numbers<br>
+  sort them by how they feel<br>
   ― bankers rounding: .5 rounds to even
 </div>
 <script>
@@ -30,68 +28,182 @@ function resize() { W = c.width = innerWidth; H = c.height = innerHeight; }
 resize();
 addEventListener('resize', resize);
 
-// Audio context for number tones
+// Audio context
 let audioCtx = null;
 function initAudio() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 }
 
-function playTone(digit, duration) {
+function playTone(digit, duration, delay) {
   if (!audioCtx) return;
-  // Each digit maps to a pentatonic note
   const freqs = [220, 246.94, 277.18, 311.13, 329.63, 369.99, 415.30, 440, 493.88, 523.25];
+  const when = audioCtx.currentTime + (delay || 0);
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
   osc.type = 'sine';
   osc.frequency.value = freqs[digit];
-  gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+  gain.gain.setValueAtTime(0.08, when);
+  gain.gain.exponentialRampToValueAtTime(0.001, when + duration);
   osc.connect(gain);
   gain.connect(audioCtx.destination);
-  osc.start();
-  osc.stop(audioCtx.currentTime + duration);
+  osc.start(when);
+  osc.stop(when + duration);
 }
 
-// Haptic for digit
-function hapticDigit(digit) {
-  if (navigator.vibrate) {
-    navigator.vibrate(5 + digit * 3); // 0=5ms, 9=32ms
-  }
+function playBinChime(binIndex) {
+  if (!audioCtx) return;
+  // Each bin has a chord
+  const chords = [
+    [220, 277.18, 329.63],    // WO — minor
+    [329.63, 415.30, 523.25], // FR — bright
+    [246.94, 311.13, 369.99], // DR — tense
+    [277.18, 349.23, 440],    // MA — resolved
+  ];
+  const chord = chords[binIndex];
+  chord.forEach((freq, i) => {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.06, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.6);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(audioCtx.currentTime + i * 0.04);
+    osc.stop(audioCtx.currentTime + 0.7);
+  });
 }
 
-// Color for each digit (warm spectrum, dyscalculia-friendly — distinct hues)
+function haptic(ms) {
+  if (navigator.vibrate) navigator.vibrate(ms);
+}
+
+// Digit colors
 const digitColors = [
-  '#6b7b8a', // 0 — cool gray (nothing, neutral)
-  '#e85d75', // 1 — coral pink
-  '#f4a742', // 2 — warm amber
-  '#f7d94e', // 3 — golden yellow
-  '#7bc67e', // 4 — soft green
-  '#42b5d8', // 5 — sky blue (the rounding pivot)
-  '#6e5ebf', // 6 — purple
-  '#d45fbf', // 7 — magenta
-  '#e8734a', // 8 — burnt orange
-  '#4ecdc4', // 9 — teal
+  '#6b7b8a', // 0
+  '#e85d75', // 1
+  '#f4a742', // 2
+  '#f7d94e', // 3
+  '#7bc67e', // 4
+  '#42b5d8', // 5
+  '#6e5ebf', // 6
+  '#d45fbf', // 7
+  '#e8734a', // 8
+  '#4ecdc4', // 9
 ];
 
-// Height scale — taller = bigger digit
 function digitHeight(d) { return 16 + d * 8; }
 
-// Bankers rounding visualization
 function bankersRound(n) {
   const floor = Math.floor(n);
   const frac = n - floor;
-  if (Math.abs(frac - 0.5) < 0.001) {
-    return floor % 2 === 0 ? floor : floor + 1; // round to even
-  }
+  if (Math.abs(frac - 0.5) < 0.001) return floor % 2 === 0 ? floor : floor + 1;
   return Math.round(n);
 }
 
-// Scene: floating numbers with their properties
+// ── Bins (Severance-inspired) ──
+const bins = [
+  { label: 'WO', fullLabel: 'Woe', color: '#6e5ebf', glow: '#6e5ebf44', count: 0, flash: 0 },
+  { label: 'FR', fullLabel: 'Frolic', color: '#7bc67e', glow: '#7bc67e44', count: 0, flash: 0 },
+  { label: 'DR', fullLabel: 'Dread', color: '#e85d75', glow: '#e85d7544', count: 0, flash: 0 },
+  { label: 'MA', fullLabel: 'Malice', color: '#f4a742', glow: '#f4a74244', count: 0, flash: 0 },
+];
+
+const BIN_W = 70;
+const BIN_H = 56;
+const BIN_GAP = 16;
+const BIN_Y_OFFSET = 90; // from bottom
+
+function getBinRects() {
+  const totalW = bins.length * BIN_W + (bins.length - 1) * BIN_GAP;
+  const startX = (W - totalW) / 2;
+  const y = H - BIN_Y_OFFSET;
+  return bins.map((b, i) => ({
+    x: startX + i * (BIN_W + BIN_GAP),
+    y,
+    w: BIN_W,
+    h: BIN_H,
+    bin: b,
+    index: i,
+  }));
+}
+
+function drawBins() {
+  const rects = getBinRects();
+  for (const r of rects) {
+    const b = r.bin;
+    
+    // Glow when flashing
+    if (b.flash > 0) {
+      ctx.globalAlpha = b.flash * 0.3;
+      ctx.shadowColor = b.color;
+      ctx.shadowBlur = 30;
+      ctx.fillStyle = b.color;
+      ctx.fillRect(r.x - 5, r.y - 5, r.w + 10, r.h + 10);
+      ctx.shadowBlur = 0;
+      b.flash -= 0.02;
+    }
+    
+    // Bin border
+    ctx.globalAlpha = dragging && dragOver === r.index ? 0.6 : 0.25;
+    ctx.strokeStyle = b.color;
+    ctx.lineWidth = dragging && dragOver === r.index ? 2 : 1;
+    ctx.strokeRect(r.x, r.y, r.w, r.h);
+    
+    // Fill
+    ctx.globalAlpha = dragging && dragOver === r.index ? 0.12 : 0.04;
+    ctx.fillStyle = b.color;
+    ctx.fillRect(r.x, r.y, r.w, r.h);
+    
+    // Label
+    ctx.globalAlpha = 0.5;
+    ctx.fillStyle = b.color;
+    ctx.font = 'bold 14px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(b.label, r.x + r.w / 2, r.y + r.h / 2 - 8);
+    
+    // Count
+    ctx.globalAlpha = 0.3;
+    ctx.font = '10px Courier New';
+    ctx.fillText(b.count, r.x + r.w / 2, r.y + r.h / 2 + 10);
+    
+    ctx.globalAlpha = 1;
+    ctx.textAlign = 'left';
+  }
+  
+  // Progress bar — refinement %
+  const total = bins.reduce((s, b) => s + b.count, 0);
+  if (total > 0) {
+    const barW = bins.length * BIN_W + (bins.length - 1) * BIN_GAP;
+    const rects2 = getBinRects();
+    const barX = rects2[0].x;
+    const barY = H - BIN_Y_OFFSET + BIN_H + 12;
+    const pct = Math.min(total / 100, 1);
+    
+    ctx.globalAlpha = 0.15;
+    ctx.fillStyle = '#ede9df';
+    ctx.fillRect(barX, barY, barW, 3);
+    
+    ctx.globalAlpha = 0.4;
+    ctx.fillStyle = '#42b5d8';
+    ctx.fillRect(barX, barY, barW * pct, 3);
+    
+    ctx.globalAlpha = 0.2;
+    ctx.font = '8px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ede9df';
+    ctx.fillText(Math.round(pct * 100) + '% refined', barX + barW / 2, barY + 14);
+    ctx.textAlign = 'left';
+    ctx.globalAlpha = 1;
+  }
+}
+
+// ── Numbers ──
 const numbers = [];
-const NUM_COUNT = 35;
+const NUM_COUNT = 25;
 
 function spawnNumber() {
-  // Generate a number with .5 sometimes for bankers rounding
   const hasFrac = Math.random() < 0.4;
   const whole = Math.floor(Math.random() * 100);
   const frac = hasFrac ? (Math.random() < 0.5 ? 0.5 : Math.round(Math.random() * 9) / 10) : 0;
@@ -105,80 +217,194 @@ function spawnNumber() {
     isBankersCase,
     digits: String(value).split('').filter(c => c !== '.'),
     hasDecimal: hasFrac,
-    x: Math.random() * W,
-    y: H + 50 + Math.random() * 200,
-    vy: -0.25 - Math.random() * 0.5,
+    x: 60 + Math.random() * (W - 120),
+    y: -50 - Math.random() * 300,
+    vy: 0.2 + Math.random() * 0.3,
     vx: (Math.random() - 0.5) * 0.15,
     phase: Math.random() * Math.PI * 2,
     scale: 0.4 + Math.random() * 0.4,
     life: 1,
     age: 0,
     played: false,
+    absorbed: false,
+    absorbTarget: null,
+    absorbProgress: 0,
   };
 }
 
 for (let i = 0; i < NUM_COUNT; i++) {
   const n = spawnNumber();
-  n.y = Math.random() * H; // initial spread
-  n.age = Math.random() * 400; // stagger
+  n.y = 50 + Math.random() * (H - 200);
+  n.age = Math.random() * 400;
   numbers.push(n);
 }
 
-let t = 0;
+// ── Drag state ──
+let dragging = null;
+let dragOffX = 0, dragOffY = 0;
+let dragOver = -1; // which bin we're hovering
 let interacted = false;
 
-// Click/tap on numbers — play their tones, feel their digits
-c.addEventListener('click', (e) => {
+// Refined number particles (absorbed into bins)
+const particles = [];
+
+function getNumberBounds(n) {
+  const str = n.hasDecimal ? n.value.toFixed(1) : String(n.value);
+  const nw = str.length * 14 * n.scale + 40;
+  const nh = 50 * n.scale + 20;
+  return { x: n.x - nw / 2, y: n.y - nh / 2, w: nw, h: nh };
+}
+
+function hitTest(mx, my) {
+  for (let i = numbers.length - 1; i >= 0; i--) {
+    const n = numbers[i];
+    if (n.absorbed) continue;
+    const b = getNumberBounds(n);
+    if (mx >= b.x && mx <= b.x + b.w && my >= b.y && my <= b.y + b.h) return i;
+  }
+  return -1;
+}
+
+function binHitTest(mx, my) {
+  const rects = getBinRects();
+  for (const r of rects) {
+    if (mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h) return r.index;
+  }
+  return -1;
+}
+
+// Pointer events (unified mouse + touch)
+function onDown(mx, my) {
   initAudio();
   interacted = true;
-  const rect = c.getBoundingClientRect();
-  const mx = e.clientX - rect.left;
-  const my = e.clientY - rect.top;
+  // Fade legend after first interaction
+  document.getElementById('legend').style.opacity = '0';
   
-  let hit = false;
-  for (const n of numbers) {
-    const str = n.hasDecimal ? n.value.toFixed(1) : String(n.value);
-    const nw = str.length * 14 * n.scale;
-    const nh = 40 * n.scale;
-    if (mx > n.x - nw/2 - 20 && mx < n.x + nw/2 + 20 &&
-        my > n.y - nh - 10 && my < n.y + nh + 10) {
-      // Play each digit as a chord
-      for (let i = 0; i < n.digits.length; i++) {
-        const d = parseInt(n.digits[i]);
-        setTimeout(() => playTone(d, 0.4), i * 80);
-      }
-      hapticDigit(n.digits.length * 2);
-      // Visual burst — boost scale briefly
-      n.scale *= 1.4;
-      setTimeout(() => { n.scale /= 1.4; }, 300);
-      hit = true;
-      break;
+  const idx = hitTest(mx, my);
+  if (idx >= 0) {
+    dragging = numbers[idx];
+    dragging.vy = 0;
+    dragging.vx = 0;
+    dragOffX = mx - dragging.x;
+    dragOffY = my - dragging.y;
+    haptic(8);
+    
+    // Play pickup chord
+    for (let i = 0; i < dragging.digits.length; i++) {
+      playTone(parseInt(dragging.digits[i]), 0.3, i * 0.06);
     }
   }
-  
-  if (!hit) {
-    // Tapped empty space — play a soft click
-    playTone(0, 0.15);
-    hapticDigit(1);
-  }
-});
+}
 
-// Touch support for mobile
+function onMove(mx, my) {
+  if (!dragging) return;
+  dragging.x = mx - dragOffX;
+  dragging.y = my - dragOffY;
+  
+  const prevOver = dragOver;
+  dragOver = binHitTest(mx, my);
+  if (dragOver >= 0 && dragOver !== prevOver) {
+    haptic(5);
+  }
+}
+
+function onUp(mx, my) {
+  if (!dragging) return;
+  
+  const binIdx = binHitTest(mx, my);
+  if (binIdx >= 0) {
+    // Refined! Absorb into bin
+    const b = bins[binIdx];
+    b.count++;
+    b.flash = 1;
+    playBinChime(binIdx);
+    haptic(25);
+    
+    // Spawn particles
+    const rects = getBinRects();
+    const r = rects[binIdx];
+    for (let i = 0; i < 8; i++) {
+      particles.push({
+        x: r.x + r.w / 2,
+        y: r.y + r.h / 2,
+        vx: (Math.random() - 0.5) * 3,
+        vy: -Math.random() * 3 - 1,
+        color: b.color,
+        life: 1,
+        size: 2 + Math.random() * 3,
+      });
+    }
+    
+    // Absorb the number
+    dragging.absorbed = true;
+    dragging.absorbTarget = { x: r.x + r.w / 2, y: r.y + r.h / 2 };
+    dragging.absorbProgress = 0;
+    
+    // Spawn replacement after delay
+    setTimeout(() => {
+      const idx = numbers.indexOf(dragging);
+      if (idx >= 0) numbers[idx] = spawnNumber();
+    }, 600);
+  } else {
+    // Dropped in space — resume floating
+    dragging.vy = 0.2 + Math.random() * 0.3;
+    dragging.vx = (Math.random() - 0.5) * 0.15;
+  }
+  
+  dragging = null;
+  dragOver = -1;
+}
+
+c.addEventListener('mousedown', (e) => onDown(e.clientX, e.clientY));
+c.addEventListener('mousemove', (e) => onMove(e.clientX, e.clientY));
+c.addEventListener('mouseup', (e) => onUp(e.clientX, e.clientY));
+
 c.addEventListener('touchstart', (e) => {
   e.preventDefault();
-  const touch = e.touches[0];
-  c.dispatchEvent(new MouseEvent('click', { clientX: touch.clientX, clientY: touch.clientY }));
+  const t = e.touches[0];
+  onDown(t.clientX, t.clientY);
+}, { passive: false });
+c.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  const t = e.touches[0];
+  onMove(t.clientX, t.clientY);
+}, { passive: false });
+c.addEventListener('touchend', (e) => {
+  e.preventDefault();
+  const t = e.changedTouches[0];
+  onUp(t.clientX, t.clientY);
 }, { passive: false });
 
+let t = 0;
+
 function drawNumber(n) {
-  const wobble = Math.sin(t * 0.02 + n.phase) * 8;
+  if (n.absorbed) {
+    // Shrink toward bin
+    n.absorbProgress += 0.04;
+    if (n.absorbProgress >= 1) return;
+    const tgt = n.absorbTarget;
+    n.x += (tgt.x - n.x) * 0.15;
+    n.y += (tgt.y - n.y) * 0.15;
+    n.scale *= 0.92;
+    ctx.globalAlpha = 1 - n.absorbProgress;
+  }
+  
+  const wobble = dragging === n ? 0 : Math.sin(t * 0.02 + n.phase) * 8;
   const breathe = Math.sin(t * 0.015 + n.phase * 2) * 0.05 + 1;
   const x = n.x + wobble;
   const y = n.y;
   
   ctx.save();
   ctx.translate(x, y);
-  ctx.scale(n.scale * breathe, n.scale * breathe);
+  
+  const s = n.scale * breathe * (dragging === n ? 1.15 : 1);
+  ctx.scale(s, s);
+  
+  // Drop shadow when dragging
+  if (dragging === n) {
+    ctx.shadowColor = 'rgba(100,180,255,0.3)';
+    ctx.shadowBlur = 20;
+  }
   
   const str = n.hasDecimal ? n.value.toFixed(1) : String(n.value);
   let curX = -(str.length * 14) / 2;
@@ -187,7 +413,6 @@ function drawNumber(n) {
     const ch = str[i];
     
     if (ch === '.') {
-      // Decimal point — small, in rounding-pivot blue
       ctx.fillStyle = digitColors[5] + '88';
       ctx.font = '16px Courier New';
       ctx.fillText('.', curX, 0);
@@ -199,12 +424,10 @@ function drawNumber(n) {
     const h = digitHeight(d);
     const col = digitColors[d];
     
-    // Draw digit at varying height
     ctx.font = h + 'px Courier New';
     
-    // Gradient fill for rounding direction
     if (n.isBankersCase) {
-      const grad = ctx.createLinearGradient(curX, -h/2, curX, h/2);
+      const grad = ctx.createLinearGradient(curX, -h / 2, curX, h / 2);
       const roundedUp = n.rounded > n.value;
       grad.addColorStop(0, roundedUp ? col : col + '44');
       grad.addColorStop(1, roundedUp ? col + '44' : col);
@@ -213,12 +436,12 @@ function drawNumber(n) {
       ctx.fillStyle = col;
     }
     
-    ctx.globalAlpha = n.life * 0.85;
+    ctx.globalAlpha = n.absorbed ? (1 - n.absorbProgress) : n.life * 0.85;
     ctx.textBaseline = 'middle';
     ctx.fillText(ch, curX, 0);
     
-    // Subtle glow
-    ctx.globalAlpha = n.life * 0.12;
+    // Glow
+    ctx.globalAlpha = (n.absorbed ? (1 - n.absorbProgress) : n.life) * 0.12;
     ctx.shadowColor = col;
     ctx.shadowBlur = 15;
     ctx.fillText(ch, curX, 0);
@@ -229,11 +452,11 @@ function drawNumber(n) {
   }
   
   // Bankers rounding annotation
-  if (n.isBankersCase && n.life > 0.5) {
+  if (n.isBankersCase && n.life > 0.5 && !n.absorbed) {
     ctx.globalAlpha = (n.life - 0.5) * 0.5;
     ctx.font = '10px Courier New';
     ctx.fillStyle = digitColors[5];
-    const arrow = n.rounded > n.value ? '↑' : '↓';
+    const arrow = n.rounded > n.value ? String.fromCharCode(8593) : String.fromCharCode(8595);
     ctx.fillText(arrow + n.rounded, curX + 8, 0);
     ctx.fillStyle = '#888';
     ctx.font = '8px Courier New';
@@ -241,23 +464,31 @@ function drawNumber(n) {
   }
   
   ctx.restore();
-  
-  // Trigger audio when number crosses center band
-  if (interacted && !n.played && Math.abs(n.y - H * 0.5) < 20) {
-    n.played = true;
-    const firstDigit = n.digits[0] ? parseInt(n.digits[0]) : 0;
-    playTone(firstDigit, 0.25);
-    hapticDigit(firstDigit);
-  }
 }
 
-// Background: subtle grid showing rounding zones
+function drawParticles() {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.05;
+    p.life -= 0.02;
+    
+    if (p.life <= 0) { particles.splice(i, 1); continue; }
+    
+    ctx.globalAlpha = p.life * 0.7;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
 function drawGrid() {
   ctx.globalAlpha = 0.04;
   ctx.strokeStyle = '#ede9df';
   ctx.lineWidth = 0.5;
-  
-  // Horizontal lines at different spacing to suggest magnitude
   for (let i = 0; i < 10; i++) {
     const y = (H / 10) * i;
     ctx.beginPath();
@@ -265,15 +496,9 @@ function drawGrid() {
     ctx.lineTo(W, y);
     ctx.stroke();
   }
-  
-  // Center band — the "crossing" zone where sounds trigger
-  ctx.globalAlpha = 0.02;
-  ctx.fillStyle = digitColors[5];
-  ctx.fillRect(0, H * 0.45, W, H * 0.1);
   ctx.globalAlpha = 1;
 }
 
-// Scanlines
 function drawScanlines() {
   ctx.globalAlpha = 0.025;
   ctx.fillStyle = '#ede9df';
@@ -286,7 +511,6 @@ function drawScanlines() {
 function draw() {
   t++;
   
-  // Fade trail
   ctx.fillStyle = 'rgba(10, 10, 18, 0.08)';
   ctx.fillRect(0, 0, W, H);
   
@@ -295,25 +519,44 @@ function draw() {
   // Update and draw numbers
   for (let i = 0; i < numbers.length; i++) {
     const n = numbers[i];
+    if (n === dragging) { drawNumber(n); continue; }
+    
     n.age++;
-    n.y += n.vy;
-    n.x += n.vx;
     
-    // Fade in and out
-    if (n.age < 60) n.life = n.age / 60;
-    if (n.y < -80) n.life -= 0.01;
-    
-    if (n.life > 0) {
-      drawNumber(n);
+    if (!n.absorbed) {
+      n.y += n.vy;
+      n.x += n.vx;
+      
+      // Fade in
+      if (n.age < 60) n.life = n.age / 60;
+      
+      // Bounce off bottom (above bins)
+      if (n.y > H - BIN_Y_OFFSET - 40) {
+        n.vy = -Math.abs(n.vy) * 0.5;
+        n.y = H - BIN_Y_OFFSET - 40;
+      }
+      
+      // Wrap horizontally
+      if (n.x < -50) n.x = W + 50;
+      if (n.x > W + 50) n.x = -50;
+      
+      // Respawn if drifted off top
+      if (n.y < -200) {
+        numbers[i] = spawnNumber();
+        continue;
+      }
     }
     
-    // Respawn
-    if (n.life <= 0) {
-      numbers[i] = spawnNumber();
-    }
+    drawNumber(n);
   }
   
+  // Draw dragged number last (on top)
+  if (dragging) drawNumber(dragging);
+  
+  drawBins();
+  drawParticles();
   drawScanlines();
+  
   requestAnimationFrame(draw);
 }
 
