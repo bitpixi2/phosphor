@@ -65,6 +65,20 @@ const WORKERS = [
   { name: 'The Fridge', task: 'growing something\nin the back corner' },
   { name: 'Temp #12', task: 'has been temp\nfor 4 years' },
   { name: 'QA Gremlin', task: 'finding edge cases\nin the coffee machine' },
+  { name: 'Lunch Thief', task: 'eating yoghurt\nthat says KAREN' },
+  { name: 'Onboarding Doc', task: 'last updated\nNovember 2018' },
+  { name: 'The Whiteboard', task: 'holding a roadmap\nnobody follows' },
+  { name: 'Badge #0000', task: 'access to everything\naccountable for nothing' },
+  { name: 'Night Owl', task: 'deploying to prod\nat 2am on Friday' },
+  { name: 'Standup Bot', task: 'asking what you did\nyesterday (again)' },
+  { name: 'The Intern', task: 'rewriting the codebase\nin a new framework' },
+  { name: 'Desk Plant #7', task: 'outlived three\nreorganisations' },
+  { name: 'JIRA Ticket', task: 'moved to backlog\nin perpetuity' },
+  { name: 'Coffee Machine', task: 'descaling\nitself resentfully' },
+  { name: 'WiFi Router', task: 'dropping packets\nwith intent' },
+  { name: 'Fire Warden', task: 'never been tested\nhopes it stays that way' },
+  { name: 'Reply-All Guy', task: 'thanking everyone\nfor thanking everyone' },
+  { name: 'Exit Interview', task: 'collecting feedback\nthat changes nothing' },
 ];
 
 let selectedCubicle = null;
@@ -93,7 +107,9 @@ function makeCubicle(gx, gy, x, y, w, h) {
   const screenPhase = Math.random() * Math.PI * 2;
   const screenType = Math.floor(Math.random() * 5); // different "work" on each screen
   
-  const worker = WORKERS[_workerIdx++ % WORKERS.length];
+  const worker = _workerIdx < WORKERS.length
+    ? WORKERS[_workerIdx++]
+    : { name: 'Desk ' + (_workerIdx++ + 1), task: 'empty\nbut the light is on' };
   return {
     gx, gy, x, y, w, h,
     hasPlant, hasMug, hasPhoto,
