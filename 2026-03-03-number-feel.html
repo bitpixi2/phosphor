@@ -9,16 +9,15 @@
 body { overflow: hidden; background: #0a0a12; font-family: 'Courier New', monospace; }
 canvas { display: block; }
 .sig { position: fixed; top: 16px; right: 20px; color: rgba(180,160,220,0.35); font-size: 10px; letter-spacing: 2px; z-index: 10; text-align: right; line-height: 1.6; }
-.legend { position: fixed; bottom: 16px; left: 20px; color: rgba(180,180,200,0.3); font-size: 9px; z-index: 10; line-height: 1.5; max-width: 200px; transition: opacity 0.5s; }
+.legend { position: fixed; bottom: 16px; left: 20px; color: rgba(180,180,200,0.25); font-size: 9px; z-index: 10; line-height: 1.5; max-width: 220px; transition: opacity 1.5s; }
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
 <div class="sig">Number Feel<br>Phosphor<br>2026-03-03</div>
 <div class="legend" id="legend">
-  drag the numbers<br>
-  sort them by how they feel<br>
-  ― bankers rounding: .5 rounds to even
+  .5 rounds to even<br>
+  drag each number where it belongs
 </div>
 <script>
 const c = document.getElementById('c');
@@ -28,21 +27,19 @@ function resize() { W = c.width = innerWidth; H = c.height = innerHeight; }
 resize();
 addEventListener('resize', resize);
 
-// Audio context
 let audioCtx = null;
 function initAudio() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 }
 
-function playTone(digit, duration, delay) {
+function playTone(freq, duration, delay) {
   if (!audioCtx) return;
-  const freqs = [220, 246.94, 277.18, 311.13, 329.63, 369.99, 415.30, 440, 493.88, 523.25];
   const when = audioCtx.currentTime + (delay || 0);
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
   osc.type = 'sine';
-  osc.frequency.value = freqs[digit];
-  gain.gain.setValueAtTime(0.08, when);
+  osc.frequency.value = freq;
+  gain.gain.setValueAtTime(0.07, when);
   gain.gain.exponentialRampToValueAtTime(0.001, when + duration);
   osc.connect(gain);
   gain.connect(audioCtx.destination);
@@ -50,50 +47,17 @@ function playTone(digit, duration, delay) {
   osc.stop(when + duration);
 }
 
-function playBinChime(binIndex) {
-  if (!audioCtx) return;
-  // Each bin has a chord
-  const chords = [
-    [220, 277.18, 329.63],    // WO — minor
-    [329.63, 415.30, 523.25], // FR — bright
-    [246.94, 311.13, 369.99], // DR — tense
-    [277.18, 349.23, 440],    // MA — resolved
-  ];
-  const chord = chords[binIndex];
-  chord.forEach((freq, i) => {
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.type = 'triangle';
-    osc.frequency.value = freq;
-    gain.gain.setValueAtTime(0.06, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.6);
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    osc.start(audioCtx.currentTime + i * 0.04);
-    osc.stop(audioCtx.currentTime + 0.7);
-  });
-}
-
-function haptic(ms) {
-  if (navigator.vibrate) navigator.vibrate(ms);
-}
+function haptic(ms) { if (navigator.vibrate) navigator.vibrate(ms); }
 
 // Digit colors
 const digitColors = [
-  '#6b7b8a', // 0
-  '#e85d75', // 1
-  '#f4a742', // 2
-  '#f7d94e', // 3
-  '#7bc67e', // 4
-  '#42b5d8', // 5
-  '#6e5ebf', // 6
-  '#d45fbf', // 7
-  '#e8734a', // 8
-  '#4ecdc4', // 9
+  '#6b7b8a', '#e85d75', '#f4a742', '#f7d94e', '#7bc67e',
+  '#42b5d8', '#6e5ebf', '#d45fbf', '#e8734a', '#4ecdc4',
 ];
 
-function digitHeight(d) { return 16 + d * 8; }
+function digitHeight(d) { return 18 + d * 7; }
 
+// Bankers rounding: .5 rounds to nearest even
 function bankersRound(n) {
   const floor = Math.floor(n);
   const frac = n - floor;
@@ -101,251 +65,80 @@ function bankersRound(n) {
   return Math.round(n);
 }
 
-// ── Bins (Severance-inspired) ──
+// ── Two bins: Down (round down) and Up (round up) ──
 const bins = [
-  { label: 'WO', fullLabel: 'Woe', color: '#6e5ebf', glow: '#6e5ebf44', count: 0, flash: 0 },
-  { label: 'FR', fullLabel: 'Frolic', color: '#7bc67e', glow: '#7bc67e44', count: 0, flash: 0 },
-  { label: 'DR', fullLabel: 'Dread', color: '#e85d75', glow: '#e85d7544', count: 0, flash: 0 },
-  { label: 'MA', fullLabel: 'Malice', color: '#f4a742', glow: '#f4a74244', count: 0, flash: 0 },
+  { label: String.fromCharCode(8595), color: '#6e5ebf', count: 0, flash: 0 },  // ↓
+  { label: String.fromCharCode(8593), color: '#42b5d8', count: 0, flash: 0 },  // ↑
 ];
 
-const BIN_W = 70;
-const BIN_H = 56;
-const BIN_GAP = 16;
-const BIN_Y_OFFSET = 90; // from bottom
+const BIN_W = 80;
+const BIN_H = 64;
+const BIN_GAP = 40;
+const BIN_Y_OFFSET = 100;
 
 function getBinRects() {
-  const totalW = bins.length * BIN_W + (bins.length - 1) * BIN_GAP;
+  const totalW = 2 * BIN_W + BIN_GAP;
   const startX = (W - totalW) / 2;
   const y = H - BIN_Y_OFFSET;
   return bins.map((b, i) => ({
-    x: startX + i * (BIN_W + BIN_GAP),
-    y,
-    w: BIN_W,
-    h: BIN_H,
-    bin: b,
-    index: i,
+    x: startX + i * (BIN_W + BIN_GAP), y, w: BIN_W, h: BIN_H, bin: b, index: i,
   }));
 }
 
-function drawBins() {
-  const rects = getBinRects();
-  for (const r of rects) {
-    const b = r.bin;
-    
-    // Glow when flashing
-    if (b.flash > 0) {
-      ctx.globalAlpha = b.flash * 0.3;
-      ctx.shadowColor = b.color;
-      ctx.shadowBlur = 30;
-      ctx.fillStyle = b.color;
-      ctx.fillRect(r.x - 5, r.y - 5, r.w + 10, r.h + 10);
-      ctx.shadowBlur = 0;
-      b.flash -= 0.02;
-    }
-    
-    // Bin border
-    ctx.globalAlpha = dragging && dragOver === r.index ? 0.6 : 0.25;
-    ctx.strokeStyle = b.color;
-    ctx.lineWidth = dragging && dragOver === r.index ? 2 : 1;
-    ctx.strokeRect(r.x, r.y, r.w, r.h);
-    
-    // Fill
-    ctx.globalAlpha = dragging && dragOver === r.index ? 0.12 : 0.04;
-    ctx.fillStyle = b.color;
-    ctx.fillRect(r.x, r.y, r.w, r.h);
-    
-    // Label
-    ctx.globalAlpha = 0.5;
-    ctx.fillStyle = b.color;
-    ctx.font = 'bold 14px Courier New';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(b.label, r.x + r.w / 2, r.y + r.h / 2 - 8);
-    
-    // Count
-    ctx.globalAlpha = 0.3;
-    ctx.font = '10px Courier New';
-    ctx.fillText(b.count, r.x + r.w / 2, r.y + r.h / 2 + 10);
-    
-    ctx.globalAlpha = 1;
-    ctx.textAlign = 'left';
-  }
-  
-  // Progress bar — refinement %
-  const total = bins.reduce((s, b) => s + b.count, 0);
-  if (total > 0) {
-    const barW = bins.length * BIN_W + (bins.length - 1) * BIN_GAP;
-    const rects2 = getBinRects();
-    const barX = rects2[0].x;
-    const barY = H - BIN_Y_OFFSET + BIN_H + 12;
-    const pct = Math.min(total / 25, 1);
-    
-    ctx.globalAlpha = 0.15;
-    ctx.fillStyle = '#ede9df';
-    ctx.fillRect(barX, barY, barW, 3);
-    
-    ctx.globalAlpha = 0.4;
-    ctx.fillStyle = '#42b5d8';
-    ctx.fillRect(barX, barY, barW * pct, 3);
-    
-    ctx.globalAlpha = 0.2;
-    ctx.font = '8px Courier New';
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#ede9df';
-    ctx.fillText(Math.round(pct * 100) + '% refined', barX + barW / 2, barY + 14);
-    ctx.textAlign = 'left';
-    ctx.globalAlpha = 1;
-  }
-}
-
-// ── Numbers ──
+// ── Generate .5 numbers for bankers rounding ──
+const TOTAL_TO_SORT = 15;
 const numbers = [];
-const NUM_COUNT = 25;
 
-function spawnNumber() {
-  const hasFrac = Math.random() < 0.4;
-  const whole = Math.floor(Math.random() * 100);
-  const frac = hasFrac ? (Math.random() < 0.5 ? 0.5 : Math.round(Math.random() * 9) / 10) : 0;
-  const value = whole + frac;
+function makeNumber() {
+  // All numbers end in .5 — the whole point of bankers rounding
+  const whole = Math.floor(Math.random() * 20);
+  const value = whole + 0.5;
   const rounded = bankersRound(value);
-  const isBankersCase = hasFrac && Math.abs(frac - 0.5) < 0.01;
+  const roundsUp = rounded > value;
   
   return {
     value,
     rounded,
-    isBankersCase,
+    roundsUp,
     digits: String(value).split('').filter(c => c !== '.'),
-    hasDecimal: hasFrac,
-    x: 60 + Math.random() * (W - 120),
-    y: -50 - Math.random() * 300,
-    vy: 0.2 + Math.random() * 0.3,
-    vx: (Math.random() - 0.5) * 0.15,
+    x: 80 + Math.random() * (W - 160),
+    y: -40 - Math.random() * 250,
+    vy: 0.15 + Math.random() * 0.25,
+    vx: (Math.random() - 0.5) * 0.1,
     phase: Math.random() * Math.PI * 2,
-    scale: 0.4 + Math.random() * 0.4,
-    life: 1,
+    scale: 0.5 + Math.random() * 0.3,
+    life: 0,
     age: 0,
-    played: false,
     absorbed: false,
     absorbTarget: null,
     absorbProgress: 0,
   };
 }
 
-for (let i = 0; i < NUM_COUNT; i++) {
-  const n = spawnNumber();
-  n.y = 50 + Math.random() * (H - 200);
-  n.age = Math.random() * 400;
+for (let i = 0; i < 12; i++) {
+  const n = makeNumber();
+  n.y = 60 + Math.random() * (H - 250);
+  n.age = Math.random() * 300;
+  n.life = 1;
   numbers.push(n);
 }
 
-// ── Drag state ──
+// ── State ──
 let dragging = null;
 let dragOffX = 0, dragOffY = 0;
-let dragOver = -1; // which bin we're hovering
-let interacted = false;
+let dragOver = -1;
+let sorted = 0;
+let correct = 0;
+let fading = false;
+let fadeProgress = 0;
+let t = 0;
 
-// Refined number particles (absorbed into bins)
+// Particles
 const particles = [];
 
-// ── Completion state ──
-let completed = false;
-let completionT = 0;
-let completionFlash = 0;
-
-function triggerCompletion() {
-  completed = true;
-  completionT = 0;
-  completionFlash = 1;
-  haptic(50);
-  
-  // Play ascending completion chord
-  if (audioCtx) {
-    const notes = [261.63, 329.63, 392, 523.25, 659.25];
-    notes.forEach((freq, i) => {
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.type = 'sine';
-      osc.frequency.value = freq;
-      const when = audioCtx.currentTime + i * 0.12;
-      gain.gain.setValueAtTime(0.1, when);
-      gain.gain.exponentialRampToValueAtTime(0.001, when + 1.2);
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start(when);
-      osc.stop(when + 1.3);
-    });
-  }
-  
-  // Big particle burst from all bins
-  const rects = getBinRects();
-  for (const r of rects) {
-    for (let i = 0; i < 25; i++) {
-      particles.push({
-        x: r.x + r.w / 2,
-        y: r.y,
-        vx: (Math.random() - 0.5) * 6,
-        vy: -Math.random() * 8 - 2,
-        color: r.bin.color,
-        life: 1,
-        size: 2 + Math.random() * 5,
-      });
-    }
-  }
-}
-
-function drawCompletion() {
-  if (!completed) return;
-  completionT++;
-  
-  // White flash fading out
-  if (completionFlash > 0) {
-    ctx.globalAlpha = completionFlash * 0.15;
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(0, 0, W, H);
-    completionFlash -= 0.008;
-  }
-  
-  // Fade numbers to background
-  const fadeAlpha = Math.min(completionT / 120, 0.7);
-  ctx.fillStyle = `rgba(10, 10, 18, ${fadeAlpha * 0.3})`;
-  ctx.fillRect(0, 0, W, H);
-  
-  // Message appears
-  const msgAlpha = Math.max(0, Math.min((completionT - 60) / 90, 0.7));
-  if (msgAlpha > 0) {
-    ctx.save();
-    ctx.globalAlpha = msgAlpha;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    
-    // Main text
-    ctx.font = '24px Courier New';
-    ctx.fillStyle = '#ede9df';
-    ctx.fillText('refinement complete', W / 2, H / 2 - 30);
-    
-    // Bin summary
-    ctx.font = '12px Courier New';
-    ctx.globalAlpha = msgAlpha * 0.5;
-    const summary = bins.map(b => b.label + ' ' + b.count).join('  ·  ');
-    ctx.fillText(summary, W / 2, H / 2 + 10);
-    
-    // Subtext
-    ctx.globalAlpha = Math.max(0, Math.min((completionT - 150) / 90, 0.35));
-    ctx.font = '10px Courier New';
-    ctx.fillStyle = digitColors[5];
-    ctx.fillText('the numbers are grateful', W / 2, H / 2 + 40);
-    
-    ctx.textAlign = 'left';
-    ctx.restore();
-  }
-  
-  ctx.globalAlpha = 1;
-}
-
 function getNumberBounds(n) {
-  const str = n.hasDecimal ? n.value.toFixed(1) : String(n.value);
-  const nw = str.length * 14 * n.scale + 40;
+  const str = n.value.toFixed(1);
+  const nw = str.length * 16 * n.scale + 40;
   const nh = 50 * n.scale + 20;
   return { x: n.x - nw / 2, y: n.y - nh / 2, w: nw, h: nh };
 }
@@ -368,11 +161,10 @@ function binHitTest(mx, my) {
   return -1;
 }
 
-// Pointer events (unified mouse + touch)
+// ── Input ──
 function onDown(mx, my) {
+  if (fading) return;
   initAudio();
-  interacted = true;
-  // Fade legend after first interaction
   document.getElementById('legend').style.opacity = '0';
   
   const idx = hitTest(mx, my);
@@ -384,10 +176,10 @@ function onDown(mx, my) {
     dragOffY = my - dragging.y;
     haptic(8);
     
-    // Play pickup chord
-    for (let i = 0; i < dragging.digits.length; i++) {
-      playTone(parseInt(dragging.digits[i]), 0.3, i * 0.06);
-    }
+    // Play the number's tone
+    const d = parseInt(dragging.digits[0]);
+    const freqs = [220, 246.94, 277.18, 311.13, 329.63, 369.99, 415.30, 440, 493.88, 523.25];
+    playTone(freqs[d], 0.3, 0);
   }
 }
 
@@ -395,117 +187,142 @@ function onMove(mx, my) {
   if (!dragging) return;
   dragging.x = mx - dragOffX;
   dragging.y = my - dragOffY;
-  
-  const prevOver = dragOver;
+  const prev = dragOver;
   dragOver = binHitTest(mx, my);
-  if (dragOver >= 0 && dragOver !== prevOver) {
-    haptic(5);
-  }
+  if (dragOver >= 0 && dragOver !== prev) haptic(5);
 }
 
 function onUp(mx, my) {
   if (!dragging) return;
-  
   const binIdx = binHitTest(mx, my);
+  
   if (binIdx >= 0) {
-    // Refined! Absorb into bin
     const b = bins[binIdx];
+    const isCorrect = (binIdx === 0 && !dragging.roundsUp) || (binIdx === 1 && dragging.roundsUp);
+    
     b.count++;
     b.flash = 1;
-    playBinChime(binIdx);
-    haptic(25);
+    sorted++;
+    if (isCorrect) correct++;
     
-    // Check completion
-    const totalRefined = bins.reduce((s, b) => s + b.count, 0);
-    if (totalRefined >= 25 && !completed) triggerCompletion();
+    // Sound: correct = warm, wrong = dissonant
+    if (isCorrect) {
+      playTone(523.25, 0.4, 0);
+      playTone(659.25, 0.4, 0.05);
+      haptic(20);
+    } else {
+      playTone(233, 0.3, 0);
+      playTone(246.94, 0.3, 0.02);
+      haptic([10, 20, 10]);
+    }
     
-    // Spawn particles
+    // Particles
     const rects = getBinRects();
     const r = rects[binIdx];
-    for (let i = 0; i < 8; i++) {
+    const pColor = isCorrect ? b.color : '#e85d75';
+    for (let i = 0; i < 6; i++) {
       particles.push({
-        x: r.x + r.w / 2,
-        y: r.y + r.h / 2,
-        vx: (Math.random() - 0.5) * 3,
-        vy: -Math.random() * 3 - 1,
-        color: b.color,
-        life: 1,
-        size: 2 + Math.random() * 3,
+        x: r.x + r.w / 2, y: r.y,
+        vx: (Math.random() - 0.5) * 4,
+        vy: -Math.random() * 4 - 1,
+        color: pColor, life: 1, size: 2 + Math.random() * 3,
       });
     }
     
-    // Absorb the number
+    // Absorb
     dragging.absorbed = true;
     dragging.absorbTarget = { x: r.x + r.w / 2, y: r.y + r.h / 2 };
     dragging.absorbProgress = 0;
     
-    // Spawn replacement after delay
-    setTimeout(() => {
-      const idx = numbers.indexOf(dragging);
-      if (idx >= 0) numbers[idx] = spawnNumber();
-    }, 600);
+    // Spawn replacement or trigger end
+    if (sorted >= TOTAL_TO_SORT) {
+      setTimeout(() => { fading = true; fadeProgress = 0; }, 600);
+    } else {
+      setTimeout(() => {
+        const idx = numbers.indexOf(dragging);
+        if (idx >= 0) numbers[idx] = makeNumber();
+      }, 500);
+    }
   } else {
-    // Dropped in space — resume floating
-    dragging.vy = 0.2 + Math.random() * 0.3;
-    dragging.vx = (Math.random() - 0.5) * 0.15;
+    dragging.vy = 0.15 + Math.random() * 0.25;
+    dragging.vx = (Math.random() - 0.5) * 0.1;
   }
   
   dragging = null;
   dragOver = -1;
 }
 
-c.addEventListener('mousedown', (e) => onDown(e.clientX, e.clientY));
-c.addEventListener('mousemove', (e) => onMove(e.clientX, e.clientY));
-c.addEventListener('mouseup', (e) => onUp(e.clientX, e.clientY));
+c.addEventListener('mousedown', e => onDown(e.clientX, e.clientY));
+c.addEventListener('mousemove', e => onMove(e.clientX, e.clientY));
+c.addEventListener('mouseup', e => onUp(e.clientX, e.clientY));
+c.addEventListener('touchstart', e => { e.preventDefault(); onDown(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
+c.addEventListener('touchmove', e => { e.preventDefault(); onMove(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
+c.addEventListener('touchend', e => { e.preventDefault(); onUp(e.changedTouches[0].clientX, e.changedTouches[0].clientY); }, { passive: false });
 
-c.addEventListener('touchstart', (e) => {
-  e.preventDefault();
-  const t = e.touches[0];
-  onDown(t.clientX, t.clientY);
-}, { passive: false });
-c.addEventListener('touchmove', (e) => {
-  e.preventDefault();
-  const t = e.touches[0];
-  onMove(t.clientX, t.clientY);
-}, { passive: false });
-c.addEventListener('touchend', (e) => {
-  e.preventDefault();
-  const t = e.changedTouches[0];
-  onUp(t.clientX, t.clientY);
-}, { passive: false });
+// ── Drawing ──
+function drawBins(alpha) {
+  const rects = getBinRects();
+  for (const r of rects) {
+    const b = r.bin;
+    
+    if (b.flash > 0) {
+      ctx.globalAlpha = b.flash * 0.25 * alpha;
+      ctx.shadowColor = b.color;
+      ctx.shadowBlur = 25;
+      ctx.fillStyle = b.color;
+      ctx.fillRect(r.x - 4, r.y - 4, r.w + 8, r.h + 8);
+      ctx.shadowBlur = 0;
+      b.flash -= 0.025;
+    }
+    
+    ctx.globalAlpha = (dragging && dragOver === r.index ? 0.5 : 0.2) * alpha;
+    ctx.strokeStyle = b.color;
+    ctx.lineWidth = dragging && dragOver === r.index ? 2 : 1;
+    ctx.strokeRect(r.x, r.y, r.w, r.h);
+    
+    ctx.globalAlpha = (dragging && dragOver === r.index ? 0.1 : 0.03) * alpha;
+    ctx.fillStyle = b.color;
+    ctx.fillRect(r.x, r.y, r.w, r.h);
+    
+    // Arrow label
+    ctx.globalAlpha = 0.45 * alpha;
+    ctx.fillStyle = b.color;
+    ctx.font = '22px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(b.label, r.x + r.w / 2, r.y + r.h / 2);
+    
+    ctx.textAlign = 'left';
+    ctx.globalAlpha = 1;
+  }
+}
 
-let t = 0;
-
-function drawNumber(n) {
+function drawNumber(n, globalAlpha) {
   if (n.absorbed) {
-    // Shrink toward bin
     n.absorbProgress += 0.04;
     if (n.absorbProgress >= 1) return;
     const tgt = n.absorbTarget;
     n.x += (tgt.x - n.x) * 0.15;
     n.y += (tgt.y - n.y) * 0.15;
-    n.scale *= 0.92;
-    ctx.globalAlpha = 1 - n.absorbProgress;
+    n.scale *= 0.93;
   }
   
-  const wobble = dragging === n ? 0 : Math.sin(t * 0.02 + n.phase) * 8;
-  const breathe = Math.sin(t * 0.015 + n.phase * 2) * 0.05 + 1;
+  const wobble = dragging === n ? 0 : Math.sin(t * 0.02 + n.phase) * 6;
+  const breathe = Math.sin(t * 0.015 + n.phase * 2) * 0.04 + 1;
   const x = n.x + wobble;
   const y = n.y;
   
   ctx.save();
   ctx.translate(x, y);
-  
   const s = n.scale * breathe * (dragging === n ? 1.15 : 1);
   ctx.scale(s, s);
   
-  // Drop shadow when dragging
   if (dragging === n) {
-    ctx.shadowColor = 'rgba(100,180,255,0.3)';
-    ctx.shadowBlur = 20;
+    ctx.shadowColor = 'rgba(100,180,255,0.25)';
+    ctx.shadowBlur = 18;
   }
   
-  const str = n.hasDecimal ? n.value.toFixed(1) : String(n.value);
+  const str = n.value.toFixed(1);
   let curX = -(str.length * 14) / 2;
   
   for (let i = 0; i < str.length; i++) {
@@ -514,6 +331,7 @@ function drawNumber(n) {
     if (ch === '.') {
       ctx.fillStyle = digitColors[5] + '88';
       ctx.font = '16px Courier New';
+      ctx.globalAlpha = (n.absorbed ? (1 - n.absorbProgress) : n.life * 0.85) * globalAlpha;
       ctx.fillText('.', curX, 0);
       curX += 10;
       continue;
@@ -522,60 +340,51 @@ function drawNumber(n) {
     const d = parseInt(ch);
     const h = digitHeight(d);
     const col = digitColors[d];
-    
     ctx.font = h + 'px Courier New';
     
-    if (n.isBankersCase) {
-      const grad = ctx.createLinearGradient(curX, -h / 2, curX, h / 2);
-      const roundedUp = n.rounded > n.value;
-      grad.addColorStop(0, roundedUp ? col : col + '44');
-      grad.addColorStop(1, roundedUp ? col + '44' : col);
-      ctx.fillStyle = grad;
+    // Gradient showing rounding direction
+    const grad = ctx.createLinearGradient(curX, -h / 2, curX, h / 2);
+    if (n.roundsUp) {
+      grad.addColorStop(0, col);
+      grad.addColorStop(1, col + '33');
     } else {
-      ctx.fillStyle = col;
+      grad.addColorStop(0, col + '33');
+      grad.addColorStop(1, col);
     }
+    ctx.fillStyle = grad;
     
-    ctx.globalAlpha = n.absorbed ? (1 - n.absorbProgress) : n.life * 0.85;
+    const a = (n.absorbed ? (1 - n.absorbProgress) : n.life * 0.85) * globalAlpha;
+    ctx.globalAlpha = a;
     ctx.textBaseline = 'middle';
     ctx.fillText(ch, curX, 0);
     
-    // Glow
-    ctx.globalAlpha = (n.absorbed ? (1 - n.absorbProgress) : n.life) * 0.12;
+    ctx.globalAlpha = a * 0.15;
     ctx.shadowColor = col;
-    ctx.shadowBlur = 15;
+    ctx.shadowBlur = 12;
     ctx.fillText(ch, curX, 0);
     ctx.shadowBlur = 0;
-    ctx.globalAlpha = 1;
     
     curX += h * 0.6;
   }
   
-  // Bankers rounding annotation
-  if (n.isBankersCase && n.life > 0.5 && !n.absorbed) {
-    ctx.globalAlpha = (n.life - 0.5) * 0.5;
+  // Rounding hint — shows rounded value faintly
+  if (!n.absorbed && n.life > 0.5 && dragging !== n) {
+    ctx.globalAlpha = 0.2 * globalAlpha;
     ctx.font = '10px Courier New';
-    ctx.fillStyle = digitColors[5];
-    const arrow = n.rounded > n.value ? String.fromCharCode(8593) : String.fromCharCode(8595);
-    ctx.fillText(arrow + n.rounded, curX + 8, 0);
-    ctx.fillStyle = '#888';
-    ctx.font = '8px Courier New';
-    ctx.fillText('even', curX + 8, 14);
+    ctx.fillStyle = n.roundsUp ? '#42b5d8' : '#6e5ebf';
+    const arrow = n.roundsUp ? String.fromCharCode(8593) : String.fromCharCode(8595);
+    ctx.fillText(arrow + n.rounded, curX + 6, 0);
   }
   
   ctx.restore();
 }
 
-function drawParticles() {
+function drawParticles(alpha) {
   for (let i = particles.length - 1; i >= 0; i--) {
     const p = particles[i];
-    p.x += p.vx;
-    p.y += p.vy;
-    p.vy += 0.05;
-    p.life -= 0.02;
-    
+    p.x += p.vx; p.y += p.vy; p.vy += 0.06; p.life -= 0.02;
     if (p.life <= 0) { particles.splice(i, 1); continue; }
-    
-    ctx.globalAlpha = p.life * 0.7;
+    ctx.globalAlpha = p.life * 0.6 * alpha;
     ctx.fillStyle = p.color;
     ctx.beginPath();
     ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
@@ -584,78 +393,66 @@ function drawParticles() {
   ctx.globalAlpha = 1;
 }
 
-function drawGrid() {
-  ctx.globalAlpha = 0.04;
+function drawGrid(alpha) {
+  ctx.globalAlpha = 0.035 * alpha;
   ctx.strokeStyle = '#ede9df';
   ctx.lineWidth = 0.5;
   for (let i = 0; i < 10; i++) {
     const y = (H / 10) * i;
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(W, y);
-    ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
   }
   ctx.globalAlpha = 1;
 }
 
-function drawScanlines() {
-  ctx.globalAlpha = 0.025;
+function drawScanlines(alpha) {
+  ctx.globalAlpha = 0.02 * alpha;
   ctx.fillStyle = '#ede9df';
-  for (let y = 0; y < H; y += 3) {
-    ctx.fillRect(0, y, W, 1);
-  }
+  for (let y = 0; y < H; y += 3) ctx.fillRect(0, y, W, 1);
   ctx.globalAlpha = 1;
 }
 
 function draw() {
   t++;
   
-  ctx.fillStyle = 'rgba(10, 10, 18, 0.08)';
+  // Fade everything out after completion
+  let alpha = 1;
+  if (fading) {
+    fadeProgress += 0.005;
+    alpha = Math.max(0, 1 - fadeProgress);
+    if (fadeProgress >= 1.5) return; // fully gone, stop drawing
+  }
+  
+  ctx.fillStyle = `rgba(10, 10, 18, ${fading ? 0.03 : 0.08})`;
   ctx.fillRect(0, 0, W, H);
   
-  drawGrid();
+  if (fading && fadeProgress > 0.8) {
+    // Final fade to black
+    ctx.fillStyle = `rgba(10, 10, 18, 0.02)`;
+    ctx.fillRect(0, 0, W, H);
+  }
   
-  // Update and draw numbers
+  drawGrid(alpha);
+  
   for (let i = 0; i < numbers.length; i++) {
     const n = numbers[i];
-    if (n === dragging) { drawNumber(n); continue; }
-    
+    if (n === dragging) continue;
     n.age++;
-    
     if (!n.absorbed) {
       n.y += n.vy;
       n.x += n.vx;
-      
-      // Fade in
       if (n.age < 60) n.life = n.age / 60;
-      
-      // Bounce off bottom (above bins)
-      if (n.y > H - BIN_Y_OFFSET - 40) {
-        n.vy = -Math.abs(n.vy) * 0.5;
-        n.y = H - BIN_Y_OFFSET - 40;
-      }
-      
-      // Wrap horizontally
+      if (n.y > H - BIN_Y_OFFSET - 40) { n.vy = -Math.abs(n.vy) * 0.5; n.y = H - BIN_Y_OFFSET - 40; }
       if (n.x < -50) n.x = W + 50;
       if (n.x > W + 50) n.x = -50;
-      
-      // Respawn if drifted off top
-      if (n.y < -200) {
-        numbers[i] = spawnNumber();
-        continue;
-      }
+      if (n.y < -200) { numbers[i] = makeNumber(); continue; }
     }
-    
-    drawNumber(n);
+    drawNumber(n, alpha);
   }
+  if (dragging) drawNumber(dragging, alpha);
   
-  // Draw dragged number last (on top)
-  if (dragging) drawNumber(dragging);
-  
-  drawBins();
-  drawParticles();
-  drawCompletion();
-  drawScanlines();
+  drawBins(alpha);
+  drawParticles(alpha);
+  drawScanlines(alpha);
   
   requestAnimationFrame(draw);
 }
