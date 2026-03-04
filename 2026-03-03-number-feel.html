@@ -179,7 +179,7 @@ function drawBins() {
     const rects2 = getBinRects();
     const barX = rects2[0].x;
     const barY = H - BIN_Y_OFFSET + BIN_H + 12;
-    const pct = Math.min(total / 100, 1);
+    const pct = Math.min(total / 25, 1);
     
     ctx.globalAlpha = 0.15;
     ctx.fillStyle = '#ede9df';
