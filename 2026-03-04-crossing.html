@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
 <title>Crossing — Phosphor</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -22,216 +22,305 @@ function resize() { W = c.width = innerWidth; H = c.height = innerHeight; }
 resize();
 addEventListener('resize', resize);
 
-// The piece: a threshold between digital and physical space
-// Left side = dark, glowing code-like particles (digital)
-// Right side = warm, textured, plaster-wall tones (physical gallery)
-// The boundary breathes and particles drift across it
+// The threshold is horizontal — code falls from above,
+// crosses a breathing line, and lands onto gallery canvases below.
+// Above: digital, glowing squares on dark.
+// Below: warm physical space, rectangles = canvases on a wall.
 
-const particles = [];
-const NUM = 180;
+const coolColors = ['#42b5d8','#6e5ebf','#7bc67e','#d45fbf','#4ecdc4'];
+const warmColors = ['#d8ccb8','#c4b5a0','#b8a890','#a89880','#e8dfd0'];
 
-// Warm gallery palette
-const warmColors = ['#d8ccb8', '#c4b5a0', '#b8a890', '#a89880', '#e8dfd0'];
-// Cool digital palette
-const coolColors = ['#42b5d8', '#6e5ebf', '#7bc67e', '#d45fbf', '#4ecdc4'];
-
-for (let i = 0; i < NUM; i++) {
-  const digital = Math.random() < 0.5;
-  particles.push({
-    x: digital ? Math.random() * W * 0.45 : W * 0.55 + Math.random() * W * 0.45,
-    y: Math.random() * H,
-    size: 1 + Math.random() * 3,
-    speed: 0.1 + Math.random() * 0.4,
-    drift: (Math.random() - 0.5) * 0.3,
-    phase: Math.random() * Math.PI * 2,
-    digital,
-    color: digital ? coolColors[Math.floor(Math.random() * coolColors.length)] : warmColors[Math.floor(Math.random() * warmColors.length)],
-    crossed: false,
-    crossProgress: 0,
-    life: 0.3 + Math.random() * 0.7,
-  });
-}
-
-// The boundary line — a living threshold
+// Gallery canvases — hung on the "wall" below the line
+const canvases = [];
 let t = 0;
 
-function getBoundaryX(y, time) {
-  return W * 0.5 + Math.sin(y * 0.008 + time * 0.003) * 30 + Math.sin(y * 0.02 + time * 0.007) * 15;
+function makeCanvases() {
+  canvases.length = 0;
+  const count = W < 500 ? 3 : 5;
+  const maxW = W < 500 ? 90 : 120;
+  const minW = W < 500 ? 60 : 80;
+  const gap = (W - count * maxW) / (count + 1);
+  const wallY = H * 0.6;
+
+  for (let i = 0; i < count; i++) {
+    const cw = minW + Math.random() * (maxW - minW);
+    const ch = cw * (0.7 + Math.random() * 0.5);
+    const cx = gap + i * (maxW + gap) + (maxW - cw) / 2;
+    const cy = wallY + 20 + Math.random() * 30;
+    canvases.push({
+      x: cx, y: cy, w: cw, h: ch,
+      color: warmColors[i % warmColors.length],
+      marks: [], // paint marks accumulate from landing particles
+      shadow: 4 + Math.random() * 3,
+    });
+  }
+}
+makeCanvases();
+addEventListener('resize', () => { resize(); makeCanvases(); });
+
+// Particles — code falling from above
+const particles = [];
+const MAX_P = 120;
+
+function spawnParticle() {
+  const col = coolColors[Math.floor(Math.random() * coolColors.length)];
+  return {
+    x: 30 + Math.random() * (W - 60),
+    y: -10 - Math.random() * 100,
+    size: 2 + Math.random() * 4,
+    speed: 0.3 + Math.random() * 0.6,
+    drift: (Math.random() - 0.5) * 0.3,
+    phase: Math.random() * Math.PI * 2,
+    color: col,
+    crossed: false,
+    crossProgress: 0,
+    landed: false,
+    landCanvas: -1,
+    landY: 0,
+    life: 0.5 + Math.random() * 0.5,
+  };
+}
+
+for (let i = 0; i < MAX_P; i++) {
+  const p = spawnParticle();
+  p.y = Math.random() * H * 0.5; // spread initially above line
+  particles.push(p);
+}
+
+// Boundary Y — horizontal, breathing
+function getBoundaryY(x, time) {
+  return H * 0.5 + Math.sin(x * 0.006 + time * 0.003) * 12 + Math.sin(x * 0.018 + time * 0.007) * 6;
 }
 
 function drawBoundary(time) {
+  // Warm glow
   ctx.beginPath();
-  for (let y = 0; y < H; y += 2) {
-    const x = getBoundaryX(y, time);
-    if (y === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
+  for (let x = 0; x <= W; x += 2) {
+    const y = getBoundaryY(x, time);
+    x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
   }
-  
-  // Warm glow on physical side
   ctx.strokeStyle = 'rgba(216, 204, 184, 0.06)';
-  ctx.lineWidth = 40;
+  ctx.lineWidth = 35;
   ctx.stroke();
-  
-  // Cool glow on digital side
+
+  // Cool glow
   ctx.strokeStyle = 'rgba(66, 181, 216, 0.04)';
-  ctx.lineWidth = 30;
+  ctx.lineWidth = 25;
   ctx.stroke();
-  
-  // Sharp center line
-  ctx.strokeStyle = 'rgba(200, 190, 180, 0.12)';
+
+  // Sharp line
+  ctx.strokeStyle = 'rgba(200, 190, 180, 0.14)';
   ctx.lineWidth = 1;
   ctx.stroke();
 }
 
-function drawBackground(time) {
-  // Digital side: deep blue-black
-  const grd = ctx.createLinearGradient(0, 0, W, 0);
-  grd.addColorStop(0, 'rgba(8, 12, 24, 0.15)');
-  grd.addColorStop(0.45, 'rgba(10, 10, 18, 0.12)');
-  grd.addColorStop(0.55, 'rgba(30, 25, 20, 0.12)');
-  grd.addColorStop(1, 'rgba(40, 35, 28, 0.08)');
+function drawWall(time) {
+  // Warm wall below the line
+  const wallTop = H * 0.5 + 20;
+  const grd = ctx.createLinearGradient(0, wallTop, 0, H);
+  grd.addColorStop(0, 'rgba(35, 30, 25, 0.08)');
+  grd.addColorStop(1, 'rgba(50, 42, 34, 0.06)');
   ctx.fillStyle = grd;
-  ctx.fillRect(0, 0, W, H);
+  ctx.fillRect(0, wallTop, W, H - wallTop);
+
+  // Subtle texture
+  ctx.globalAlpha = 0.01;
+  ctx.fillStyle = '#a89880';
+  for (let i = 0; i < 80; i++) {
+    const nx = Math.abs((Math.sin(i * 127.1 + 311.7) * 43758.5453) % 1) * W;
+    const ny = wallTop + Math.abs((Math.sin(i * 269.5 + 183.3) * 43758.5453) % 1) * (H - wallTop);
+    ctx.fillRect(nx, ny, 1 + Math.random(), 1);
+  }
+  ctx.globalAlpha = 1;
 }
 
-function drawParticle(p, time) {
-  const wobble = Math.sin(time * 0.01 + p.phase) * 2;
-  const breathe = Math.sin(time * 0.008 + p.phase * 2) * 0.3 + 1;
-  
-  const boundaryX = getBoundaryX(p.y, time);
-  
-  // Particles near the boundary get pulled toward it
-  const distToBoundary = boundaryX - p.x;
-  const pull = Math.abs(distToBoundary) < 80 ? distToBoundary * 0.001 : 0;
-  
-  // When crossing, the particle changes
-  if (p.crossed) {
-    p.crossProgress = Math.min(p.crossProgress + 0.005, 1);
-  }
-  
-  // Check if particle has crossed
-  if (p.digital && p.x > boundaryX && !p.crossed) {
-    p.crossed = true;
-    p.crossProgress = 0;
-  } else if (!p.digital && p.x < boundaryX && !p.crossed) {
-    p.crossed = true;
-    p.crossProgress = 0;
-  }
-  
-  // Color interpolation when crossing
-  let color = p.color;
-  if (p.crossed && p.crossProgress < 1) {
-    const targetColors = p.digital ? warmColors : coolColors;
-    const target = targetColors[Math.floor(Math.random() * targetColors.length)];
-    // Simple: just increase opacity as it settles
-    ctx.globalAlpha = p.life * (0.3 + p.crossProgress * 0.5);
-  } else {
-    ctx.globalAlpha = p.life * 0.6;
-  }
-  
-  // Draw
-  const s = p.size * breathe;
-  
-  if (p.digital && !p.crossed) {
-    // Digital: sharp, glowing squares
-    ctx.fillStyle = color;
-    ctx.shadowColor = color;
-    ctx.shadowBlur = 8;
-    ctx.fillRect(p.x + wobble - s/2, p.y - s/2, s, s);
-    ctx.shadowBlur = 0;
-  } else if (!p.digital && !p.crossed) {
-    // Physical: soft, round, textured
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.arc(p.x + wobble, p.y, s, 0, Math.PI * 2);
-    ctx.fill();
-  } else {
-    // Crossed: becoming the other
-    const mix = p.crossProgress;
-    if (p.digital) {
-      // Was digital, becoming physical — squares rounding into circles
-      ctx.fillStyle = warmColors[Math.floor(p.phase * 10) % warmColors.length];
+function drawCanvases(time) {
+  for (const cv of canvases) {
+    // Shadow
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+    ctx.fillRect(cv.x + cv.shadow, cv.y + cv.shadow, cv.w, cv.h);
+
+    // Canvas (cream/linen)
+    ctx.fillStyle = '#f0e8d8';
+    ctx.fillRect(cv.x, cv.y, cv.w, cv.h);
+
+    // Frame edge
+    ctx.strokeStyle = '#6a5a4a';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(cv.x, cv.y, cv.w, cv.h);
+
+    // Inner margin
+    ctx.strokeStyle = 'rgba(180, 170, 155, 0.3)';
+    ctx.lineWidth = 0.5;
+    ctx.strokeRect(cv.x + 4, cv.y + 4, cv.w - 8, cv.h - 8);
+
+    // Paint marks from landed particles
+    for (const m of cv.marks) {
+      ctx.globalAlpha = m.alpha;
+      ctx.fillStyle = m.color;
       ctx.beginPath();
-      const r = s * (0.2 + mix * 0.8);
-      ctx.arc(p.x + wobble, p.y, r, 0, Math.PI * 2);
+      ctx.arc(m.x, m.y, m.size, 0, Math.PI * 2);
       ctx.fill();
-    } else {
-      // Was physical, becoming digital — circles squaring off
-      ctx.fillStyle = coolColors[Math.floor(p.phase * 10) % coolColors.length];
-      ctx.shadowColor = coolColors[Math.floor(p.phase * 10) % coolColors.length];
-      ctx.shadowBlur = 6 * mix;
-      const sq = s * (0.5 + mix * 0.5);
-      ctx.fillRect(p.x + wobble - sq/2, p.y - sq/2, sq, sq);
+
+      // Slight glow
+      ctx.globalAlpha = m.alpha * 0.3;
+      ctx.shadowColor = m.color;
+      ctx.shadowBlur = 6;
+      ctx.beginPath();
+      ctx.arc(m.x, m.y, m.size * 0.6, 0, Math.PI * 2);
+      ctx.fill();
       ctx.shadowBlur = 0;
     }
-  }
-  
-  ctx.globalAlpha = 1;
-  
-  // Move
-  p.y -= p.speed;
-  p.x += p.drift + pull + wobble * 0.01;
-  
-  // Respawn at bottom
-  if (p.y < -20) {
-    p.y = H + 20;
-    p.x = p.digital ? Math.random() * W * 0.45 : W * 0.55 + Math.random() * W * 0.45;
-    p.crossed = false;
-    p.crossProgress = 0;
-    p.color = p.digital ? coolColors[Math.floor(Math.random() * coolColors.length)] : warmColors[Math.floor(Math.random() * warmColors.length)];
+    ctx.globalAlpha = 1;
   }
 }
 
-// Subtle wall texture on physical side
-function drawTexture(time) {
-  ctx.globalAlpha = 0.008;
-  ctx.fillStyle = '#a89880';
-  for (let i = 0; i < 100; i++) {
-    const x = W * 0.5 + ((Math.sin(i * 127.1 + 311.7) * 43758.5453) % 1) * W * 0.5;
-    const y = ((Math.sin(i * 269.5 + 183.3) * 43758.5453) % 1) * H;
-    ctx.fillRect(Math.abs(x), Math.abs(y), 1 + Math.random(), 1);
-  }
-  ctx.globalAlpha = 1;
-}
-
-// Grid on digital side
 function drawGrid(time) {
+  // Digital grid above the line
   ctx.globalAlpha = 0.02;
   ctx.strokeStyle = '#42b5d8';
   ctx.lineWidth = 0.5;
-  for (let y = 0; y < H; y += 40) {
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(W * 0.48, y);
-    ctx.stroke();
+  const gridTop = H * 0.48;
+  for (let y = 0; y < gridTop; y += 35) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
   }
-  for (let x = 0; x < W * 0.48; x += 40) {
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, H);
-    ctx.stroke();
+  for (let x = 0; x < W; x += 35) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, gridTop); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function findCanvasAt(x, y) {
+  for (let i = 0; i < canvases.length; i++) {
+    const cv = canvases[i];
+    if (x >= cv.x && x <= cv.x + cv.w && y >= cv.y && y <= cv.y + cv.h) return i;
+  }
+  return -1;
+}
+
+function updateParticle(p, time) {
+  if (p.landed) return;
+
+  const wobble = Math.sin(time * 0.015 + p.phase) * 2;
+  const boundY = getBoundaryY(p.x, time);
+
+  // Above the line: fall slowly, square, digital
+  if (!p.crossed) {
+    p.y += p.speed;
+    p.x += p.drift + wobble * 0.02;
+
+    // Check crossing
+    if (p.y > boundY) {
+      p.crossed = true;
+      p.crossProgress = 0;
+    }
+  } else {
+    // Below the line: accelerate gently, morph to circles
+    p.crossProgress = Math.min(p.crossProgress + 0.008, 1);
+    p.speed += 0.01;
+    p.y += p.speed;
+    p.x += p.drift * 0.5;
+
+    // Check landing on a canvas
+    const ci = findCanvasAt(p.x, p.y);
+    if (ci >= 0) {
+      p.landed = true;
+      p.landCanvas = ci;
+      const cv = canvases[ci];
+      // Leave a mark
+      if (cv.marks.length < 80) {
+        cv.marks.push({
+          x: p.x,
+          y: p.y,
+          size: p.size * (0.5 + Math.random() * 0.8),
+          color: p.color,
+          alpha: 0.25 + Math.random() * 0.35,
+        });
+      }
+    }
+
+    // Fell off screen without landing
+    if (p.y > H + 20) {
+      p.landed = true; // will respawn
+    }
+  }
+}
+
+function drawParticle(p, time) {
+  if (p.landed) return;
+
+  const wobble = Math.sin(time * 0.015 + p.phase) * 2;
+  const breathe = Math.sin(time * 0.01 + p.phase * 2) * 0.2 + 1;
+  const s = p.size * breathe;
+  const x = p.x + wobble;
+  const y = p.y;
+
+  if (!p.crossed) {
+    // Digital: sharp glowing square
+    ctx.globalAlpha = p.life * 0.65;
+    ctx.fillStyle = p.color;
+    ctx.shadowColor = p.color;
+    ctx.shadowBlur = 8;
+    ctx.fillRect(x - s/2, y - s/2, s, s);
+    ctx.shadowBlur = 0;
+  } else {
+    // Crossing: square morphing into circle
+    const mix = p.crossProgress;
+    const warmIdx = Math.floor(p.phase * 10) % warmColors.length;
+    
+    // Interpolate color toward warm
+    ctx.globalAlpha = p.life * (0.4 + mix * 0.3);
+    
+    if (mix < 0.5) {
+      // Still mostly square, rounding corners
+      ctx.fillStyle = p.color;
+      ctx.shadowColor = p.color;
+      ctx.shadowBlur = 6 * (1 - mix);
+      const radius = s * mix;
+      ctx.beginPath();
+      ctx.roundRect(x - s/2, y - s/2, s, s, radius);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    } else {
+      // Mostly circle now, warming up
+      ctx.fillStyle = warmColors[warmIdx];
+      ctx.beginPath();
+      ctx.arc(x, y, s * 0.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
   ctx.globalAlpha = 1;
 }
 
 function draw() {
   t++;
-  
-  drawBackground(t);
+
+  // Fade background
+  ctx.fillStyle = 'rgba(10, 10, 18, 0.06)';
+  ctx.fillRect(0, 0, W, H);
+
+  drawWall(t);
   drawGrid(t);
-  drawTexture(t);
   drawBoundary(t);
-  
-  for (const p of particles) {
-    drawParticle(p, t);
+  drawCanvases(t);
+
+  // Update and draw particles
+  for (let i = 0; i < particles.length; i++) {
+    updateParticle(particles[i], t);
+    drawParticle(particles[i], t);
+
+    // Respawn landed/offscreen particles
+    if (particles[i].landed) {
+      particles[i] = spawnParticle();
+    }
   }
-  
-  // Scanlines
+
+  // Scanlines above boundary
   ctx.globalAlpha = 0.015;
   ctx.fillStyle = '#ede9df';
-  for (let y = 0; y < H; y += 3) ctx.fillRect(0, y, W * 0.5, 1);
+  for (let y = 0; y < H * 0.5; y += 3) ctx.fillRect(0, y, W, 1);
   ctx.globalAlpha = 1;
-  
+
   requestAnimationFrame(draw);
 }
 
