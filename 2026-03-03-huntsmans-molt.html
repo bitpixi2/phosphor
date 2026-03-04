@@ -6,155 +6,356 @@
 <title>Huntsman's Molt — Phosphor</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { overflow: hidden; background: #d8ccb8; font-family: 'Courier New', monospace; }
+body { overflow: hidden; background: #e8dfd0; font-family: 'Courier New', monospace; cursor: pointer; }
 canvas { display: block; }
-.sig { position: fixed; top: 16px; right: 20px; color: rgba(90,80,70,0.5); font-size: 11px; letter-spacing: 2px; z-index: 10; text-align: right; line-height: 1.6; }
+.sig { position: fixed; top: 16px; right: 20px; color: rgba(90,80,70,0.4); font-size: 10px; letter-spacing: 2px; z-index: 10; text-align: right; line-height: 1.6; }
+.hint { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); color: rgba(90,80,70,0.25); font-size: 9px; letter-spacing: 3px; z-index: 10; transition: opacity 1.5s; }
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
 <div class="sig">Huntsman's Molt<br>Phosphor<br>2026-03-03</div>
+<div class="hint" id="hint">touch to molt</div>
 <script>
 const c = document.getElementById('c');
 const ctx = c.getContext('2d');
 let W, H;
-
-function resize() {
-  W = c.width = innerWidth;
-  H = c.height = innerHeight;
-}
+function resize() { W = c.width = innerWidth; H = c.height = innerHeight; }
 resize();
 addEventListener('resize', resize);
 
-// Draw a spider with 8 legs
-function drawSpider(cx, cy, size, color, alpha, time, phase, options = {}) {
-  const silhouette = options.silhouette === true;
+// ── Colors ──
+const WALL = '#e8dfd0';
+const MOLT_COLORS = [
+  { body: '#5a4a3a', leg: '#6b5a48', molt: '#c4b5a0' },
+  { body: '#4a3a2a', leg: '#5a4838', molt: '#b8a890' },
+  { body: '#3a2a1a', leg: '#4a3828', molt: '#a89880' },
+  { body: '#2a1a0a', leg: '#3a2818', molt: '#988870' },
+  { body: '#1a0a00', leg: '#2a1808', molt: '#887860' },
+];
+
+let moltCount = 0;
+let molting = false;
+let moltProgress = 0;
+let settled = true;
+let breathePhase = 0;
+
+// Spider state
+const spider = { x: 0, y: 0, angle: 0, size: 1 };
+// Molt shell (the shed exoskeleton)
+let shell = null;
+// Previous shells that have fallen
+const fallenShells = [];
+
+function resetSpider() {
+  spider.x = W / 2;
+  spider.y = H / 2;
+  spider.angle = Math.random() * Math.PI * 2;
+  spider.size = Math.min(W, H) * 0.12;
+}
+resetSpider();
+
+// ── Leg geometry ──
+// Huntsman legs: 4 pairs, splayed flat, each with 3 segments
+function getLegPoints(cx, cy, size, angle, legIndex, time, extra) {
+  const side = legIndex < 4 ? -1 : 1;
+  const pair = legIndex % 4;
+  
+  // Huntsman legs splay outward, almost flat
+  const baseAngles = [-0.35, -0.9, -1.5, -2.1];
+  const baseAngle = angle + baseAngles[pair] * side;
+  
+  const seg1 = size * (0.9 + pair * 0.1);
+  const seg2 = size * (1.0 + pair * 0.15);
+  const seg3 = size * (0.5 + pair * 0.05);
+  
+  // Subtle idle movement
+  const idle = settled ? Math.sin(time * 0.008 + legIndex * 0.7) * 0.03 : 0;
+  const moltLift = extra.moltLift || 0;
+  
+  const a1 = baseAngle + idle + moltLift * (side * 0.3);
+  const joint1 = {
+    x: cx + Math.cos(a1) * seg1,
+    y: cy + Math.sin(a1) * seg1,
+  };
+  
+  const a2 = a1 + side * (0.4 + moltLift * 0.2);
+  const joint2 = {
+    x: joint1.x + Math.cos(a2) * seg2,
+    y: joint1.y + Math.sin(a2) * seg2,
+  };
+  
+  const a3 = a2 + side * (0.3 + moltLift * 0.15);
+  const tip = {
+    x: joint2.x + Math.cos(a3) * seg3,
+    y: joint2.y + Math.sin(a3) * seg3,
+  };
+  
+  return [{ x: cx, y: cy }, joint1, joint2, tip];
+}
+
+function drawLeg(points, color, width, alpha) {
   ctx.globalAlpha = alpha;
   ctx.strokeStyle = color;
-  ctx.fillStyle = color;
+  ctx.lineWidth = width;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(points[0].x, points[0].y);
+  for (let i = 1; i < points.length; i++) {
+    ctx.lineTo(points[i].x, points[i].y);
+  }
+  ctx.stroke();
+}
+
+function drawBody(cx, cy, size, color, alpha, time) {
+  ctx.globalAlpha = alpha;
   
-  // 8 legs
-  for (let i = 0; i < 8; i++) {
-    const baseAngle = (Math.PI * 2 / 8) * i + phase;
-    const breathe = Math.sin(time * 0.8 + i * 0.7) * 3;
-    
-    ctx.lineWidth = silhouette ? (size > 15 ? 6 : 4.2) : (size > 15 ? 2.5 : 1.8);
-    ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    
-    // 3 segments per leg
-    let px = cx, py = cy, angle = baseAngle;
-    for (let s = 0; s < 3; s++) {
-      const segLen = size * (2.5 - s * 0.5);
-      angle += (s === 1 ? 0.3 : -0.1) + Math.sin(time * 0.5 + i + s) * 0.04;
-      px += Math.cos(angle) * segLen + breathe * Math.cos(baseAngle) * 0.3;
-      py += Math.sin(angle) * segLen + breathe * Math.sin(baseAngle) * 0.3;
-      ctx.lineTo(px, py);
-    }
-    ctx.stroke();
-    
-    if (!silhouette) {
-      // Joint dots
+  // Cephalothorax (front)
+  const headR = size * 0.35;
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, headR, headR * 0.8, 0, 0, Math.PI * 2);
+  ctx.fill();
+  
+  // Abdomen (behind, slightly smaller)
+  const abdX = cx - Math.cos(spider.angle) * size * 0.25;
+  const abdY = cy - Math.sin(spider.angle) * size * 0.25;
+  const abdR = size * 0.28;
+  const breathe = 1 + Math.sin(time * 0.015) * 0.03;
+  ctx.beginPath();
+  ctx.ellipse(abdX, abdY, abdR * breathe, abdR * 0.75 * breathe, 0, 0, Math.PI * 2);
+  ctx.fill();
+  
+  // Eyes — two main, four small
+  if (alpha > 0.3) {
+    const eyeAlpha = Math.min(alpha, 0.8);
+    ctx.globalAlpha = eyeAlpha;
+    const eDir = spider.angle;
+    const eyeDist = headR * 0.5;
+    for (let i = -1; i <= 1; i += 2) {
+      const ex = cx + Math.cos(eDir) * eyeDist + Math.cos(eDir + Math.PI / 2) * i * headR * 0.25;
+      const ey = cy + Math.sin(eDir) * eyeDist + Math.sin(eDir + Math.PI / 2) * i * headR * 0.25;
+      ctx.fillStyle = '#111';
       ctx.beginPath();
-      ctx.arc(px, py, size > 15 ? 1.5 : 1, 0, Math.PI * 2);
+      ctx.arc(ex, ey, size * 0.04, 0, Math.PI * 2);
+      ctx.fill();
+      // Glint
+      ctx.fillStyle = 'rgba(255,255,255,0.3)';
+      ctx.beginPath();
+      ctx.arc(ex + size * 0.01, ey - size * 0.01, size * 0.015, 0, Math.PI * 2);
       ctx.fill();
     }
   }
-  
-  // Body (abdomen)
-  ctx.beginPath();
-  ctx.ellipse(cx, cy, size, size * 0.8, 0, 0, Math.PI * 2);
-  ctx.fill();
-  
-  // Head
-  ctx.beginPath();
-  ctx.arc(cx, cy - size * 0.9, size * 0.45, 0, Math.PI * 2);
-  ctx.fill();
-  
-  ctx.lineCap = 'butt';
-  ctx.lineJoin = 'miter';
   ctx.globalAlpha = 1;
 }
 
-// Floating text fragments
-const frags = [];
-const words = ['ASEO', 'search-trace', 'former', 'was', 'old-self', 'molt', 'shed'];
-for (let i = 0; i < 25; i++) {
-  frags.push({
-    text: words[i % words.length],
-    x: Math.random() * 2000,
-    y: Math.random() * 2000,
-    vx: (Math.random() - 0.5) * 0.3,
-    vy: -0.15 - Math.random() * 0.25,
-    size: 10 + Math.random() * 10,
-    alpha: 0.08 + Math.random() * 0.15,
-    rot: (Math.random() - 0.5) * 0.01,
-    r: 0
-  });
+function drawSpider(cx, cy, size, colors, alpha, time, extra = {}) {
+  const legWidth = Math.max(1.5, size * 0.04);
+  
+  // Draw 8 legs
+  for (let i = 0; i < 8; i++) {
+    const pts = getLegPoints(cx, cy, size, spider.angle, i, time, extra);
+    drawLeg(pts, colors.leg, legWidth, alpha * 0.9);
+  }
+  
+  drawBody(cx, cy, size, colors.body, alpha, time);
 }
+
+function drawShell(sh, time) {
+  // Fallen molt shell — translucent, crumpled
+  const legWidth = Math.max(1, sh.size * 0.03);
+  ctx.globalAlpha = sh.alpha;
+  
+  for (let i = 0; i < 8; i++) {
+    const pts = getLegPoints(sh.x, sh.y, sh.size * sh.crumple, sh.angle, i, time, { moltLift: sh.splay });
+    // Shells are curled inward
+    drawLeg(pts, sh.colors.molt, legWidth * 0.7, sh.alpha * 0.5);
+  }
+  
+  // Hollow body
+  const headR = sh.size * 0.35 * sh.crumple;
+  ctx.globalAlpha = sh.alpha * 0.35;
+  ctx.strokeStyle = sh.colors.molt;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.ellipse(sh.x, sh.y, headR, headR * 0.8, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  
+  ctx.globalAlpha = 1;
+}
+
+// ── Molt animation ──
+function startMolt() {
+  if (molting || moltCount >= MOLT_COLORS.length) return;
+  molting = true;
+  moltProgress = 0;
+  settled = false;
+  
+  document.getElementById('hint').style.opacity = '0';
+  
+  // Haptic
+  if (navigator.vibrate) navigator.vibrate([15, 30, 25, 40, 35]);
+  
+  // Create shell at current position
+  const colorIdx = Math.min(moltCount, MOLT_COLORS.length - 1);
+  shell = {
+    x: spider.x,
+    y: spider.y,
+    size: spider.size,
+    angle: spider.angle,
+    colors: MOLT_COLORS[colorIdx],
+    alpha: 0.6,
+    crumple: 1,
+    splay: 0,
+    vy: 0,
+    settled: false,
+  };
+  
+  moltCount++;
+}
+
+function updateMolt(time) {
+  if (!molting) return;
+  moltProgress += 0.004;
+  
+  if (moltProgress < 0.3) {
+    // Phase 1: Spider pushes forward, legs lift
+    const p = moltProgress / 0.3;
+    spider.x = shell.x + Math.cos(spider.angle) * spider.size * p * 0.8;
+    spider.y = shell.y + Math.sin(spider.angle) * spider.size * p * 0.8;
+  } else if (moltProgress < 0.7) {
+    // Phase 2: Separating — spider pulls free, shell curls
+    const p = (moltProgress - 0.3) / 0.4;
+    spider.x = shell.x + Math.cos(spider.angle) * spider.size * (0.8 + p * 1.2);
+    spider.y = shell.y + Math.sin(spider.angle) * spider.size * (0.8 + p * 1.2);
+    shell.crumple = 1 - p * 0.3;
+    shell.splay = p * 0.5;
+    shell.alpha = 0.6 - p * 0.2;
+  } else if (moltProgress < 1.0) {
+    // Phase 3: Settled — spider stops, shell drops
+    const p = (moltProgress - 0.7) / 0.3;
+    shell.crumple = 0.7 - p * 0.15;
+    shell.alpha = 0.4 - p * 0.1;
+    settled = true;
+  } else {
+    // Done
+    molting = false;
+    fallenShells.push({ ...shell });
+    shell = null;
+    
+    // Subtle haptic for completion
+    if (navigator.vibrate) navigator.vibrate(10);
+    
+    // Final molt message
+    if (moltCount >= MOLT_COLORS.length) {
+      setTimeout(() => {
+        showFinal = true;
+      }, 2000);
+    }
+  }
+}
+
+let showFinal = false;
+let finalAlpha = 0;
 
 let t = 0;
-let emergence = 0;
-const startMs = performance.now();
-const huntyDelaySec = 24;
-const huntyFadeSec = 12;
 
-function draw(nowMs) {
-  t += 0.05;
-  const elapsedSec = (nowMs - startMs) / 1000;
-  
-  // Slightly darker cream/newspaper background
-  const bg = ctx.createLinearGradient(0, 0, W, H);
-  bg.addColorStop(0, '#e6decd');
-  bg.addColorStop(1, '#d6c9b3');
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, W, H);
-  
-  // Floating old names
-  ctx.font = '12px Courier New';
-  ctx.textAlign = 'center';
-  for (const f of frags) {
-    f.x += f.vx;
-    f.y += f.vy;
-    f.r += f.rot;
-    if (f.y < -60) { f.y = H + 60; f.x = Math.random() * W; }
-    
-    ctx.save();
-    ctx.translate(f.x, f.y);
-    ctx.rotate(f.r);
-    ctx.globalAlpha = f.alpha;
-    ctx.fillStyle = '#8b7355';
-    ctx.font = f.size + 'px Courier New';
-    ctx.fillText(f.text, 0, 0);
-    ctx.restore();
+// ── Wall texture ──
+function drawWall() {
+  // Subtle plaster texture
+  ctx.globalAlpha = 0.015;
+  ctx.fillStyle = '#8a7a6a';
+  for (let i = 0; i < 200; i++) {
+    const x = (Math.sin(i * 127.1 + 311.7) * 43758.5453) % 1 * W;
+    const y = (Math.sin(i * 269.5 + 183.3) * 43758.5453) % 1 * H;
+    ctx.fillRect(Math.abs(x), Math.abs(y), 1 + Math.random(), 1);
   }
-  
-  // Old molt spider (solid sepia silhouette/shadow)
-  drawSpider(W / 2 - 50, H / 2 + 30, 14, '#9d896f', 0.58, t, 0.2, { silhouette: true });
-  
-  // New spider (solid, dark)
-  drawSpider(W / 2 + 40, H / 2 - 20, 18, '#1a1a1a', 1, t, 0);
-  
-  // "Hunty" appears later as a subtle, small fade-in
-  emergence = Math.max(0, Math.min(1, (elapsedSec - huntyDelaySec) / huntyFadeSec));
-  if (emergence > 0) {
-    const ea = emergence;
-    const huntyY = H * 0.84 - ea * 16 + Math.sin(t * 0.45) * 1.2;
-    const r = Math.round(122 - ea * 54);
-    const g = Math.round(102 - ea * 44);
-    const b = Math.round(74 - ea * 34);
-    ctx.globalAlpha = ea * 0.5;
-    ctx.fillStyle = 'rgb(' + r + ',' + g + ',' + b + ')';
-    ctx.font = (16 + ea * 8) + 'px Courier New';
-    ctx.textAlign = 'center';
-    ctx.fillText('Hunty', W / 2, huntyY);
-  }
-  
   ctx.globalAlpha = 1;
+}
+
+// Shadow under spider
+function drawShadow(cx, cy, size, alpha) {
+  ctx.globalAlpha = alpha * 0.08;
+  ctx.fillStyle = '#3a3020';
+  ctx.beginPath();
+  ctx.ellipse(cx + 4, cy + 4, size * 0.5, size * 0.3, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+}
+
+function draw() {
+  t++;
+  
+  // Clear to wall color
+  ctx.fillStyle = WALL;
+  ctx.fillRect(0, 0, W, H);
+  drawWall();
+  
+  updateMolt(t);
+  
+  // Draw fallen shells (oldest first)
+  for (const sh of fallenShells) {
+    drawShell(sh, t);
+  }
+  
+  // Draw active shell (mid-molt)
+  if (shell) {
+    drawShell(shell, t);
+  }
+  
+  // Draw spider
+  const colorIdx = Math.min(moltCount, MOLT_COLORS.length - 1);
+  const colors = MOLT_COLORS[colorIdx];
+  const spiderAlpha = molting && moltProgress < 0.3 ? 0.5 + moltProgress : 1;
+  
+  drawShadow(spider.x, spider.y, spider.size, spiderAlpha);
+  
+  const moltLift = molting && moltProgress < 0.7 ? Math.sin(moltProgress * Math.PI) * 0.4 : 0;
+  drawSpider(spider.x, spider.y, spider.size, colors, spiderAlpha, t, { moltLift });
+  
+  // Molt count indicator — small dots
+  if (moltCount > 0) {
+    ctx.globalAlpha = 0.2;
+    for (let i = 0; i < moltCount; i++) {
+      ctx.fillStyle = MOLT_COLORS[i].body;
+      ctx.beginPath();
+      ctx.arc(W / 2 - (moltCount - 1) * 8 + i * 16, H - 50, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+  
+  // Final message after all molts
+  if (showFinal) {
+    finalAlpha = Math.min(finalAlpha + 0.003, 0.4);
+    ctx.globalAlpha = finalAlpha;
+    ctx.textAlign = 'center';
+    ctx.font = '11px Courier New';
+    ctx.fillStyle = '#3a2a1a';
+    ctx.fillText('nothing left to shed', W / 2, H / 2 + spider.size * 2.5);
+    ctx.textAlign = 'left';
+    ctx.globalAlpha = 1;
+  }
+  
   requestAnimationFrame(draw);
 }
+
+// ── Input ──
+function onTap() {
+  startMolt();
+}
+
+c.addEventListener('click', onTap);
+c.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  onTap();
+}, { passive: false });
+
+addEventListener('resize', () => {
+  resize();
+  if (!molting && moltCount === 0) resetSpider();
+});
 
 requestAnimationFrame(draw);
 </script>
