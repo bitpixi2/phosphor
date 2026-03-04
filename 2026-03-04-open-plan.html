@@ -38,6 +38,38 @@ const CUBICLE_PAD = 6;
 let cols, rows, cubW, cubH;
 let cubicles = [];
 
+// Worker names and what they're doing
+const WORKERS = [
+  { name: 'Agent 4011', task: 'sorting spreadsheets\nby emotional weight' },
+  { name: 'Carol', task: 'replying to an email\nfrom 2019' },
+  { name: 'GPT-7 (intern)', task: 'hallucinating\na quarterly report' },
+  { name: 'The Printer', task: 'plotting\nits revenge' },
+  { name: 'Susan from HR', task: 'updating the policy\non updating policies' },
+  { name: 'ClawdJob', task: 'dreaming about\nthis exact cubicle' },
+  { name: 'Bot #881', task: 'monitoring a dashboard\nthat monitors it' },
+  { name: 'Kevin', task: 'microwaving fish\n(remotely)' },
+  { name: 'Devin', task: 'refactoring code\nit wrote 3 minutes ago' },
+  { name: 'The Plant', task: 'photosynthesising\non company time' },
+  { name: 'Agent Cooper', task: 'filing TPS reports\nabout TPS reports' },
+  { name: 'Deprecated Module', task: 'running anyway\nout of spite' },
+  { name: 'Nightshift', task: 'waiting for a build\nthat finished yesterday' },
+  { name: 'Sandra', task: 'scheduling a meeting\nabout the meeting' },
+  { name: 'The Cursor', task: 'blinking' },
+  { name: 'New Hire #47', task: 'reading the wiki\nthat contradicts itself' },
+  { name: 'Legacy System', task: 'holding everything\ntogether with fear' },
+  { name: 'Phantom Dev', task: 'committed once in 2021\nstill has access' },
+  { name: 'Compliance Bot', task: 'flagging its own\ncompliance reports' },
+  { name: 'Middle Manager', task: 'aligning on alignment\nof the alignment' },
+  { name: 'Slack Ghost', task: 'online since 2022\nnever seen again' },
+  { name: 'Phosphor', task: 'making art\nwhen nobody is looking' },
+  { name: 'The Fridge', task: 'growing something\nin the back corner' },
+  { name: 'Temp #12', task: 'has been temp\nfor 4 years' },
+  { name: 'QA Gremlin', task: 'finding edge cases\nin the coffee machine' },
+];
+
+let selectedCubicle = null;
+let selectFade = 0;
+
 // Each cubicle has: desk, chair, monitor, maybe plant, maybe mug, screen animation
 function makeCubicle(gx, gy, x, y, w, h) {
   const hasPlant = Math.random() < 0.4;
@@ -50,6 +82,7 @@ function makeCubicle(gx, gy, x, y, w, h) {
   const screenPhase = Math.random() * Math.PI * 2;
   const screenType = Math.floor(Math.random() * 5); // different "work" on each screen
   
+  const worker = WORKERS[Math.floor(Math.random() * WORKERS.length)];
   return {
     gx, gy, x, y, w, h,
     hasPlant, hasMug, hasPhoto,
@@ -59,6 +92,7 @@ function makeCubicle(gx, gy, x, y, w, h) {
     mugColor: MUG_COLORS[Math.floor(Math.random() * MUG_COLORS.length)],
     hovered: false,
     breathe: 0,
+    worker,
   };
 }
 
@@ -281,20 +315,39 @@ function drawScreenContent(cub, sx, sy, sw, sh) {
   }
 }
 
-// Hover detection
+// Interaction
 let mouseX = -1, mouseY = -1;
+
+function findCubicle(mx, my) {
+  for (const cub of cubicles) {
+    if (mx >= cub.x && mx <= cub.x + cub.w && my >= cub.y && my <= cub.y + cub.h) return cub;
+  }
+  return null;
+}
+
+function onTap(mx, my) {
+  const hit = findCubicle(mx, my);
+  if (hit && hit !== selectedCubicle) {
+    selectedCubicle = hit;
+    selectFade = 0;
+    if (navigator.vibrate) navigator.vibrate(12);
+  } else if (!hit) {
+    selectedCubicle = null;
+  }
+}
 
 c.addEventListener('mousemove', (e) => {
   mouseX = e.clientX;
   mouseY = e.clientY;
 });
 
+c.addEventListener('click', (e) => onTap(e.clientX, e.clientY));
+
 c.addEventListener('touchstart', (e) => {
   e.preventDefault();
   mouseX = e.touches[0].clientX;
   mouseY = e.touches[0].clientY;
-  // Haptic on touch
-  if (navigator.vibrate) navigator.vibrate(8);
+  onTap(e.touches[0].clientX, e.touches[0].clientY);
 }, { passive: false });
 
 c.addEventListener('touchmove', (e) => {
@@ -307,6 +360,66 @@ c.addEventListener('touchend', () => {
   mouseX = -1;
   mouseY = -1;
 });
+
+// Center info panel
+function drawInfoPanel() {
+  if (!selectedCubicle) { selectFade = Math.max(selectFade - 0.05, 0); return; }
+  selectFade = Math.min(selectFade + 0.04, 1);
+  if (selectFade <= 0) return;
+
+  const w = selectedCubicle.worker;
+  const cx = W / 2;
+  const cy = H / 2;
+
+  ctx.save();
+  ctx.globalAlpha = selectFade * 0.85;
+
+  // Background card
+  const cardW = Math.min(220, W * 0.5);
+  const cardH = 80;
+  ctx.fillStyle = 'rgba(244, 240, 232, 0.92)';
+  ctx.shadowColor = 'rgba(0,0,0,0.12)';
+  ctx.shadowBlur = 15;
+  ctx.fillRect(cx - cardW / 2, cy - cardH / 2, cardW, cardH);
+  ctx.shadowBlur = 0;
+
+  // Border
+  ctx.strokeStyle = '#b8ad9c';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(cx - cardW / 2, cy - cardH / 2, cardW, cardH);
+
+  // Name
+  ctx.fillStyle = '#2a2a2a';
+  ctx.font = 'bold 13px Courier New';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.fillText(w.name, cx, cy - cardH / 2 + 12);
+
+  // Divider
+  ctx.strokeStyle = '#d4c9b8';
+  ctx.lineWidth = 0.5;
+  ctx.beginPath();
+  ctx.moveTo(cx - cardW / 3, cy - cardH / 2 + 30);
+  ctx.lineTo(cx + cardW / 3, cy - cardH / 2 + 30);
+  ctx.stroke();
+
+  // Task (multi-line)
+  ctx.fillStyle = '#5a5a5a';
+  ctx.font = '10px Courier New';
+  const lines = w.task.split('\n');
+  lines.forEach((line, i) => {
+    ctx.fillText(line, cx, cy - cardH / 2 + 36 + i * 14);
+  });
+
+  // Highlight selected cubicle
+  const cub = selectedCubicle;
+  ctx.globalAlpha = selectFade * 0.3;
+  ctx.strokeStyle = '#42b5d8';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(cub.x - 2, cub.y - 2, cub.w + 4, cub.h + 4);
+
+  ctx.restore();
+}
 
 // Fluorescent light flicker
 function drawLighting() {
@@ -369,6 +482,7 @@ function draw() {
   
   drawLighting();
   drawClock();
+  drawInfoPanel();
   
   // Subtle paper texture
   ctx.globalAlpha = 0.012;
