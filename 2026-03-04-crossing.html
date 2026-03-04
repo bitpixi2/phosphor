@@ -154,7 +154,11 @@ function drawCanvases(time) {
     ctx.lineWidth = 0.5;
     ctx.strokeRect(cv.x + 4, cv.y + 4, cv.w - 8, cv.h - 8);
 
-    // Paint marks from landed particles
+    // Paint marks — clipped inside canvas
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(cv.x + 5, cv.y + 5, cv.w - 10, cv.h - 10);
+    ctx.clip();
     for (const m of cv.marks) {
       ctx.globalAlpha = m.alpha;
       ctx.fillStyle = m.color;
@@ -162,7 +166,6 @@ function drawCanvases(time) {
       ctx.arc(m.x, m.y, m.size, 0, Math.PI * 2);
       ctx.fill();
 
-      // Slight glow
       ctx.globalAlpha = m.alpha * 0.3;
       ctx.shadowColor = m.color;
       ctx.shadowBlur = 6;
@@ -171,6 +174,7 @@ function drawCanvases(time) {
       ctx.fill();
       ctx.shadowBlur = 0;
     }
+    ctx.restore();
     ctx.globalAlpha = 1;
   }
 }
@@ -227,11 +231,14 @@ function updateParticle(p, time) {
       p.landed = true;
       p.landCanvas = ci;
       const cv = canvases[ci];
-      // Leave a mark
+      // Leave a mark inside the canvas bounds
       if (cv.marks.length < 80) {
+        const margin = 8;
+        const mx = cv.x + margin + Math.random() * (cv.w - margin * 2);
+        const my = cv.y + margin + Math.random() * (cv.h - margin * 2);
         cv.marks.push({
-          x: p.x,
-          y: p.y,
+          x: mx,
+          y: my,
           size: p.size * (0.5 + Math.random() * 0.8),
           color: p.color,
           alpha: 0.25 + Math.random() * 0.35,
