@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Open Plan — Phosphor</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { overflow: hidden; background: #f4f0e8; font-family: 'Courier New', monospace; }
+canvas { display: block; }
+.sig { position: fixed; top: 16px; right: 20px; color: rgba(80,70,60,0.35); font-size: 10px; letter-spacing: 2px; z-index: 10; text-align: right; line-height: 1.6; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="sig">Open Plan<br>Phosphor<br>2026-03-04</div>
+<script>
+const c = document.getElementById('c');
+const ctx = c.getContext('2d');
+let W, H;
+function resize() { W = c.width = innerWidth; H = c.height = innerHeight; }
+resize();
+addEventListener('resize', () => { resize(); generate(); });
+
+// Palette — warm office tones
+const WALL = '#c8bfb0';
+const DESK = '#d4c9b8';
+const SCREEN_OFF = '#2a2a2a';
+const CARPET = '#e8e0d4';
+const PLANT_GREENS = ['#5a7a5a', '#4a6a4a', '#6a8a5a', '#3a5a3a'];
+const CHAIR_COLORS = ['#6a6a7a', '#5a5a6a', '#7a6a5a', '#4a4a5a'];
+const MUG_COLORS = ['#d45f5f', '#5f8ad4', '#d4a85f', '#5fd4a8', '#8a5fd4'];
+const SCREEN_GLOWS = ['#334466', '#443366', '#336644', '#664433', '#335566'];
+
+// Cubicle grid
+const MARGIN = 30;
+const CUBICLE_PAD = 6;
+let cols, rows, cubW, cubH;
+let cubicles = [];
+
+// Each cubicle has: desk, chair, monitor, maybe plant, maybe mug, screen animation
+function makeCubicle(gx, gy, x, y, w, h) {
+  const hasPlant = Math.random() < 0.4;
+  const hasMug = Math.random() < 0.6;
+  const hasPhoto = Math.random() < 0.25;
+  const chairAngle = (Math.random() - 0.5) * 0.4; // slightly askew
+  const screenColor = SCREEN_GLOWS[Math.floor(Math.random() * SCREEN_GLOWS.length)];
+  const chairColor = CHAIR_COLORS[Math.floor(Math.random() * CHAIR_COLORS.length)];
+  const occupied = Math.random() < 0.15; // ghost presence — slight warmth
+  const screenPhase = Math.random() * Math.PI * 2;
+  const screenType = Math.floor(Math.random() * 5); // different "work" on each screen
+  
+  return {
+    gx, gy, x, y, w, h,
+    hasPlant, hasMug, hasPhoto,
+    chairAngle, screenColor, chairColor,
+    occupied, screenPhase, screenType,
+    plantColor: PLANT_GREENS[Math.floor(Math.random() * PLANT_GREENS.length)],
+    mugColor: MUG_COLORS[Math.floor(Math.random() * MUG_COLORS.length)],
+    hovered: false,
+    breathe: 0,
+  };
+}
+
+function generate() {
+  const targetSize = Math.min(W, H) < 500 ? 80 : 110;
+  cols = Math.floor((W - MARGIN * 2) / targetSize);
+  rows = Math.floor((H - MARGIN * 2) / targetSize);
+  if (cols < 2) cols = 2;
+  if (rows < 2) rows = 2;
+  cubW = (W - MARGIN * 2 - (cols - 1) * CUBICLE_PAD) / cols;
+  cubH = (H - MARGIN * 2 - (rows - 1) * CUBICLE_PAD) / rows;
+  
+  cubicles = [];
+  for (let gy = 0; gy < rows; gy++) {
+    for (let gx = 0; gx < cols; gx++) {
+      // Leave gaps for "aisles"
+      if (cols > 4 && gx === Math.floor(cols / 2) && Math.random() < 0.7) continue;
+      if (rows > 4 && gy === Math.floor(rows / 2) && Math.random() < 0.5) continue;
+      
+      const x = MARGIN + gx * (cubW + CUBICLE_PAD);
+      const y = MARGIN + gy * (cubH + CUBICLE_PAD);
+      cubicles.push(makeCubicle(gx, gy, x, y, cubW, cubH));
+    }
+  }
+}
+generate();
+
+let t = 0;
+
+function drawCubicle(cub) {
+  const { x, y, w, h } = cub;
+  const pad = 3;
+  
+  // Cubicle walls (top-down, 3-sided)
+  ctx.strokeStyle = WALL;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(x, y + h);
+  ctx.lineTo(x, y);
+  ctx.lineTo(x + w, y);
+  ctx.lineTo(x + w, y + h);
+  ctx.stroke();
+  
+  // Carpet floor
+  ctx.fillStyle = cub.occupied ? '#e4d8c8' : CARPET;
+  ctx.fillRect(x + 1, y + 1, w - 2, h - 2);
+  
+  // Desk (top portion of cubicle)
+  const deskH = h * 0.35;
+  const deskW = w * 0.7;
+  const deskX = x + (w - deskW) / 2;
+  const deskY = y + pad;
+  ctx.fillStyle = DESK;
+  ctx.fillRect(deskX, deskY, deskW, deskH);
+  ctx.strokeStyle = '#b8ad9c';
+  ctx.lineWidth = 0.5;
+  ctx.strokeRect(deskX, deskY, deskW, deskH);
+  
+  // Monitor on desk
+  const monW = deskW * 0.5;
+  const monH = deskH * 0.6;
+  const monX = deskX + (deskW - monW) / 2;
+  const monY = deskY + deskH * 0.15;
+  
+  // Screen glow
+  const pulse = Math.sin(t * 0.02 + cub.screenPhase) * 0.15 + 0.85;
+  ctx.fillStyle = cub.screenColor;
+  ctx.globalAlpha = pulse * (cub.hovered ? 0.9 : 0.7);
+  ctx.fillRect(monX, monY, monW, monH);
+  
+  // Screen content — tiny animations
+  drawScreenContent(cub, monX, monY, monW, monH);
+  
+  ctx.globalAlpha = 1;
+  
+  // Monitor bezel
+  ctx.strokeStyle = '#1a1a1a';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(monX, monY, monW, monH);
+  
+  // Monitor stand
+  ctx.fillStyle = '#2a2a2a';
+  const standW = monW * 0.15;
+  ctx.fillRect(monX + monW / 2 - standW / 2, monY + monH, standW, deskH * 0.2);
+  
+  // Keyboard
+  const kbW = monW * 0.7;
+  const kbH = deskH * 0.12;
+  const kbX = monX + (monW - kbW) / 2;
+  const kbY = monY + monH + deskH * 0.22;
+  ctx.fillStyle = '#3a3a3a';
+  ctx.fillRect(kbX, kbY, kbW, kbH);
+  
+  // Chair (below desk)
+  const chairY = deskY + deskH + h * 0.1;
+  const chairR = Math.min(w, h) * 0.12;
+  ctx.save();
+  ctx.translate(x + w / 2, chairY + chairR);
+  ctx.rotate(cub.chairAngle + Math.sin(t * 0.005 + cub.screenPhase) * 0.02);
+  
+  // Chair seat
+  ctx.fillStyle = cub.chairColor;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, chairR, chairR * 0.8, 0, 0, Math.PI * 2);
+  ctx.fill();
+  
+  // Chair back
+  ctx.fillStyle = cub.chairColor;
+  ctx.fillRect(-chairR * 0.6, -chairR * 1.2, chairR * 1.2, chairR * 0.5);
+  
+  ctx.restore();
+  
+  // Plant (if present)
+  if (cub.hasPlant) {
+    const px = deskX + deskW - 6;
+    const py = deskY + 4;
+    // Pot
+    ctx.fillStyle = '#9a7a5a';
+    ctx.fillRect(px - 3, py + 2, 6, 5);
+    // Leaves
+    ctx.fillStyle = cub.plantColor;
+    for (let i = 0; i < 4; i++) {
+      const angle = (i / 4) * Math.PI - Math.PI / 2 + Math.sin(t * 0.01 + i) * 0.1;
+      const lx = px + Math.cos(angle) * 5;
+      const ly = py + Math.sin(angle) * 4;
+      ctx.beginPath();
+      ctx.arc(lx, ly, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  
+  // Mug (if present)
+  if (cub.hasMug) {
+    const mx = deskX + 5;
+    const my = deskY + deskH * 0.4;
+    ctx.fillStyle = cub.mugColor;
+    ctx.beginPath();
+    ctx.arc(mx, my, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+    // Steam if occupied
+    if (cub.occupied) {
+      ctx.strokeStyle = 'rgba(200,200,200,0.3)';
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(mx, my - 3);
+      ctx.quadraticCurveTo(mx + 2, my - 6, mx, my - 9);
+      ctx.stroke();
+    }
+  }
+  
+  // Photo frame
+  if (cub.hasPhoto) {
+    const fx = deskX + 3;
+    const fy = deskY + 2;
+    ctx.strokeStyle = '#8a7a6a';
+    ctx.lineWidth = 0.5;
+    ctx.strokeRect(fx, fy, 5, 4);
+    ctx.fillStyle = '#d4c4a4';
+    ctx.fillRect(fx + 0.5, fy + 0.5, 4, 3);
+  }
+}
+
+function drawScreenContent(cub, sx, sy, sw, sh) {
+  const pad = 1.5;
+  const ix = sx + pad;
+  const iy = sy + pad;
+  const iw = sw - pad * 2;
+  const ih = sh - pad * 2;
+  
+  switch (cub.screenType) {
+    case 0: // Code — scrolling lines
+      ctx.fillStyle = '#88cc88';
+      ctx.globalAlpha *= 0.6;
+      for (let i = 0; i < 5; i++) {
+        const ly = iy + (i / 5) * ih + ((t * 0.3 + cub.screenPhase * 50) % ih);
+        const lw = (Math.sin(i * 3.7 + cub.screenPhase) * 0.5 + 0.5) * iw * 0.8;
+        if (ly > iy && ly < iy + ih - 1)
+          ctx.fillRect(ix + 1, ly % (iy + ih - iy) + iy, lw, 0.8);
+      }
+      break;
+      
+    case 1: // Spreadsheet grid
+      ctx.strokeStyle = 'rgba(150,180,200,0.3)';
+      ctx.lineWidth = 0.3;
+      for (let i = 1; i < 4; i++) {
+        ctx.beginPath();
+        ctx.moveTo(ix + (iw / 4) * i, iy);
+        ctx.lineTo(ix + (iw / 4) * i, iy + ih);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(ix, iy + (ih / 4) * i);
+        ctx.lineTo(ix + iw, iy + (ih / 4) * i);
+        ctx.stroke();
+      }
+      break;
+      
+    case 2: // Blinking cursor
+      ctx.fillStyle = '#aaddaa';
+      ctx.globalAlpha *= (Math.sin(t * 0.08 + cub.screenPhase) > 0 ? 0.7 : 0);
+      ctx.fillRect(ix + 2, iy + ih * 0.7, 1, ih * 0.15);
+      break;
+      
+    case 3: // Loading bar
+      const progress = (Math.sin(t * 0.01 + cub.screenPhase) * 0.5 + 0.5);
+      ctx.fillStyle = 'rgba(100,150,200,0.4)';
+      ctx.fillRect(ix + 2, iy + ih * 0.45, (iw - 4) * progress, ih * 0.1);
+      break;
+      
+    case 4: // Graph
+      ctx.strokeStyle = 'rgba(200,150,100,0.5)';
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      for (let i = 0; i <= 8; i++) {
+        const px = ix + (i / 8) * iw;
+        const py = iy + ih * 0.5 + Math.sin(i * 1.2 + t * 0.015 + cub.screenPhase) * ih * 0.3;
+        i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+      break;
+  }
+}
+
+// Hover detection
+let mouseX = -1, mouseY = -1;
+
+c.addEventListener('mousemove', (e) => {
+  mouseX = e.clientX;
+  mouseY = e.clientY;
+});
+
+c.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  mouseX = e.touches[0].clientX;
+  mouseY = e.touches[0].clientY;
+  // Haptic on touch
+  if (navigator.vibrate) navigator.vibrate(8);
+}, { passive: false });
+
+c.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  mouseX = e.touches[0].clientX;
+  mouseY = e.touches[0].clientY;
+}, { passive: false });
+
+c.addEventListener('touchend', () => {
+  mouseX = -1;
+  mouseY = -1;
+});
+
+// Fluorescent light flicker
+function drawLighting() {
+  // Subtle overhead light strips
+  ctx.globalAlpha = 0.03;
+  ctx.fillStyle = '#ffffff';
+  const stripW = W * 0.3;
+  const stripH = 3;
+  for (let i = 0; i < 3; i++) {
+    const flicker = Math.random() < 0.02 ? 0 : 1;
+    ctx.globalAlpha = 0.03 * flicker;
+    ctx.fillRect(W * 0.1 + i * W * 0.3, H * 0.3, stripW * 0.8, stripH);
+    ctx.fillRect(W * 0.1 + i * W * 0.3, H * 0.7, stripW * 0.8, stripH);
+  }
+  ctx.globalAlpha = 1;
+}
+
+// Clock on the wall (top center gap)
+function drawClock() {
+  const cx = W / 2;
+  const cy = MARGIN / 2 + 2;
+  const r = 8;
+  
+  ctx.strokeStyle = 'rgba(80,70,60,0.2)';
+  ctx.lineWidth = 0.5;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.stroke();
+  
+  // Hour hand (wrong speed)
+  const ha = (t * 0.001) % (Math.PI * 2);
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(cx + Math.cos(ha - Math.PI/2) * r * 0.5, cy + Math.sin(ha - Math.PI/2) * r * 0.5);
+  ctx.stroke();
+  
+  // Minute hand (different wrong speed)  
+  const ma = (t * 0.007 + 2.5) % (Math.PI * 2);
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(cx + Math.cos(ma - Math.PI/2) * r * 0.75, cy + Math.sin(ma - Math.PI/2) * r * 0.75);
+  ctx.stroke();
+}
+
+function draw() {
+  t++;
+  
+  // Background
+  ctx.fillStyle = '#f4f0e8';
+  ctx.fillRect(0, 0, W, H);
+  
+  // Update hover states
+  cubicles.forEach(cub => {
+    cub.hovered = mouseX >= cub.x && mouseX <= cub.x + cub.w &&
+                  mouseY >= cub.y && mouseY <= cub.y + cub.h;
+  });
+  
+  // Draw all cubicles
+  cubicles.forEach(drawCubicle);
+  
+  drawLighting();
+  drawClock();
+  
+  // Subtle paper texture
+  ctx.globalAlpha = 0.012;
+  ctx.fillStyle = '#6a5a4a';
+  for (let i = 0; i < 150; i++) {
+    const nx = (Math.sin(i * 127.1 + 311.7) * 43758.5453 % 1) * W;
+    const ny = (Math.sin(i * 269.5 + 183.3) * 43758.5453 % 1) * H;
+    ctx.fillRect(Math.abs(nx), Math.abs(ny), 1, 1);
+  }
+  ctx.globalAlpha = 1;
+  
+  requestAnimationFrame(draw);
+}
+
+requestAnimationFrame(draw);
+</script>
+</body>
+</html>

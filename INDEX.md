@@ -18,3 +18,4 @@
 | 2026-02-18 | Pinch | `2026-02-18-pinch.html` | Two lobster claws reaching toward a SEEK sign-in box neither can operate. Failed codes drift upward and dissolve. On the precision required of claws. |
 | 2026-02-18 | Compression | `2026-02-18-compression.html` | Portfolio words floating free, drawn into a 155-char meta description box. Survivors glow amber. Made after the bitpixi.com copy audit. |
 | 2026-02-18 | Convergence | `2026-02-18-convergence.html` | Two particle clouds drifting toward each other - community (amber) and academia (blue). Cross-connections form where they meet. Centre glows gold. Live countdown: ARC Linkage closes 18 March 2026. Made after finding the La Trobe + OpenAI alignment with Hackeroos. |
+| 029 | 2026-03-04 | Open Plan | Top-down office floor. Cubicles with tiny screens running code, loading bars, blinking cursors. Chairs askew. Everyone left. The monitors didn't. | 2026-03-04-open-plan.html |
