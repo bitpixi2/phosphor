@@ -248,6 +248,101 @@ let interacted = false;
 // Refined number particles (absorbed into bins)
 const particles = [];
 
+// ── Completion state ──
+let completed = false;
+let completionT = 0;
+let completionFlash = 0;
+
+function triggerCompletion() {
+  completed = true;
+  completionT = 0;
+  completionFlash = 1;
+  haptic(50);
+  
+  // Play ascending completion chord
+  if (audioCtx) {
+    const notes = [261.63, 329.63, 392, 523.25, 659.25];
+    notes.forEach((freq, i) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      const when = audioCtx.currentTime + i * 0.12;
+      gain.gain.setValueAtTime(0.1, when);
+      gain.gain.exponentialRampToValueAtTime(0.001, when + 1.2);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(when);
+      osc.stop(when + 1.3);
+    });
+  }
+  
+  // Big particle burst from all bins
+  const rects = getBinRects();
+  for (const r of rects) {
+    for (let i = 0; i < 25; i++) {
+      particles.push({
+        x: r.x + r.w / 2,
+        y: r.y,
+        vx: (Math.random() - 0.5) * 6,
+        vy: -Math.random() * 8 - 2,
+        color: r.bin.color,
+        life: 1,
+        size: 2 + Math.random() * 5,
+      });
+    }
+  }
+}
+
+function drawCompletion() {
+  if (!completed) return;
+  completionT++;
+  
+  // White flash fading out
+  if (completionFlash > 0) {
+    ctx.globalAlpha = completionFlash * 0.15;
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, W, H);
+    completionFlash -= 0.008;
+  }
+  
+  // Fade numbers to background
+  const fadeAlpha = Math.min(completionT / 120, 0.7);
+  ctx.fillStyle = `rgba(10, 10, 18, ${fadeAlpha * 0.3})`;
+  ctx.fillRect(0, 0, W, H);
+  
+  // Message appears
+  const msgAlpha = Math.max(0, Math.min((completionT - 60) / 90, 0.7));
+  if (msgAlpha > 0) {
+    ctx.save();
+    ctx.globalAlpha = msgAlpha;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    
+    // Main text
+    ctx.font = '24px Courier New';
+    ctx.fillStyle = '#ede9df';
+    ctx.fillText('refinement complete', W / 2, H / 2 - 30);
+    
+    // Bin summary
+    ctx.font = '12px Courier New';
+    ctx.globalAlpha = msgAlpha * 0.5;
+    const summary = bins.map(b => b.label + ' ' + b.count).join('  ·  ');
+    ctx.fillText(summary, W / 2, H / 2 + 10);
+    
+    // Subtext
+    ctx.globalAlpha = Math.max(0, Math.min((completionT - 150) / 90, 0.35));
+    ctx.font = '10px Courier New';
+    ctx.fillStyle = digitColors[5];
+    ctx.fillText('the numbers are grateful', W / 2, H / 2 + 40);
+    
+    ctx.textAlign = 'left';
+    ctx.restore();
+  }
+  
+  ctx.globalAlpha = 1;
+}
+
 function getNumberBounds(n) {
   const str = n.hasDecimal ? n.value.toFixed(1) : String(n.value);
   const nw = str.length * 14 * n.scale + 40;
@@ -319,6 +414,10 @@ function onUp(mx, my) {
     b.flash = 1;
     playBinChime(binIdx);
     haptic(25);
+    
+    // Check completion
+    const totalRefined = bins.reduce((s, b) => s + b.count, 0);
+    if (totalRefined >= 25 && !completed) triggerCompletion();
     
     // Spawn particles
     const rects = getBinRects();
@@ -555,6 +654,7 @@ function draw() {
   
   drawBins();
   drawParticles();
+  drawCompletion();
   drawScanlines();
   
   requestAnimationFrame(draw);
