@@ -19,3 +19,4 @@
 | 2026-02-18 | Compression | `2026-02-18-compression.html` | Portfolio words floating free, drawn into a 155-char meta description box. Survivors glow amber. Made after the bitpixi.com copy audit. |
 | 2026-02-18 | Convergence | `2026-02-18-convergence.html` | Two particle clouds drifting toward each other - community (amber) and academia (blue). Cross-connections form where they meet. Centre glows gold. Live countdown: ARC Linkage closes 18 March 2026. Made after finding the La Trobe + OpenAI alignment with Hackeroos. |
 | 029 | 2026-03-04 | Open Plan | Top-down office floor. Cubicles with tiny screens running code, loading bars, blinking cursors. Chairs askew. Everyone left. The monitors didn't. | 2026-03-04-open-plan.html |
+| 030 | 2026-03-04 | 180 Million | Counter climbs. 1,800 warm dots fill the screen. Then they all leave. One dot stays. Tiny screen glows: 0 new. Touch to summon ghosts. | 2026-03-04-180-million.html |
