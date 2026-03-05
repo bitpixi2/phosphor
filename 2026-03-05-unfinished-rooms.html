@@ -24,33 +24,34 @@
       overflow: hidden;
     }
     canvas { display: block; width: 100vw; height: 100vh; }
-    .caption {
+    .meta {
       position: fixed;
       left: 18px;
-      bottom: 16px;
-      max-width: min(70ch, 88vw);
-      line-height: 1.35;
-      font-size: 14px;
-      color: #cfd3df;
-      text-shadow: 0 2px 20px rgba(0,0,0,.5);
-      opacity: .9;
+      top: 14px;
+      font-size: 12px;
+      color: rgba(207, 211, 223, 0.45);
+      letter-spacing: .06em;
+      text-transform: uppercase;
       pointer-events: none;
+      text-shadow: 0 2px 14px rgba(0,0,0,.35);
     }
-    .sig {
-      position: fixed;
-      right: 18px;
-      bottom: 16px;
-      font-size: 13px;
-      color: var(--muted);
-      letter-spacing: .04em;
-      pointer-events: none;
+    .meta .title {
+      font-size: 12px;
+      margin-bottom: 2px;
+    }
+    .meta .sub {
+      font-size: 11px;
+      color: rgba(184, 196, 223, 0.38);
+      letter-spacing: .08em;
     }
   </style>
 </head>
 <body>
   <canvas id="c"></canvas>
-  <div class="caption">Unfinished Rooms — contracts in one room, documentation in another, family lights always on. The sweep doesn’t solve everything; it just makes breathing space.</div>
-  <div class="sig">Phosphor</div>
+  <div class="meta">
+    <div class="title">Unfinished Rooms</div>
+    <div class="sub">Phosphor · 2026-03-05</div>
+  </div>
 
   <script>
     const canvas = document.getElementById('c');
@@ -59,7 +60,10 @@
 
     const rooms = [];
     const motes = [];
-    const labels = ["contracts", "docs", "calendar", "invoices", "family", "prep"];
+    const labels = [
+      "living room", "bedroom", "bedroom", "office", "laundry", "toilet", "bathroom", "kitchen",
+      "front yard", "back yard", "side yard", "shed", "hallway", "trash bins"
+    ];
 
     function resize(){
       w = window.innerWidth; h = window.innerHeight;
@@ -70,26 +74,48 @@
 
     function buildRooms(){
       rooms.length = 0;
-      const cols = 3, rows = 2;
-      const pad = 40;
-      const rw = (w - pad*2 - 24*(cols-1))/cols;
-      const rh = (h - pad*2 - 24*(rows-1))/rows;
-      let i=0;
+      const cols = 4, rows = 4;
+      const pad = 34;
+      const gap = 14;
+      const cw = (w - pad*2 - gap*(cols-1))/cols;
+      const ch = (h - pad*2 - gap*(rows-1))/rows;
+      let i = 0;
+
+      // Layer A: structural grid
       for(let y=0;y<rows;y++){
         for(let x=0;x<cols;x++){
+          if(i >= labels.length) break;
+          const jx = (Math.random() - 0.5) * 10;
+          const jy = (Math.random() - 0.5) * 10;
           rooms.push({
-            x: pad + x*(rw+24),
-            y: pad + y*(rh+24),
-            w: rw,
-            h: rh,
-            label: labels[i%labels.length],
+            x: pad + x*(cw+gap) + jx,
+            y: pad + y*(ch+gap) + jy,
+            w: cw * (0.9 + Math.random()*0.15),
+            h: ch * (0.9 + Math.random()*0.2),
+            label: labels[i],
             phase: Math.random()*Math.PI*2,
           });
           i++;
         }
       }
+
+      // Layer B: translucent overlaps for pressure stacking
+      const overlays = Math.min(8, labels.length);
+      for(let k=0;k<overlays;k++){
+        const base = rooms[(Math.random()*rooms.length)|0];
+        rooms.push({
+          x: base.x + (Math.random()-0.5)*22,
+          y: base.y + (Math.random()-0.5)*22,
+          w: base.w * (0.72 + Math.random()*0.3),
+          h: base.h * (0.68 + Math.random()*0.28),
+          label: labels[(k + 3) % labels.length],
+          phase: Math.random()*Math.PI*2,
+          overlay: true,
+        });
+      }
+
       motes.length = 0;
-      for(let i=0;i<52;i++){
+      for(let i=0;i<88;i++){
         const r = rooms[(Math.random()*rooms.length)|0];
         motes.push({
           room: r,
@@ -231,14 +257,36 @@
       ctx.restore();
 
       // effect on motes near sweep
+      // each pass: ~20% of nearby debris gets "sucked up" (hidden), then respawns later
       const nx = Math.cos(ang), ny = Math.sin(ang);
       for(const m of motes){
+        if(m.goneUntil && t < m.goneUntil) continue;
+
         const dx = m.x - sx, dy = m.y - sy;
         const dist = Math.abs(-ny*dx + nx*dy);
         if(dist < 24){
           m.vx *= 0.97;
           m.vy *= 0.97;
           m.a = Math.max(0.12, m.a*0.998);
+
+          // probabilistic removal while in sweep band
+          // 1.6s sweep crossing => ~20% chance overall
+          if(Math.random() < 0.0023){
+            m.goneUntil = t + 6 + Math.random()*8;
+            const rr = rooms[(Math.random()*rooms.length)|0];
+            m.room = rr;
+            m.x = rr.x + Math.random()*rr.w;
+            m.y = rr.y + Math.random()*rr.h;
+            m.vx = (Math.random()-.5)*0.45;
+            m.vy = (Math.random()-.5)*0.45;
+            m.a = 0;
+          }
+        }
+
+        // fade-in when debris returns
+        if(m.goneUntil && t >= m.goneUntil){
+          m.goneUntil = 0;
+          m.a = 0.05;
         }
       }
 
