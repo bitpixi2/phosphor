@@ -117,8 +117,8 @@
     const motes = [];
     const roamers = [
       { name: 'me', x: 0, y: 0, vx: 1.2, vy: .85, r: 12, hue: '244,211,164' },
-      { name: 'husband', x: 0, y: 0, vx: -1.0, vy: 1.05, r: 10, hue: '242,184,128' },
-      { name: 'child', x: 0, y: 0, vx: .9, vy: -1.15, r: 11, hue: '175,205,230' }
+      { name: 'husband', x: 0, y: 0, vx: -6.0, vy: 5.25, r: 10, hue: '242,184,128' },
+      { name: 'child', x: 0, y: 0, vx: 4.5, vy: -5.75, r: 11, hue: '175,205,230' }
     ];
 
     function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
@@ -201,17 +201,17 @@
       });
 
       motes.length = 0;
-      for (let i = 0; i < 150; i++) {
+      for (let i = 0; i < 170; i++) {
         const r = rooms[(Math.random() * rooms.length) | 0];
         motes.push({
           room: r,
           x: r.x + Math.random() * r.w,
           y: r.y + Math.random() * r.h,
-          vx: (Math.random() - .5) * 0.55,
-          vy: (Math.random() - .5) * 0.55,
-          s: 1 + Math.random() * 2.2,
-          a: .12 + Math.random() * .5,
-          hue: Math.random() < .55 ? 'warm' : 'cool',
+          vx: (Math.random() - .5) * 0.45,
+          vy: (Math.random() - .5) * 0.45,
+          s: 2.2 + Math.random() * 4.2,
+          a: .18 + Math.random() * .45,
+          tone: Math.random(),
           goneUntil: 0
         });
       }
@@ -291,8 +291,16 @@
         m.vx *= 0.995;
         m.vy *= 0.995;
 
-        const col = m.hue === 'warm' ? '242,184,128' : '122,166,199';
-        ctx.fillStyle = `rgba(${col},${m.a})`;
+        // all debris in brown family tones
+        const brown = [
+          [112, 78, 52],
+          [129, 88, 58],
+          [146, 98, 66],
+          [164, 112, 76],
+          [92, 64, 44]
+        ];
+        const c = brown[Math.floor(m.tone * brown.length) % brown.length];
+        ctx.fillStyle = `rgba(${c[0]},${c[1]},${c[2]},${m.a})`;
         ctx.beginPath();
         ctx.arc(m.x, m.y, m.s, 0, Math.PI * 2);
         ctx.fill();
