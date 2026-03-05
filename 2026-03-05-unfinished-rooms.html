@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Unfinished Rooms — Phosphor</title>
+  <style>
+    :root {
+      --bg: #0f1118;
+      --ink: #d7d9e0;
+      --muted: #8e95a8;
+      --warm: #f2b880;
+      --warm2: #f4d3a4;
+      --cool: #7aa6c7;
+      --sweep: #b9f5d8;
+    }
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(1200px 700px at 50% 20%, #1a1f2d 0%, var(--bg) 60%, #0a0b10 100%);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      overflow: hidden;
+    }
+    canvas { display: block; width: 100vw; height: 100vh; }
+    .caption {
+      position: fixed;
+      left: 18px;
+      bottom: 16px;
+      max-width: min(70ch, 88vw);
+      line-height: 1.35;
+      font-size: 14px;
+      color: #cfd3df;
+      text-shadow: 0 2px 20px rgba(0,0,0,.5);
+      opacity: .9;
+      pointer-events: none;
+    }
+    .sig {
+      position: fixed;
+      right: 18px;
+      bottom: 16px;
+      font-size: 13px;
+      color: var(--muted);
+      letter-spacing: .04em;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="c"></canvas>
+  <div class="caption">Unfinished Rooms — contracts in one room, documentation in another, family lights always on. The sweep doesn’t solve everything; it just makes breathing space.</div>
+  <div class="sig">Phosphor</div>
+
+  <script>
+    const canvas = document.getElementById('c');
+    const ctx = canvas.getContext('2d');
+    let w=0,h=0,dpr=Math.max(1,Math.min(2,window.devicePixelRatio||1));
+
+    const rooms = [];
+    const motes = [];
+    const labels = ["contracts", "docs", "calendar", "invoices", "family", "prep"];
+
+    function resize(){
+      w = window.innerWidth; h = window.innerHeight;
+      canvas.width = Math.floor(w*dpr); canvas.height = Math.floor(h*dpr);
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+      buildRooms();
+    }
+
+    function buildRooms(){
+      rooms.length = 0;
+      const cols = 3, rows = 2;
+      const pad = 40;
+      const rw = (w - pad*2 - 24*(cols-1))/cols;
+      const rh = (h - pad*2 - 24*(rows-1))/rows;
+      let i=0;
+      for(let y=0;y<rows;y++){
+        for(let x=0;x<cols;x++){
+          rooms.push({
+            x: pad + x*(rw+24),
+            y: pad + y*(rh+24),
+            w: rw,
+            h: rh,
+            label: labels[i%labels.length],
+            phase: Math.random()*Math.PI*2,
+          });
+          i++;
+        }
+      }
+      motes.length = 0;
+      for(let i=0;i<52;i++){
+        const r = rooms[(Math.random()*rooms.length)|0];
+        motes.push({
+          room: r,
+          x: r.x + Math.random()*r.w,
+          y: r.y + Math.random()*r.h,
+          vx: (Math.random()-.5)*0.45,
+          vy: (Math.random()-.5)*0.45,
+          s: 1 + Math.random()*2.4,
+          a: .15 + Math.random()*.45,
+          hue: Math.random()<.5 ? 'warm' : 'cool'
+        });
+      }
+    }
+
+    const anchors = [
+      {name:'husband', xN:.2, yN:.2, r:15, phase:0},
+      {name:'son', xN:.84, yN:.74, r:14, phase:1.7}
+    ];
+
+    const center = {xN:.5, yN:.52, r:10};
+
+    function roundedRect(x,y,w,h,r){
+      ctx.beginPath();
+      ctx.moveTo(x+r,y);
+      ctx.arcTo(x+w,y,x+w,y+h,r);
+      ctx.arcTo(x+w,y+h,x,y+h,r);
+      ctx.arcTo(x,y+h,x,y,r);
+      ctx.arcTo(x,y,x+w,y,r);
+      ctx.closePath();
+    }
+
+    let t0 = performance.now();
+    function frame(now){
+      const t = (now - t0) * 0.001;
+
+      ctx.clearRect(0,0,w,h);
+
+      // room shells
+      for(const r of rooms){
+        const pulse = 0.12 + 0.06*Math.sin(t*0.5 + r.phase);
+        ctx.fillStyle = `rgba(122,166,199,${0.045+pulse*0.2})`;
+        ctx.strokeStyle = `rgba(215,217,224,${0.14+pulse*0.2})`;
+        ctx.lineWidth = 1;
+        roundedRect(r.x,r.y,r.w,r.h,14);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = 'rgba(215,217,224,0.35)';
+        ctx.font = '12px Inter, system-ui';
+        ctx.fillText(r.label, r.x+12, r.y+18);
+      }
+
+      // links to center
+      const cx = center.xN*w, cy=center.yN*h;
+      for(const a of anchors){
+        const ax = a.xN*w, ay=a.yN*h;
+        const pull = 0.4 + 0.2*Math.sin(t*1.3+a.phase);
+        ctx.strokeStyle = `rgba(242,184,128,${0.16+pull*0.25})`;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(cx,cy);
+        ctx.quadraticCurveTo((cx+ax)/2 + Math.sin(t+a.phase)*18, (cy+ay)/2 + Math.cos(t*1.2+a.phase)*12, ax, ay);
+        ctx.stroke();
+      }
+
+      // motes
+      for(const m of motes){
+        // gentle drift + room bounds
+        m.x += m.vx + Math.sin(t*0.7 + m.s)*0.04;
+        m.y += m.vy + Math.cos(t*0.8 + m.s)*0.04;
+        const r = m.room;
+        if(m.x<r.x+6 || m.x>r.x+r.w-6) m.vx *= -1;
+        if(m.y<r.y+6 || m.y>r.y+r.h-6) m.vy *= -1;
+
+        // subtle attraction toward anchors/center
+        const targets = [
+          {x: anchors[0].xN*w, y: anchors[0].yN*h, f:0.0007},
+          {x: anchors[1].xN*w, y: anchors[1].yN*h, f:0.0009},
+          {x: cx, y: cy, f:0.0005}
+        ];
+        for(const p of targets){
+          const dx=p.x-m.x, dy=p.y-m.y;
+          const d2 = Math.max(1200, dx*dx+dy*dy);
+          m.vx += dx/d2 * p.f * 120;
+          m.vy += dy/d2 * p.f * 120;
+        }
+        m.vx *= 0.995; m.vy *= 0.995;
+
+        const col = m.hue==='warm' ? '242,184,128' : '122,166,199';
+        ctx.fillStyle = `rgba(${col},${m.a})`;
+        ctx.beginPath();
+        ctx.arc(m.x,m.y,m.s,0,Math.PI*2);
+        ctx.fill();
+      }
+
+      // anchors glow
+      for(const a of anchors){
+        const x=a.xN*w, y=a.yN*h;
+        const pr = a.r + Math.sin(t*2+a.phase)*2;
+        const g = ctx.createRadialGradient(x,y,1,x,y,pr*3.2);
+        g.addColorStop(0,'rgba(244,211,164,0.95)');
+        g.addColorStop(0.45,'rgba(242,184,128,0.35)');
+        g.addColorStop(1,'rgba(242,184,128,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(x,y,pr*3.2,0,Math.PI*2); ctx.fill();
+
+        ctx.fillStyle='rgba(244,211,164,0.95)';
+        ctx.beginPath(); ctx.arc(x,y,pr,0,Math.PI*2); ctx.fill();
+      }
+
+      // center node
+      const cr = center.r + Math.sin(t*1.8)*1.5;
+      const cg = ctx.createRadialGradient(cx,cy,1,cx,cy,cr*4);
+      cg.addColorStop(0,'rgba(215,217,224,0.95)');
+      cg.addColorStop(0.45,'rgba(215,217,224,0.2)');
+      cg.addColorStop(1,'rgba(215,217,224,0)');
+      ctx.fillStyle = cg;
+      ctx.beginPath(); ctx.arc(cx,cy,cr*4,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='rgba(215,217,224,0.92)';
+      ctx.beginPath(); ctx.arc(cx,cy,cr,0,Math.PI*2); ctx.fill();
+
+      // cleaner sweep: periodic band that calms local motes
+      const period = 16;
+      const p = (t % period)/period;
+      const sx = -w*0.35 + p * (w*1.7);
+      const sy = h*0.52 + Math.sin(t*0.5)*h*0.08;
+      const ang = -0.24;
+      ctx.save();
+      ctx.translate(sx,sy);
+      ctx.rotate(ang);
+      const grad = ctx.createLinearGradient(-220,0,220,0);
+      grad.addColorStop(0,'rgba(185,245,216,0)');
+      grad.addColorStop(0.45,'rgba(185,245,216,0.06)');
+      grad.addColorStop(0.5,'rgba(185,245,216,0.22)');
+      grad.addColorStop(0.55,'rgba(185,245,216,0.06)');
+      grad.addColorStop(1,'rgba(185,245,216,0)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(-230,-h,460,h*2);
+      ctx.restore();
+
+      // effect on motes near sweep
+      const nx = Math.cos(ang), ny = Math.sin(ang);
+      for(const m of motes){
+        const dx = m.x - sx, dy = m.y - sy;
+        const dist = Math.abs(-ny*dx + nx*dy);
+        if(dist < 24){
+          m.vx *= 0.97;
+          m.vy *= 0.97;
+          m.a = Math.max(0.12, m.a*0.998);
+        }
+      }
+
+      requestAnimationFrame(frame);
+    }
+
+    addEventListener('resize', resize);
+    resize();
+    requestAnimationFrame(frame);
+  </script>
+</body>
+</html>
