@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Low Battery, Book Light — Phosphor</title>
+  <style>
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #0a0d14;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    }
+    #meta {
+      position: fixed;
+      top: 12px;
+      left: 14px;
+      color: rgba(214,223,242,.45);
+      font-size: 11px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      pointer-events: none;
+      z-index: 5;
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"></script>
+</head>
+<body>
+  <div id="meta">Low Battery, Book Light · Phosphor · 2026-03-05</div>
+  <script>
+    // Uses p5.js for cinematic transition from phone depletion to book-reading calm.
+    let particles = [];
+    let t0;
+
+    function setup() {
+      createCanvas(windowWidth, windowHeight);
+      t0 = millis();
+      for (let i = 0; i < 220; i++) {
+        particles.push({
+          x: random(width),
+          y: random(height),
+          vx: random(-0.3, 0.3),
+          vy: random(-0.3, 0.3),
+          a: random(20, 90),
+          s: random(1, 3)
+        });
+      }
+      textAlign(CENTER, CENTER);
+      rectMode(CENTER);
+      noStroke();
+    }
+
+    function drawBackground(phase) {
+      // phase 0 = phone-world, phase 1 = book-world
+      const c1 = lerpColor(color(10, 14, 24), color(24, 18, 10), phase);
+      const c2 = lerpColor(color(12, 30, 58), color(88, 56, 24), phase);
+      for (let y = 0; y < height; y += 2) {
+        let n = y / height;
+        stroke(lerpColor(c1, c2, n));
+        line(0, y, width, y);
+      }
+      noStroke();
+    }
+
+    function drawPhone(cx, cy, w, h, batteryPct, fade) {
+      push();
+      translate(cx, cy);
+      fill(18, 22, 30, 240 * fade);
+      stroke(130, 150, 190, 120 * fade);
+      strokeWeight(2);
+      rect(0, 0, w, h, 26);
+
+      // screen
+      noStroke();
+      fill(12, 16, 25, 220 * fade);
+      rect(0, 0, w * 0.9, h * 0.86, 16);
+
+      // battery frame
+      const bw = w * 0.45;
+      const bh = h * 0.08;
+      const bx = 0;
+      const by = -h * 0.26;
+      stroke(200, 210, 230, 120 * fade);
+      noFill();
+      rect(bx, by, bw, bh, 5);
+      noStroke();
+      fill(190, 200, 230, 130 * fade);
+      rect(bx + bw / 2 + 4, by, 6, bh * 0.48, 2);
+
+      // battery charge
+      const chargeW = (bw - 6) * constrain(batteryPct, 0, 1);
+      const chargeCol = batteryPct > 0.35 ? color(93, 215, 161, 220 * fade)
+                        : batteryPct > 0.15 ? color(255, 197, 94, 220 * fade)
+                        : color(241, 89, 94, 230 * fade);
+      fill(chargeCol);
+      rect(bx - (bw - 6 - chargeW) / 2, by, max(chargeW, 2), bh - 6, 3);
+
+      // low battery text glitch
+      const g = (1 - batteryPct);
+      fill(220, 230, 255, (130 + sin(frameCount * 0.2) * 40) * fade);
+      textSize(h * 0.045);
+      text('LOW BATTERY', random(-g*3, g*3), h * 0.08 + random(-g*2, g*2));
+
+      pop();
+    }
+
+    function drawBook(cx, cy, w, h, reveal) {
+      push();
+      translate(cx, cy);
+      const alpha = 255 * reveal;
+
+      // glow pool for reading lamp mood
+      noStroke();
+      for (let r = 220; r > 40; r -= 12) {
+        fill(255, 214, 146, map(r, 220, 40, 8, 42) * reveal);
+        ellipse(0, h * 0.12, r * 2.1, r * 1.2);
+      }
+
+      // book covers/pages
+      fill(58, 38, 26, alpha * .9);
+      rect(-w * 0.26, 0, w * 0.48, h * 0.58, 6);
+      rect(w * 0.26, 0, w * 0.48, h * 0.58, 6);
+
+      fill(242, 223, 187, alpha);
+      rect(-w * 0.24, 0, w * 0.42, h * 0.52, 4);
+      rect(w * 0.24, 0, w * 0.42, h * 0.52, 4);
+
+      // spine / center fold
+      stroke(94, 64, 42, alpha * .7);
+      strokeWeight(2);
+      line(0, -h * 0.27, 0, h * 0.27);
+
+      // lines of text
+      noStroke();
+      for (let y = -h * 0.2; y < h * 0.22; y += h * 0.05) {
+        fill(123, 96, 68, alpha * random(0.35, 0.65));
+        rect(-w * 0.25, y, random(w * 0.2, w * 0.35), 2, 1);
+        rect(w * 0.23, y, random(w * 0.2, w * 0.35), 2, 1);
+      }
+
+      fill(255, 234, 197, alpha * .86);
+      textSize(h * 0.075);
+      text('…so I read instead', 0, h * 0.43);
+      pop();
+    }
+
+    function draw() {
+      const t = (millis() - t0) / 1000;
+      const phonePhase = constrain(map(t, 0, 16, 0, 1), 0, 1);
+      drawBackground(phonePhase);
+
+      // ambient floating notification fragments
+      for (const p of particles) {
+        p.x += p.vx;
+        p.y += p.vy;
+        if (p.x < 0) p.x = width;
+        if (p.x > width) p.x = 0;
+        if (p.y < 0) p.y = height;
+        if (p.y > height) p.y = 0;
+
+        const a = p.a * (1 - phonePhase * 0.75);
+        fill(125, 168, 227, a);
+        circle(p.x, p.y, p.s);
+      }
+
+      const cx = width * 0.5;
+      const cy = height * 0.48;
+
+      // battery drains from ~18% to 0 in early phase
+      const batteryPct = max(0, 0.18 - t * 0.02);
+      const phoneFade = constrain(map(t, 0, 14, 1, 0), 0, 1);
+      drawPhone(cx, cy, min(width, height) * 0.34, min(width, height) * 0.58, batteryPct, phoneFade);
+
+      // transition cue: tiny power icon falls away
+      if (t > 5 && t < 16) {
+        const y = map(t, 5, 16, cy + 20, cy + 220);
+        fill(245, 91, 95, map(t, 5, 16, 210, 0));
+        triangle(cx - 8, y - 10, cx + 8, y - 10, cx, y + 10);
+      }
+
+      // reveal book scene
+      const bookReveal = constrain(map(t, 8, 18, 0, 1), 0, 1);
+      drawBook(cx, cy + 10, min(width, height) * 0.65, min(width, height) * 0.65, bookReveal);
+
+      // closing line
+      fill(220, 228, 242, 150 + sin(frameCount * 0.03) * 40);
+      textSize(min(width, height) * 0.03);
+      text('battery out, attention in', cx, height * 0.9);
+    }
+
+    function windowResized() {
+      resizeCanvas(windowWidth, windowHeight);
+    }
+  </script>
+</body>
+</html>
