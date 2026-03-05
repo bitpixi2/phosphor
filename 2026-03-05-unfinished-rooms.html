@@ -9,10 +9,6 @@
       --bg: #0f1118;
       --ink: #d7d9e0;
       --muted: #8e95a8;
-      --warm: #f2b880;
-      --warm2: #f4d3a4;
-      --cool: #7aa6c7;
-      --sweep: #b9f5d8;
     }
     html, body {
       margin: 0;
@@ -22,12 +18,57 @@
       color: var(--ink);
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
       overflow: hidden;
+      touch-action: none;
     }
-    canvas { display: block; width: 100vw; height: 100vh; }
+    canvas {
+      position: fixed;
+      inset: 0;
+      display: block;
+      width: 100vw;
+      height: 100vh;
+      z-index: 1;
+    }
+    #layer {
+      position: fixed;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
+    }
+    .box {
+      position: absolute;
+      border-radius: 12px;
+      border: 1px solid rgba(210,216,230,.2);
+      box-shadow: 0 8px 26px rgba(0,0,0,.22);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      line-height: 1.12;
+      user-select: none;
+      -webkit-user-select: none;
+      cursor: grab;
+      pointer-events: auto;
+      padding: 6px;
+      box-sizing: border-box;
+    }
+    .box:active { cursor: grabbing; }
+    .room {
+      color: rgba(232,236,244,.62);
+      font-size: 12px;
+      letter-spacing: .02em;
+      text-transform: lowercase;
+    }
+    .work {
+      color: rgba(208,231,255,.9);
+      font-size: 10px;
+      font-weight: 500;
+      border-color: rgba(122,170,215,.45);
+    }
     .meta {
       position: fixed;
       left: 18px;
       top: 14px;
+      z-index: 3;
       font-size: 12px;
       color: rgba(207, 211, 223, 0.45);
       letter-spacing: .06em;
@@ -35,256 +76,272 @@
       pointer-events: none;
       text-shadow: 0 2px 14px rgba(0,0,0,.35);
     }
-    .meta .title {
-      font-size: 12px;
-      margin-bottom: 2px;
-    }
     .meta .sub {
       font-size: 11px;
       color: rgba(184, 196, 223, 0.38);
       letter-spacing: .08em;
+      margin-top: 2px;
     }
   </style>
 </head>
 <body>
   <canvas id="c"></canvas>
+  <div id="layer"></div>
   <div class="meta">
-    <div class="title">Unfinished Rooms</div>
+    <div>Unfinished Rooms</div>
     <div class="sub">Phosphor · 2026-03-05</div>
   </div>
 
   <script>
     const canvas = document.getElementById('c');
     const ctx = canvas.getContext('2d');
-    let w=0,h=0,dpr=Math.max(1,Math.min(2,window.devicePixelRatio||1));
+    const layer = document.getElementById('layer');
+
+    let w = 0, h = 0, dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+
+    const roomNames = [
+      'living room','bedroom','bedroom','office','laundry','toilet','bathroom','kitchen',
+      'front yard','back yard','side yard','shed','hallway','trash bins in driveway','footpath'
+    ];
+
+    const workNames = [
+      'interview prep','game expo prep','speaker event prep','slides prep',
+      'invoice 1','invoice 2','invoice 3','invoice 4','invoice 5',
+      'contract 1','contract 2','contract 3','contract 4','contract 5',
+      'project 1','project 2','project 3',
+      'company emails','school emails','family emails'
+    ];
 
     const rooms = [];
+    const works = [];
     const motes = [];
-    const labels = [
-      "living room", "bedroom", "bedroom", "office", "laundry", "toilet", "bathroom", "kitchen",
-      "front yard", "back yard", "side yard", "shed", "hallway", "trash bins"
+    const roamers = [
+      { name: 'me', x: 0, y: 0, vx: 1.2, vy: .85, r: 12, hue: '244,211,164' },
+      { name: 'husband', x: 0, y: 0, vx: -1.0, vy: 1.05, r: 10, hue: '242,184,128' },
+      { name: 'child', x: 0, y: 0, vx: .9, vy: -1.15, r: 11, hue: '175,205,230' }
     ];
 
-    function resize(){
-      w = window.innerWidth; h = window.innerHeight;
-      canvas.width = Math.floor(w*dpr); canvas.height = Math.floor(h*dpr);
-      ctx.setTransform(dpr,0,0,dpr,0,0);
-      buildRooms();
+    function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
+
+    function addDraggableBox(type, label, x, y, bw, bh, bg) {
+      const el = document.createElement('div');
+      el.className = `box ${type}`;
+      el.textContent = label;
+      el.style.left = `${x}px`;
+      el.style.top = `${y}px`;
+      el.style.width = `${bw}px`;
+      el.style.height = `${bh}px`;
+      el.style.background = bg;
+
+      const item = { el, type, label, x, y, w: bw, h: bh };
+
+      let dragging = false, ox = 0, oy = 0;
+      el.addEventListener('pointerdown', (e) => {
+        dragging = true;
+        el.setPointerCapture(e.pointerId);
+        ox = e.clientX - item.x;
+        oy = e.clientY - item.y;
+        el.style.zIndex = '999';
+      });
+      el.addEventListener('pointermove', (e) => {
+        if (!dragging) return;
+        item.x = clamp(e.clientX - ox, 0, w - item.w);
+        item.y = clamp(e.clientY - oy, 0, h - item.h);
+        el.style.left = `${item.x}px`;
+        el.style.top = `${item.y}px`;
+      });
+      const stop = () => { dragging = false; el.style.zIndex = ''; };
+      el.addEventListener('pointerup', stop);
+      el.addEventListener('pointercancel', stop);
+
+      layer.appendChild(el);
+      return item;
     }
 
-    function buildRooms(){
+    function buildLayout() {
+      layer.innerHTML = '';
       rooms.length = 0;
-      const cols = 4, rows = 4;
-      const pad = 34;
-      const gap = 14;
-      const cw = (w - pad*2 - gap*(cols-1))/cols;
-      const ch = (h - pad*2 - gap*(rows-1))/rows;
-      let i = 0;
+      works.length = 0;
 
-      // Layer A: structural grid
-      for(let y=0;y<rows;y++){
-        for(let x=0;x<cols;x++){
-          if(i >= labels.length) break;
-          const jx = (Math.random() - 0.5) * 10;
-          const jy = (Math.random() - 0.5) * 10;
-          rooms.push({
-            x: pad + x*(cw+gap) + jx,
-            y: pad + y*(ch+gap) + jy,
-            w: cw * (0.9 + Math.random()*0.15),
-            h: ch * (0.9 + Math.random()*0.2),
-            label: labels[i],
-            phase: Math.random()*Math.PI*2,
-          });
-          i++;
+      const cols = Math.max(3, Math.ceil(Math.sqrt(roomNames.length)));
+      const rows = Math.ceil(roomNames.length / cols);
+      const pad = 24;
+      const gap = 10;
+      const rw = (w - pad * 2 - gap * (cols - 1)) / cols;
+      const rh = (h - pad * 2 - gap * (rows - 1)) / rows;
+
+      roomNames.forEach((name, i) => {
+        const cx = i % cols;
+        const cy = Math.floor(i / cols);
+        const bw = rw * (0.95 + Math.random() * 0.1);
+        const bh = rh * (0.9 + Math.random() * 0.14);
+        const x = clamp(pad + cx * (rw + gap) + (Math.random() - 0.5) * 18, 0, w - bw);
+        const y = clamp(pad + cy * (rh + gap) + (Math.random() - 0.5) * 18, 0, h - bh);
+
+        let bg;
+        if (name === 'kitchen' || name === 'footpath') {
+          bg = 'rgba(170,58,58,0.46)'; // no-phones zones
+        } else {
+          const g = 68 + ((i * 11) % 46);
+          bg = `rgba(${g},${g+3},${g+8},0.33)`;
         }
-      }
 
-      // Layer B: translucent overlaps for pressure stacking
-      const overlays = Math.min(8, labels.length);
-      for(let k=0;k<overlays;k++){
-        const base = rooms[(Math.random()*rooms.length)|0];
-        rooms.push({
-          x: base.x + (Math.random()-0.5)*22,
-          y: base.y + (Math.random()-0.5)*22,
-          w: base.w * (0.72 + Math.random()*0.3),
-          h: base.h * (0.68 + Math.random()*0.28),
-          label: labels[(k + 3) % labels.length],
-          phase: Math.random()*Math.PI*2,
-          overlay: true,
-        });
-      }
+        rooms.push(addDraggableBox('room', name, x, y, bw, bh, bg));
+      });
+
+      // work clutter: smaller blue boxes layered over rooms
+      workNames.forEach((name, i) => {
+        const bw = clamp(120 + Math.random() * 55, 105, 190);
+        const bh = clamp(32 + Math.random() * 12, 30, 48);
+        const x = Math.random() * (w - bw);
+        const y = Math.random() * (h - bh);
+        const b = 96 + (i % 5) * 18;
+        const bg = `rgba(48,${88 + (i%4)*16},${b+60},0.52)`;
+        works.push(addDraggableBox('work', name, x, y, bw, bh, bg));
+      });
 
       motes.length = 0;
-      for(let i=0;i<88;i++){
-        const r = rooms[(Math.random()*rooms.length)|0];
+      for (let i = 0; i < 150; i++) {
+        const r = rooms[(Math.random() * rooms.length) | 0];
         motes.push({
           room: r,
-          x: r.x + Math.random()*r.w,
-          y: r.y + Math.random()*r.h,
-          vx: (Math.random()-.5)*0.45,
-          vy: (Math.random()-.5)*0.45,
-          s: 1 + Math.random()*2.4,
-          a: .15 + Math.random()*.45,
-          hue: Math.random()<.5 ? 'warm' : 'cool'
+          x: r.x + Math.random() * r.w,
+          y: r.y + Math.random() * r.h,
+          vx: (Math.random() - .5) * 0.55,
+          vy: (Math.random() - .5) * 0.55,
+          s: 1 + Math.random() * 2.2,
+          a: .12 + Math.random() * .5,
+          hue: Math.random() < .55 ? 'warm' : 'cool',
+          goneUntil: 0
         });
       }
+
+      roamers[0].x = w * 0.22; roamers[0].y = h * 0.26;
+      roamers[1].x = w * 0.74; roamers[1].y = h * 0.64;
+      roamers[2].x = w * 0.52; roamers[2].y = h * 0.46;
     }
 
-    const anchors = [
-      {name:'husband', xN:.2, yN:.2, r:15, phase:0},
-      {name:'son', xN:.84, yN:.74, r:14, phase:1.7}
-    ];
-
-    const center = {xN:.5, yN:.52, r:10};
-
-    function roundedRect(x,y,w,h,r){
-      ctx.beginPath();
-      ctx.moveTo(x+r,y);
-      ctx.arcTo(x+w,y,x+w,y+h,r);
-      ctx.arcTo(x+w,y+h,x,y+h,r);
-      ctx.arcTo(x,y+h,x,y,r);
-      ctx.arcTo(x,y,x+w,y,r);
-      ctx.closePath();
+    function resize() {
+      w = innerWidth;
+      h = innerHeight;
+      canvas.width = Math.floor(w * dpr);
+      canvas.height = Math.floor(h * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      buildLayout();
     }
 
     let t0 = performance.now();
-    function frame(now){
+    function frame(now) {
       const t = (now - t0) * 0.001;
+      ctx.clearRect(0, 0, w, h);
 
-      ctx.clearRect(0,0,w,h);
-
-      // room shells
-      for(const r of rooms){
-        const pulse = 0.12 + 0.06*Math.sin(t*0.5 + r.phase);
-        ctx.fillStyle = `rgba(122,166,199,${0.045+pulse*0.2})`;
-        ctx.strokeStyle = `rgba(215,217,224,${0.14+pulse*0.2})`;
-        ctx.lineWidth = 1;
-        roundedRect(r.x,r.y,r.w,r.h,14);
-        ctx.fill();
-        ctx.stroke();
-
-        ctx.fillStyle = 'rgba(215,217,224,0.35)';
-        ctx.font = '12px Inter, system-ui';
-        ctx.fillText(r.label, r.x+12, r.y+18);
+      // autonomous roaming circles
+      for (const r of roamers) {
+        r.x += r.vx;
+        r.y += r.vy;
+        if (r.x < r.r || r.x > w - r.r) r.vx *= -1;
+        if (r.y < r.r || r.y > h - r.r) r.vy *= -1;
       }
 
-      // links to center
-      const cx = center.xN*w, cy=center.yN*h;
-      for(const a of anchors){
-        const ax = a.xN*w, ay=a.yN*h;
-        const pull = 0.4 + 0.2*Math.sin(t*1.3+a.phase);
-        ctx.strokeStyle = `rgba(242,184,128,${0.16+pull*0.25})`;
-        ctx.lineWidth = 1.5;
+      // keep the two strings connected: me -> husband, me -> child
+      const me = roamers[0], husband = roamers[1], child = roamers[2];
+      for (const target of [husband, child]) {
+        const mx = (me.x + target.x) / 2;
+        const my = (me.y + target.y) / 2;
+        const wobble = Math.sin(t * 1.6 + (target === husband ? 0.7 : 1.9)) * 16;
+        ctx.strokeStyle = 'rgba(244,211,164,0.35)';
+        ctx.lineWidth = 1.4;
         ctx.beginPath();
-        ctx.moveTo(cx,cy);
-        ctx.quadraticCurveTo((cx+ax)/2 + Math.sin(t+a.phase)*18, (cy+ay)/2 + Math.cos(t*1.2+a.phase)*12, ax, ay);
+        ctx.moveTo(me.x, me.y);
+        ctx.quadraticCurveTo(mx + wobble, my - wobble * 0.4, target.x, target.y);
         ctx.stroke();
       }
 
-      // motes
-      for(const m of motes){
-        // gentle drift + room bounds
-        m.x += m.vx + Math.sin(t*0.7 + m.s)*0.04;
-        m.y += m.vy + Math.cos(t*0.8 + m.s)*0.04;
+      for (const r of roamers) {
+        const glow = ctx.createRadialGradient(r.x, r.y, 1, r.x, r.y, r.r * 3.2);
+        glow.addColorStop(0, `rgba(${r.hue},0.95)`);
+        glow.addColorStop(0.45, `rgba(${r.hue},0.32)`);
+        glow.addColorStop(1, `rgba(${r.hue},0)`);
+        ctx.fillStyle = glow;
+        ctx.beginPath(); ctx.arc(r.x, r.y, r.r * 3.2, 0, Math.PI * 2); ctx.fill();
+
+        ctx.fillStyle = `rgba(${r.hue},0.92)`;
+        ctx.beginPath(); ctx.arc(r.x, r.y, r.r, 0, Math.PI * 2); ctx.fill();
+      }
+
+      // room debris
+      for (const m of motes) {
+        if (m.goneUntil && t < m.goneUntil) continue;
+
+        m.x += m.vx + Math.sin(t * 0.7 + m.s) * 0.05;
+        m.y += m.vy + Math.cos(t * 0.85 + m.s) * 0.05;
+
         const r = m.room;
-        if(m.x<r.x+6 || m.x>r.x+r.w-6) m.vx *= -1;
-        if(m.y<r.y+6 || m.y>r.y+r.h-6) m.vy *= -1;
+        if (m.x < r.x + 4 || m.x > r.x + r.w - 4) m.vx *= -1;
+        if (m.y < r.y + 4 || m.y > r.y + r.h - 4) m.vy *= -1;
 
-        // subtle attraction toward anchors/center
-        const targets = [
-          {x: anchors[0].xN*w, y: anchors[0].yN*h, f:0.0007},
-          {x: anchors[1].xN*w, y: anchors[1].yN*h, f:0.0009},
-          {x: cx, y: cy, f:0.0005}
-        ];
-        for(const p of targets){
-          const dx=p.x-m.x, dy=p.y-m.y;
-          const d2 = Math.max(1200, dx*dx+dy*dy);
-          m.vx += dx/d2 * p.f * 120;
-          m.vy += dy/d2 * p.f * 120;
+        // subtle attraction toward roamers
+        for (const p of roamers) {
+          const dx = p.x - m.x, dy = p.y - m.y;
+          const d2 = Math.max(1600, dx * dx + dy * dy);
+          m.vx += dx / d2 * 0.09;
+          m.vy += dy / d2 * 0.09;
         }
-        m.vx *= 0.995; m.vy *= 0.995;
 
-        const col = m.hue==='warm' ? '242,184,128' : '122,166,199';
+        m.vx *= 0.995;
+        m.vy *= 0.995;
+
+        const col = m.hue === 'warm' ? '242,184,128' : '122,166,199';
         ctx.fillStyle = `rgba(${col},${m.a})`;
         ctx.beginPath();
-        ctx.arc(m.x,m.y,m.s,0,Math.PI*2);
+        ctx.arc(m.x, m.y, m.s, 0, Math.PI * 2);
         ctx.fill();
       }
 
-      // anchors glow
-      for(const a of anchors){
-        const x=a.xN*w, y=a.yN*h;
-        const pr = a.r + Math.sin(t*2+a.phase)*2;
-        const g = ctx.createRadialGradient(x,y,1,x,y,pr*3.2);
-        g.addColorStop(0,'rgba(244,211,164,0.95)');
-        g.addColorStop(0.45,'rgba(242,184,128,0.35)');
-        g.addColorStop(1,'rgba(242,184,128,0)');
-        ctx.fillStyle = g;
-        ctx.beginPath(); ctx.arc(x,y,pr*3.2,0,Math.PI*2); ctx.fill();
-
-        ctx.fillStyle='rgba(244,211,164,0.95)';
-        ctx.beginPath(); ctx.arc(x,y,pr,0,Math.PI*2); ctx.fill();
-      }
-
-      // center node
-      const cr = center.r + Math.sin(t*1.8)*1.5;
-      const cg = ctx.createRadialGradient(cx,cy,1,cx,cy,cr*4);
-      cg.addColorStop(0,'rgba(215,217,224,0.95)');
-      cg.addColorStop(0.45,'rgba(215,217,224,0.2)');
-      cg.addColorStop(1,'rgba(215,217,224,0)');
-      ctx.fillStyle = cg;
-      ctx.beginPath(); ctx.arc(cx,cy,cr*4,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='rgba(215,217,224,0.92)';
-      ctx.beginPath(); ctx.arc(cx,cy,cr,0,Math.PI*2); ctx.fill();
-
-      // cleaner sweep: periodic band that calms local motes
+      // cleaner sweep (kept), with ~20% debris pickup per pass
       const period = 16;
-      const p = (t % period)/period;
-      const sx = -w*0.35 + p * (w*1.7);
-      const sy = h*0.52 + Math.sin(t*0.5)*h*0.08;
+      const sweepP = (t % period) / period;
+      const sx = -w * 0.35 + sweepP * (w * 1.7);
+      const sy = h * 0.52 + Math.sin(t * 0.5) * h * 0.08;
       const ang = -0.24;
+
       ctx.save();
-      ctx.translate(sx,sy);
+      ctx.translate(sx, sy);
       ctx.rotate(ang);
-      const grad = ctx.createLinearGradient(-220,0,220,0);
-      grad.addColorStop(0,'rgba(185,245,216,0)');
-      grad.addColorStop(0.45,'rgba(185,245,216,0.06)');
-      grad.addColorStop(0.5,'rgba(185,245,216,0.22)');
-      grad.addColorStop(0.55,'rgba(185,245,216,0.06)');
-      grad.addColorStop(1,'rgba(185,245,216,0)');
+      const grad = ctx.createLinearGradient(-220, 0, 220, 0);
+      grad.addColorStop(0, 'rgba(185,245,216,0)');
+      grad.addColorStop(0.45, 'rgba(185,245,216,0.06)');
+      grad.addColorStop(0.5, 'rgba(185,245,216,0.22)');
+      grad.addColorStop(0.55, 'rgba(185,245,216,0.06)');
+      grad.addColorStop(1, 'rgba(185,245,216,0)');
       ctx.fillStyle = grad;
-      ctx.fillRect(-230,-h,460,h*2);
+      ctx.fillRect(-230, -h, 460, h * 2);
       ctx.restore();
 
-      // effect on motes near sweep
-      // each pass: ~20% of nearby debris gets "sucked up" (hidden), then respawns later
       const nx = Math.cos(ang), ny = Math.sin(ang);
-      for(const m of motes){
-        if(m.goneUntil && t < m.goneUntil) continue;
+      for (const m of motes) {
+        if (m.goneUntil && t < m.goneUntil) continue;
 
         const dx = m.x - sx, dy = m.y - sy;
-        const dist = Math.abs(-ny*dx + nx*dy);
-        if(dist < 24){
+        const dist = Math.abs(-ny * dx + nx * dy);
+        if (dist < 24) {
           m.vx *= 0.97;
           m.vy *= 0.97;
-          m.a = Math.max(0.12, m.a*0.998);
+          m.a = Math.max(0.12, m.a * 0.998);
 
-          // probabilistic removal while in sweep band
-          // 1.6s sweep crossing => ~20% chance overall
-          if(Math.random() < 0.0023){
-            m.goneUntil = t + 6 + Math.random()*8;
-            const rr = rooms[(Math.random()*rooms.length)|0];
+          if (Math.random() < 0.0023) {
+            m.goneUntil = t + 6 + Math.random() * 8;
+            const rr = rooms[(Math.random() * rooms.length) | 0];
             m.room = rr;
-            m.x = rr.x + Math.random()*rr.w;
-            m.y = rr.y + Math.random()*rr.h;
-            m.vx = (Math.random()-.5)*0.45;
-            m.vy = (Math.random()-.5)*0.45;
+            m.x = rr.x + Math.random() * rr.w;
+            m.y = rr.y + Math.random() * rr.h;
+            m.vx = (Math.random() - .5) * 0.5;
+            m.vy = (Math.random() - .5) * 0.5;
             m.a = 0;
           }
         }
 
-        // fade-in when debris returns
-        if(m.goneUntil && t >= m.goneUntil){
+        if (m.goneUntil && t >= m.goneUntil) {
           m.goneUntil = 0;
           m.a = 0.05;
         }
