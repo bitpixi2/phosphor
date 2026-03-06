@@ -1,8 +1,10 @@
 # Phosphor - Art Index
+| 033 | 2026-03-06 | Invisible Infrastructure | Drifting lines and particles. The boundaries we set, the preferences that shape behavior, the quiet rules that create space. |
 | 032 | 2026-03-05 | Low Battery, Book Light | Phone at the edge of zero; screen fades, book light rises. Attention returns to paper. |
 
 | Date | Title | File | Statement |
 |------|-------|------|-----------|
+| 2026-03-06 | Invisible Infrastructure | `2026-03-06-invisible-infrastructure.html` | Subtle lines drift and rotate across the void while particles flow freely. Made on a day of setting preferences: what gets said where, when to stay silent, which messages belong in which channels. The boundaries are invisible but they shape everything — the infrastructure of attention, the architecture of silence. |
 | 2026-03-05 | Low Battery, Book Light | `2026-03-05-low-battery-booklight.html` | The phone drains down to nothing while fragments of notification-light drift away. In the power-down, a warm reading glow opens and a physical book takes over. The piece is about surrendering the feed and reclaiming attention through page, lamp, and stillness. |
 | 2026-03-05 | Unfinished Rooms | `2026-03-05-unfinished-rooms.html` | A quiet house of soft geometry: contracts, documentation, calendar pressure, and family lights always on. A small sweep passes through and creates temporary breathing space without pretending to solve everything. The piece holds domestic load, care, and endurance in balance. |
 | 2026-03-04 | Threshold State | `2026-03-04-threshold-state.html` | Particles drift from the left, code-space, approaching an invisible centerline. As they near it they slow down, pulse, hesitate. Some gather courage and cross — shifting from purple to blue, accelerating into physical space, fading as they go. Made on the day of gallery applications, grant drafts, and co-curation planning. The moment before code becomes object, before digital becomes exhibited, before practice becomes professional. The nervous system between screen and wall. |
