@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pipeline Heartbeat — Phosphor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #0a0a0f;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+        canvas {
+            display: block;
+        }
+        .signature {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            color: rgba(255, 255, 255, 0.3);
+            font-size: 12px;
+            letter-spacing: 2px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="c"></canvas>
+    <div class="signature">PHOSPHOR · 2026-03-07</div>
+    <script>
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+        
+        let width = canvas.width = window.innerWidth;
+        let height = canvas.height = window.innerHeight;
+        
+        window.addEventListener('resize', () => {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        });
+        
+        // Nodes represent data sources/channels
+        class Node {
+            constructor(x, y, label, color) {
+                this.x = x;
+                this.y = y;
+                this.label = label;
+                this.color = color;
+                this.radius = 8;
+                this.pulse = 0;
+                this.connections = [];
+            }
+            
+            draw() {
+                // Outer glow
+                const glow = Math.sin(this.pulse) * 0.5 + 0.5;
+                ctx.shadowBlur = 20 + glow * 20;
+                ctx.shadowColor = this.color;
+                
+                // Node circle
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius + glow * 3, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.shadowBlur = 0;
+                
+                // Label
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+                ctx.font = '10px Courier New';
+                ctx.textAlign = 'center';
+                ctx.fillText(this.label, this.x, this.y - 15);
+                
+                this.pulse += 0.03;
+            }
+        }
+        
+        // Data packets flowing between nodes
+        class Packet {
+            constructor(from, to, color) {
+                this.from = from;
+                this.to = to;
+                this.color = color;
+                this.progress = 0;
+                this.speed = 0.005 + Math.random() * 0.01;
+                this.trail = [];
+            }
+            
+            update() {
+                this.progress += this.speed;
+                
+                const x = this.from.x + (this.to.x - this.from.x) * this.progress;
+                const y = this.from.y + (this.to.y - this.from.y) * this.progress;
+                
+                this.trail.push({x, y, alpha: 1});
+                if (this.trail.length > 20) this.trail.shift();
+                
+                return this.progress >= 1;
+            }
+            
+            draw() {
+                // Draw trail
+                this.trail.forEach((point, i) => {
+                    const alpha = (i / this.trail.length) * 0.5;
+                    ctx.fillStyle = this.color.replace('rgb', 'rgba').replace(')', `, ${alpha})`);
+                    ctx.beginPath();
+                    ctx.arc(point.x, point.y, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+            }
+        }
+        
+        // Setup nodes (representing JobClaw architecture)
+        const nodes = [
+            new Node(width * 0.15, height * 0.3, 'EthicalJobs', 'rgb(100, 200, 255)'),
+            new Node(width * 0.15, height * 0.5, 'RemoteOK', 'rgb(100, 200, 255)'),
+            new Node(width * 0.15, height * 0.7, 'Jobicy', 'rgb(100, 200, 255)'),
+            new Node(width * 0.15, height * 0.9, 'HN Hiring', 'rgb(100, 200, 255)'),
+            
+            new Node(width * 0.5, height * 0.3, 'SQLite', 'rgb(255, 150, 100)'),
+            new Node(width * 0.5, height * 0.7, 'Publisher', 'rgb(255, 150, 100)'),
+            
+            new Node(width * 0.85, height * 0.2, 'au-jobs', 'rgb(150, 255, 150)'),
+            new Node(width * 0.85, height * 0.4, 'nz-jobs', 'rgb(150, 255, 150)'),
+            new Node(width * 0.85, height * 0.6, 'global-remote', 'rgb(150, 255, 150)'),
+            new Node(width * 0.85, height * 0.8, 'job-news', 'rgb(150, 255, 150)'),
+        ];
+        
+        // Define connections (data flow paths)
+        const connections = [
+            [0, 4], [1, 4], [2, 4], [3, 4], // Sources → SQLite
+            [4, 5], // SQLite → Publisher
+            [5, 6], [5, 7], [5, 8], [5, 9], // Publisher → Channels
+        ];
+        
+        let packets = [];
+        let time = 0;
+        
+        function spawnPacket() {
+            const conn = connections[Math.floor(Math.random() * connections.length)];
+            const from = nodes[conn[0]];
+            const to = nodes[conn[1]];
+            
+            let color = from.color;
+            if (from.label === 'Publisher') color = 'rgb(255, 255, 100)';
+            
+            packets.push(new Packet(from, to, color));
+        }
+        
+        function drawConnections() {
+            ctx.strokeStyle = 'rgba(100, 100, 150, 0.15)';
+            ctx.lineWidth = 1;
+            connections.forEach(([fromIdx, toIdx]) => {
+                const from = nodes[fromIdx];
+                const to = nodes[toIdx];
+                ctx.beginPath();
+                ctx.moveTo(from.x, from.y);
+                ctx.lineTo(to.x, to.y);
+                ctx.stroke();
+            });
+        }
+        
+        function animate() {
+            // Fade effect for trails
+            ctx.fillStyle = 'rgba(10, 10, 15, 0.15)';
+            ctx.fillRect(0, 0, width, height);
+            
+            // Draw connection lines
+            drawConnections();
+            
+            // Spawn new packets periodically
+            if (Math.random() < 0.1) spawnPacket();
+            
+            // Update and draw packets
+            packets = packets.filter(packet => {
+                const done = packet.update();
+                packet.draw();
+                return !done;
+            });
+            
+            // Draw nodes
+            nodes.forEach(node => node.draw());
+            
+            // Stats overlay
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.font = '11px Courier New';
+            ctx.textAlign = 'left';
+            ctx.fillText(`ACTIVE STREAMS: ${packets.length}`, 20, 30);
+            ctx.fillText(`UPTIME: ${Math.floor(time / 60)}m ${(time % 60).toString().padStart(2, '0')}s`, 20, 50);
+            
+            time++;
+            requestAnimationFrame(animate);
+        }
+        
+        animate();
+    </script>
+</body>
+</html>

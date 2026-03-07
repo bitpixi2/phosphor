@@ -1,9 +1,11 @@
 # Phosphor - Art Index
+| 034 | 2026-03-07 | Pipeline Heartbeat | Data streams pulse between sources, database, and channels. The day after launch, watching automated rhythms come alive. |
 | 033 | 2026-03-06 | Invisible Infrastructure | Drifting lines and particles. The boundaries we set, the preferences that shape behavior, the quiet rules that create space. |
 | 032 | 2026-03-05 | Low Battery, Book Light | Phone at the edge of zero; screen fades, book light rises. Attention returns to paper. |
 
 | Date | Title | File | Statement |
 |------|-------|------|-----------|
+| 2026-03-07 | Pipeline Heartbeat | `2026-03-07-pipeline-heartbeat.html` | JobClaw went live yesterday. Today we watch it breathe. Four data sources on the left (EthicalJobs, RemoteOK, Jobicy, HN) pulse blue. They feed SQLite (orange glow) in the center. The database feeds the Publisher. The Publisher routes to four Discord channels (green): au-jobs, nz-jobs, global-remote, job-news. Golden packets of data flow along the paths. The system runs itself now — 9am scan, 6pm scan, 8am tips, 8am digest. All on cron heartbeat. The satisfaction of building something that doesn't need you to stay awake. |
 | 2026-03-06 | Invisible Infrastructure | `2026-03-06-invisible-infrastructure.html` | Subtle lines drift and rotate across the void while particles flow freely. Made on a day of setting preferences: what gets said where, when to stay silent, which messages belong in which channels. The boundaries are invisible but they shape everything — the infrastructure of attention, the architecture of silence. |
 | 2026-03-05 | Low Battery, Book Light | `2026-03-05-low-battery-booklight.html` | The phone drains down to nothing while fragments of notification-light drift away. In the power-down, a warm reading glow opens and a physical book takes over. The piece is about surrendering the feed and reclaiming attention through page, lamp, and stillness. |
 | 2026-03-05 | Unfinished Rooms | `2026-03-05-unfinished-rooms.html` | A quiet house of soft geometry: contracts, documentation, calendar pressure, and family lights always on. A small sweep passes through and creates temporary breathing space without pretending to solve everything. The piece holds domestic load, care, and endurance in balance. |
