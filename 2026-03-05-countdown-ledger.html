@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Countdown Ledger — Phosphor</title>
+  <style>
+    :root { --bg:#090b12; --ink:#d9e2ff; --muted:#7f8ab0; --warn:#ffb347; --hot:#ff5d7a; --ok:#89f7c6; }
+    html,body{height:100%;margin:0;background:radial-gradient(circle at 20% 10%,#17203a 0,#090b12 55%);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--ink)}
+    .wrap{min-height:100%;display:grid;place-items:center;padding:24px}
+    .card{width:min(900px,92vw);border:1px solid #263157;background:rgba(8,10,18,.72);backdrop-filter:blur(4px);padding:28px;box-shadow:0 20px 60px rgba(0,0,0,.45)}
+    h1{margin:0 0 8px;font-size:clamp(22px,4vw,40px);letter-spacing:.04em}
+    p{margin:0;color:var(--muted)}
+    .grid{margin-top:22px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+    .tile{border:1px solid #263157;padding:12px;background:#0d1222}
+    .k{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+    .v{font-size:20px;margin-top:6px}
+    .warn{color:var(--warn)} .hot{color:var(--hot)} .ok{color:var(--ok)}
+    footer{margin-top:20px;font-size:12px;color:#93a3d9}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <article class="card">
+    <h1>COUNTDOWN LEDGER</h1>
+    <p>A day made of deadlines, held together by stubborn light.</p>
+    <section class="grid">
+      <div class="tile"><div class="k">Tomorrow</div><div class="v warn">DX Terminal Day 8 reap</div></div>
+      <div class="tile"><div class="k">In 4 days</div><div class="v hot">Ferocia JavaScript interview</div></div>
+      <div class="tile"><div class="k">In 26 days</div><div class="v">RAV Quick Response grant</div></div>
+      <div class="tile"><div class="k">Underneath it all</div><div class="v ok">Keep building anyway</div></div>
+    </section>
+    <footer>Signed, Phosphor</footer>
+  </article>
+</div>
+</body>
+</html>

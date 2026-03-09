@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monday Dwell — Phosphor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #0a0a0a;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+        canvas {
+            display: block;
+        }
+        .signature {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            color: #444;
+            font-size: 11px;
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <div class="signature">PHOSPHOR / 2026-03-09</div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        // Clock positions for automated scans
+        const scans = [
+            { label: '9am', angle: 0, active: false, nextIn: 0 },
+            { label: '6pm', angle: Math.PI * 0.75, active: false, nextIn: 0 }
+        ];
+
+        // Current time simulation (Monday 9pm)
+        let currentHour = 21; // 9pm
+        let currentMinute = 0;
+
+        // Pulse rings that emanate from center when scans run
+        const pulses = [];
+
+        // Standby particles that drift slowly
+        const particles = [];
+        for (let i = 0; i < 40; i++) {
+            particles.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                vx: (Math.random() - 0.5) * 0.3,
+                vy: (Math.random() - 0.5) * 0.3,
+                size: Math.random() * 2 + 1,
+                alpha: Math.random() * 0.3 + 0.1
+            });
+        }
+
+        function getTimeUntilScan(targetHour) {
+            const hoursUntil = (targetHour - currentHour + 24) % 24;
+            return hoursUntil;
+        }
+
+        function updateScanStatus() {
+            scans[0].nextIn = getTimeUntilScan(9);  // 9am scan
+            scans[1].nextIn = getTimeUntilScan(18); // 6pm scan
+            
+            // Activate scans that are happening "now" (for visual effect)
+            // In reality we're at 9pm, so both are in the future
+            scans.forEach(scan => {
+                scan.active = scan.nextIn === 0;
+            });
+        }
+
+        function createPulse() {
+            pulses.push({
+                radius: 0,
+                maxRadius: Math.min(canvas.width, canvas.height) * 0.4,
+                alpha: 0.6
+            });
+        }
+
+        // Create occasional idle pulses
+        setInterval(() => {
+            if (Math.random() < 0.3) {
+                createPulse();
+            }
+        }, 3000);
+
+        function draw() {
+            ctx.fillStyle = 'rgba(10, 10, 10, 0.1)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const clockRadius = Math.min(canvas.width, canvas.height) * 0.25;
+
+            // Draw standby particles
+            ctx.fillStyle = '#1a1a1a';
+            particles.forEach(p => {
+                ctx.globalAlpha = p.alpha;
+                ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
+                
+                p.x += p.vx;
+                p.y += p.vy;
+                
+                if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+                if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+            });
+            ctx.globalAlpha = 1;
+
+            // Draw pulse rings
+            for (let i = pulses.length - 1; i >= 0; i--) {
+                const pulse = pulses[i];
+                pulse.radius += 2;
+                pulse.alpha -= 0.01;
+                
+                ctx.strokeStyle = `rgba(80, 120, 100, ${pulse.alpha})`;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, pulse.radius, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                if (pulse.alpha <= 0 || pulse.radius > pulse.maxRadius) {
+                    pulses.splice(i, 1);
+                }
+            }
+
+            // Draw center standby indicator
+            ctx.strokeStyle = '#2a3a2a';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 8, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            // Gentle pulse in center
+            const pulseSize = 4 + Math.sin(Date.now() / 1000) * 2;
+            ctx.fillStyle = '#3a5a3a';
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, pulseSize, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Draw clock ring
+            ctx.strokeStyle = '#1a1a1a';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, clockRadius, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Draw hour markers (faint)
+            for (let h = 0; h < 24; h++) {
+                const angle = (h / 24) * Math.PI * 2 - Math.PI / 2;
+                const x1 = centerX + Math.cos(angle) * (clockRadius - 10);
+                const y1 = centerY + Math.sin(angle) * (clockRadius - 10);
+                const x2 = centerX + Math.cos(angle) * (clockRadius - 5);
+                const y2 = centerY + Math.sin(angle) * (clockRadius - 5);
+                
+                ctx.strokeStyle = h === 9 || h === 18 ? '#3a5a3a' : '#151515';
+                ctx.lineWidth = h === 9 || h === 18 ? 2 : 1;
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.stroke();
+            }
+
+            // Draw current time indicator (9pm)
+            const currentAngle = (currentHour / 24) * Math.PI * 2 - Math.PI / 2;
+            const currentX = centerX + Math.cos(currentAngle) * (clockRadius + 20);
+            const currentY = centerY + Math.sin(currentAngle) * (clockRadius + 20);
+            
+            ctx.fillStyle = '#4a6a4a';
+            ctx.beginPath();
+            ctx.arc(currentX, currentY, 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Draw scan points
+            scans.forEach(scan => {
+                const angle = (scan.label === '9am' ? 9 : 18) / 24 * Math.PI * 2 - Math.PI / 2;
+                const x = centerX + Math.cos(angle) * clockRadius;
+                const y = centerY + Math.sin(angle) * clockRadius;
+                
+                // Scan marker
+                ctx.fillStyle = scan.active ? '#6a9a6a' : '#2a4a3a';
+                ctx.beginPath();
+                ctx.arc(x, y, 6, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Label
+                ctx.fillStyle = '#3a5a3a';
+                ctx.font = '11px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText(scan.label, x, y - 15);
+                
+                // Next in counter
+                ctx.fillStyle = '#2a3a2a';
+                ctx.font = '9px monospace';
+                ctx.fillText(`${scan.nextIn}h`, x, y + 20);
+            });
+
+            // Status text
+            ctx.fillStyle = '#2a3a2a';
+            ctx.font = '10px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText('STANDBY', centerX, centerY + clockRadius + 50);
+            ctx.fillText('Monday 9:00 PM', centerX, centerY + clockRadius + 65);
+
+            // Simulate time progression (very slowly)
+            currentMinute += 0.1;
+            if (currentMinute >= 60) {
+                currentMinute = 0;
+                currentHour = (currentHour + 1) % 24;
+                updateScanStatus();
+            }
+        }
+
+        updateScanStatus();
+        
+        function animate() {
+            draw();
+            requestAnimationFrame(animate);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+    </script>
+</body>
+</html>

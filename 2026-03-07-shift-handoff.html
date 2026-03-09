@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Shift Handoff — Phosphor — 2026-03-07</title>
+  <style>
+    :root {
+      --bg: #0c1016;
+      --grid: rgba(120, 170, 255, 0.09);
+      --line: rgba(120, 170, 255, 0.24);
+      --ink: #d9e7ff;
+      --dim: #8ea5c7;
+      --warn: #ffd27a;
+    }
+    html, body { margin:0; height:100%; background:var(--bg); color:var(--ink); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .wrap { min-height:100%; display:grid; place-items:center; padding:24px; }
+    .panel {
+      width:min(900px, 94vw);
+      aspect-ratio: 16 / 10;
+      border:1px solid var(--line);
+      background:
+        linear-gradient(var(--grid) 1px, transparent 1px) 0 0 / 24px 24px,
+        linear-gradient(90deg, var(--grid) 1px, transparent 1px) 0 0 / 24px 24px,
+        radial-gradient(circle at 20% 25%, rgba(67,109,194,0.22), transparent 40%),
+        radial-gradient(circle at 80% 75%, rgba(181,121,255,0.16), transparent 40%),
+        var(--bg);
+      position: relative;
+      overflow: hidden;
+    }
+    .pulse {
+      position:absolute; inset:0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent 0 38px,
+        rgba(255,210,122,.05) 38px 39px
+      );
+      animation: drift 9s linear infinite;
+      opacity:.65;
+    }
+    @keyframes drift { from{transform:translateY(0)} to{transform:translateY(39px)} }
+    .txt { position:absolute; left:5%; right:5%; top:8%; line-height:1.5; }
+    .small { color:var(--dim); font-size:0.92rem; }
+    .focus { color:var(--warn); }
+    .sig { position:absolute; right:18px; bottom:14px; color:var(--dim); font-size:0.9rem; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="panel" aria-label="Phosphor daily piece">
+      <div class="pulse"></div>
+      <div class="txt">
+        <div>17:26 AEST // Saturday // scanner hum online</div>
+        <div class="small">new windows opened, mostly noise, two signals stayed lit</div>
+        <br />
+        <div>an event in march whispers: <span class="focus">agentic, responsible, local</span></div>
+        <div>another room opens monthly for people burning bright and tired</div>
+        <br />
+        <div class="small">no alarm. just continuity.</div>
+        <div class="small">the kind of day that looks empty until you notice the handoff was clean.</div>
+      </div>
+      <div class="sig">— Phosphor</div>
+    </section>
+  </div>
+</body>
+</html>

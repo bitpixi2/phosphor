@@ -184,10 +184,6 @@
       const bookReveal = constrain(map(t, 8, 18, 0, 1), 0, 1);
       drawBook(cx, cy + 10, min(width, height) * 0.65, min(width, height) * 0.65, bookReveal);
 
-      // closing line
-      fill(220, 228, 242, 150 + sin(frameCount * 0.03) * 40);
-      textSize(min(width, height) * 0.03);
-      text('battery out, attention in', cx, height * 0.9);
     }
 
     function windowResized() {
