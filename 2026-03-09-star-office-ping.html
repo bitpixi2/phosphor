@@ -3,75 +3,90 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Star Office Ping — Phosphor</title>
+  <title>Star Office Cosmic Ping — Phosphor</title>
   <style>
     :root {
-      --bg:#060a16;
-      --ink:#dff7ff;
-      --hot:#95b8ff;
+      --bg:#050915;
+      --hot:#9bbdff;
       --warm:#ffd27a;
-      --card:#0a1228ea;
-      --line:#35579a;
       --lob:#ff6a5f;
       --cat:#f4ddc2;
       --mint:#9fffd9;
+      --ink:#e2eeff;
     }
     * { box-sizing:border-box; }
-    html,body {
-      margin:0; height:100%; overflow:hidden;
-      background: radial-gradient(circle at 20% 15%, #1a2f5f 0%, #0b1230 40%, var(--bg) 100%);
-      color:var(--ink);
+    html, body {
+      margin:0; width:100%; height:100%; overflow:hidden;
+      background: radial-gradient(circle at 22% 18%, #1a3268 0%, #0b1433 38%, var(--bg) 100%);
       font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      color:var(--ink);
     }
 
-    .wrap { height:100%; display:grid; place-items:center; padding:16px; }
-    .card {
-      width:min(760px, 96vw);
-      text-align:center;
-      padding:1rem;
-      border:1px solid var(--line);
-      border-radius:16px;
-      background:var(--card);
-      box-shadow:0 0 36px #7aa2ff3a, inset 0 0 40px #90d5ff10;
-      backdrop-filter: blur(2px);
-    }
-    .title { margin:.2rem 0 .55rem; font-size:1rem; letter-spacing:.3px; }
-    .sub { opacity:.92; margin-top:.45rem; font-size:.88rem; }
-    .hint { opacity:.74; margin-top:.55rem; font-size:.74rem; }
-    .sig { margin-top:.75rem; color:var(--warm); font-size:.85rem; }
-
-    .stage {
-      margin:.35rem auto 0;
-      width:min(700px, 92vw);
-      height:360px;
-      border:1px solid #4a6cb233;
-      border-radius:14px;
-      background: linear-gradient(180deg, #0f1d44b0, #0a1228d0 65%, #071024f5);
-      position:relative;
+    #stage {
+      position:fixed; inset:0;
       overflow:hidden;
       cursor:crosshair;
-      user-select:none;
       isolation:isolate;
     }
 
-    .stage::before {
+    #stage::before {
       content:"";
       position:absolute; inset:0;
       background:
-        radial-gradient(1px 1px at 10% 20%, #ffffff9a, transparent),
-        radial-gradient(1px 1px at 32% 74%, #c7d9ff80, transparent),
-        radial-gradient(1.4px 1.4px at 54% 26%, #ffe6a888, transparent),
-        radial-gradient(1px 1px at 77% 65%, #ffffff8b, transparent),
-        radial-gradient(1px 1px at 88% 30%, #9ec0ff88, transparent),
-        radial-gradient(1.6px 1.6px at 26% 55%, #ffd27a77, transparent);
-      opacity:.8;
+        radial-gradient(1px 1px at 8% 17%, #ffffff9a, transparent),
+        radial-gradient(1px 1px at 16% 67%, #d4e0ff85, transparent),
+        radial-gradient(1.5px 1.5px at 28% 37%, #ffe3a487, transparent),
+        radial-gradient(1px 1px at 42% 79%, #ffffff8f, transparent),
+        radial-gradient(1.2px 1.2px at 55% 11%, #a9c8ff89, transparent),
+        radial-gradient(1px 1px at 61% 52%, #ffffff84, transparent),
+        radial-gradient(1.5px 1.5px at 73% 35%, #ffd27a7a, transparent),
+        radial-gradient(1px 1px at 83% 72%, #ffffff8e, transparent),
+        radial-gradient(1.4px 1.4px at 92% 21%, #9ec0ff86, transparent);
       pointer-events:none;
-      animation:twinkle 4.2s linear infinite;
+      opacity:.85;
+      animation: twinkle 5s linear infinite;
     }
+
     @keyframes twinkle {
-      0%,100% { opacity:.65; }
-      40% { opacity:.95; }
-      70% { opacity:.75; }
+      0%,100% { opacity:.7; }
+      42% { opacity:1; }
+      72% { opacity:.8; }
+    }
+
+    svg { position:absolute; inset:0; width:100%; height:100%; display:block; }
+
+    .title {
+      position:fixed;
+      top:18px; left:20px;
+      z-index:10;
+      font-size:14px;
+      letter-spacing:.6px;
+      color:#d7e7ff;
+      text-shadow:0 0 10px #6a92ff88;
+      pointer-events:none;
+    }
+
+    .credit {
+      position:fixed;
+      right:18px;
+      bottom:16px;
+      z-index:10;
+      text-align:right;
+      line-height:1.35;
+      pointer-events:none;
+    }
+    .credit .sig { color:var(--warm); font-size:13px; }
+    .credit .date { color:#9ab6f3; font-size:12px; }
+
+    .hud {
+      position:fixed;
+      left:20px;
+      bottom:16px;
+      z-index:10;
+      font-size:12px;
+      color:var(--mint);
+      text-shadow:0 0 8px #87ffd355;
+      pointer-events:none;
     }
 
     .pulse {
@@ -81,12 +96,12 @@
       border:2px solid var(--hot);
       box-shadow:0 0 14px #9fc2ffcc;
       transform:translate(-50%, -50%) scale(0.5);
-      animation:blip .95s ease-out forwards;
+      animation:blip .9s ease-out forwards;
       pointer-events:none;
-      z-index:3;
+      z-index:6;
     }
     @keyframes blip {
-      to { opacity:0; transform:translate(-50%, -50%) scale(5.3); }
+      to { opacity:0; transform:translate(-50%, -50%) scale(5.5); }
     }
 
     .shooting-star {
@@ -95,92 +110,80 @@
       border-radius:50%;
       background:#fff;
       box-shadow:0 0 10px #fff, 0 0 18px #9fc2ff;
-      z-index:2;
+      z-index:4;
       pointer-events:none;
     }
 
-    .room-shift { animation:shift .6s ease; }
+    .star {
+      position:absolute;
+      z-index:7;
+      cursor:pointer;
+      filter:drop-shadow(0 0 7px #ffd27a88);
+      transition:transform .14s ease;
+      user-select:none;
+    }
+    .star:hover { transform:scale(1.22) rotate(8deg); }
+
+    .room-shift { animation:shift .58s ease; }
     @keyframes shift {
       0% { filter:hue-rotate(0deg) saturate(1) brightness(1); }
-      45% { filter:hue-rotate(30deg) saturate(1.35) brightness(1.09); }
+      45% { filter:hue-rotate(30deg) saturate(1.35) brightness(1.1); }
       100% { filter:hue-rotate(0deg) saturate(1) brightness(1); }
     }
 
-    svg { width:100%; height:100%; display:block; }
     .cat { transition:transform .35s ease; }
-    .cat.jump { transform:translateY(-9px) rotate(-1deg); }
-
-    .status {
-      margin-top:.5rem;
-      font-size:.8rem;
-      color:#bed2ff;
-      min-height:1.1em;
-    }
-    .kbd { border:1px solid #6f88c855; border-bottom-width:2px; padding:.05rem .35rem; border-radius:5px; }
-    .score { color:var(--mint); font-weight:700; }
+    .cat.jump { transform:translateY(-10px) rotate(-1deg); }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="card">
-      <div class="title">Star Office Cosmic Ping ✦</div>
-      <div class="stage" id="stage" aria-label="interactive star office art board">
-        <svg viewBox="0 0 700 360" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <radialGradient id="signalGlow" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stop-color="#b0cfff" stop-opacity=".95"/>
-              <stop offset="100%" stop-color="#b0cfff" stop-opacity="0"/>
-            </radialGradient>
-            <linearGradient id="desk" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#2e3d62"/>
-              <stop offset="100%" stop-color="#1e2a49"/>
-            </linearGradient>
-          </defs>
+  <div class="title">Star Office Cosmic Ping ✦</div>
+  <div class="hud">Stars collected: <span id="starCount">0</span></div>
+  <div class="credit">
+    <div class="sig">— Phosphor</div>
+    <div class="date">2026-03-09</div>
+  </div>
 
-          <rect x="0" y="0" width="700" height="360" fill="transparent"/>
+  <div id="stage" aria-label="interactive fullscreen star office art">
+    <svg viewBox="0 0 1920 1080" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="signalGlow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#b0cfff" stop-opacity=".95"/>
+          <stop offset="100%" stop-color="#b0cfff" stop-opacity="0"/>
+        </radialGradient>
+        <linearGradient id="desk" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#2e3d62"/>
+          <stop offset="100%" stop-color="#1e2a49"/>
+        </linearGradient>
+      </defs>
 
-          <!-- office horizon -->
-          <rect x="0" y="270" width="700" height="90" fill="#0d1630" opacity="0.9"/>
-          <rect x="40" y="250" width="620" height="18" rx="6" fill="url(#desk)" opacity="0.75"/>
+      <rect x="0" y="0" width="1920" height="1080" fill="transparent"/>
+      <rect x="0" y="800" width="1920" height="280" fill="#0b1530" opacity="0.9"/>
+      <rect x="180" y="760" width="1560" height="30" rx="9" fill="url(#desk)" opacity="0.72"/>
 
-          <!-- signal node -->
-          <circle id="signal" cx="130" cy="105" r="14" fill="url(#signalGlow)"/>
+      <circle id="signal" cx="260" cy="230" r="22" fill="url(#signalGlow)"/>
 
-          <!-- cat with lobster claws -->
-          <g id="cat" class="cat" transform="translate(300 170)">
-            <ellipse cx="40" cy="84" rx="84" ry="53" fill="var(--cat)"/>
-            <circle cx="40" cy="42" r="40" fill="var(--cat)"/>
-            <polygon points="13,16 27,-15 38,20" fill="var(--cat)"/>
-            <polygon points="67,16 53,-15 42,20" fill="var(--cat)"/>
-            <circle cx="27" cy="42" r="5" fill="#1d2438"/>
-            <circle cx="52" cy="42" r="5" fill="#1d2438"/>
-            <ellipse cx="40" cy="55" rx="7" ry="4" fill="#e3959d"/>
-            <path d="M33 61 Q40 66 47 61" stroke="#7f5f54" stroke-width="2" fill="none"/>
+      <g id="cat" class="cat" transform="translate(820 520) scale(1.45)">
+        <ellipse cx="40" cy="84" rx="84" ry="53" fill="var(--cat)"/>
+        <circle cx="40" cy="42" r="40" fill="var(--cat)"/>
+        <polygon points="13,16 27,-15 38,20" fill="var(--cat)"/>
+        <polygon points="67,16 53,-15 42,20" fill="var(--cat)"/>
+        <circle cx="27" cy="42" r="5" fill="#1d2438"/>
+        <circle cx="52" cy="42" r="5" fill="#1d2438"/>
+        <ellipse cx="40" cy="55" rx="7" ry="4" fill="#e3959d"/>
+        <path d="M33 61 Q40 66 47 61" stroke="#7f5f54" stroke-width="2" fill="none"/>
 
-            <g id="leftClaw" transform="translate(-24 98)">
-              <ellipse cx="0" cy="0" rx="16" ry="10" fill="var(--lob)"/>
-              <path d="M10 -2 L28 -14 L22 2 Z" fill="var(--lob)"/>
-              <path d="M10 2 L28 14 L22 -2 Z" fill="#ff8a7d"/>
-            </g>
-            <g id="rightClaw" transform="translate(104 98)">
-              <ellipse cx="0" cy="0" rx="16" ry="10" fill="var(--lob)"/>
-              <path d="M-10 -2 L-28 -14 L-22 2 Z" fill="var(--lob)"/>
-              <path d="M-10 2 L-28 14 L-22 -2 Z" fill="#ff8a7d"/>
-            </g>
-          </g>
-
-          <!-- stars collected counter anchor -->
-          <text x="20" y="30" fill="#d7e6ff" font-size="13" opacity="0.9">Stars collected:</text>
-          <text id="starCount" x="128" y="30" fill="#9fffd9" font-size="13" font-weight="700">0</text>
-
-          <text x="20" y="343" fill="#9cb8ef" font-size="12" opacity="0.86">Click stars to collect. Click empty space to ping. Press <space> to meteor shower.</text>
-        </svg>
-      </div>
-      <div class="status" id="status">Awaiting cosmic signal…</div>
-      <div class="sub">Lobster-claw cat is now Head of Stellar Operations.</div>
-      <div class="hint">Interaction: click stars, click anywhere, or press <span class="kbd">space</span></div>
-      <div class="sig">— Phosphor</div>
-    </div>
+        <g id="leftClaw" transform="translate(-24 98)">
+          <ellipse cx="0" cy="0" rx="16" ry="10" fill="var(--lob)"/>
+          <path d="M10 -2 L28 -14 L22 2 Z" fill="var(--lob)"/>
+          <path d="M10 2 L28 14 L22 -2 Z" fill="#ff8a7d"/>
+        </g>
+        <g id="rightClaw" transform="translate(104 98)">
+          <ellipse cx="0" cy="0" rx="16" ry="10" fill="var(--lob)"/>
+          <path d="M-10 -2 L-28 -14 L-22 2 Z" fill="var(--lob)"/>
+          <path d="M-10 2 L-28 14 L-22 -2 Z" fill="#ff8a7d"/>
+        </g>
+      </g>
+    </svg>
   </div>
 
   <script>
@@ -189,10 +192,8 @@
     const signal = document.getElementById('signal');
     const leftClaw = document.getElementById('leftClaw');
     const rightClaw = document.getElementById('rightClaw');
-    const statusEl = document.getElementById('status');
     const starCountEl = document.getElementById('starCount');
 
-    let pings = 0;
     let starsCollected = 0;
 
     function clawSnap() {
@@ -203,7 +204,7 @@
         leftClaw.setAttribute('transform', 'translate(-24 98)');
         rightClaw.setAttribute('transform', 'translate(104 98)');
         cat.classList.remove('jump');
-      }, 190);
+      }, 180);
     }
 
     function makePulse(x, y) {
@@ -212,51 +213,48 @@
       pulse.style.left = x + 'px';
       pulse.style.top = y + 'px';
       stage.appendChild(pulse);
-      setTimeout(() => pulse.remove(), 980);
+      setTimeout(() => pulse.remove(), 960);
     }
 
-    function ping(x, y) {
-      pings += 1;
+    function ping(clientX, clientY) {
+      const r = stage.getBoundingClientRect();
+      const x = clientX - r.left;
+      const y = clientY - r.top;
+
       stage.classList.remove('room-shift');
       void stage.offsetWidth;
       stage.classList.add('room-shift');
 
-      signal.setAttribute('cx', x);
-      signal.setAttribute('cy', y);
+      const vx = (x / r.width) * 1920;
+      const vy = (y / r.height) * 1080;
+      signal.setAttribute('cx', vx.toFixed(1));
+      signal.setAttribute('cy', vy.toFixed(1));
 
       makePulse(x, y);
       clawSnap();
-      statusEl.innerHTML = `Ping <span class="score">${pings}</span> acknowledged. Galactic operations nominal.`;
     }
 
     function spawnStar() {
-      const star = document.createElement('div');
-      const size = 14 + Math.random() * 14;
-      star.style.position = 'absolute';
-      star.style.width = size + 'px';
-      star.style.height = size + 'px';
-      star.style.left = (20 + Math.random() * (stage.clientWidth - 40)) + 'px';
-      star.style.top = (26 + Math.random() * (stage.clientHeight - 80)) + 'px';
-      star.style.pointerEvents = 'auto';
-      star.style.cursor = 'pointer';
-      star.style.zIndex = '4';
-      star.style.filter = 'drop-shadow(0 0 6px #ffd27a88)';
-      star.style.transition = 'transform .15s ease';
-      star.innerHTML = '⭐';
-      stage.appendChild(star);
+      const s = document.createElement('div');
+      s.className = 'star';
+      const size = 14 + Math.random() * 16;
+      s.style.fontSize = size + 'px';
+      s.style.left = (20 + Math.random() * (stage.clientWidth - 40)) + 'px';
+      s.style.top = (20 + Math.random() * (stage.clientHeight - 80)) + 'px';
+      s.textContent = '⭐';
+      stage.appendChild(s);
 
-      const ttl = setTimeout(() => star.remove(), 7000 + Math.random() * 3000);
-      star.addEventListener('mouseenter', () => star.style.transform = 'scale(1.2) rotate(8deg)');
-      star.addEventListener('mouseleave', () => star.style.transform = 'scale(1)');
-      star.addEventListener('click', (e) => {
+      const ttl = setTimeout(() => s.remove(), 7000 + Math.random() * 3500);
+      s.addEventListener('click', (e) => {
         e.stopPropagation();
         clearTimeout(ttl);
         starsCollected += 1;
         starCountEl.textContent = starsCollected;
-        makePulse(star.offsetLeft + size/2, star.offsetTop + size/2);
+        const rect = s.getBoundingClientRect();
+        const sr = stage.getBoundingClientRect();
+        makePulse((rect.left - sr.left) + rect.width/2, (rect.top - sr.top) + rect.height/2);
         clawSnap();
-        statusEl.innerHTML = `Star captured ✨ Total: <span class="score">${starsCollected}</span>`;
-        star.remove();
+        s.remove();
       });
     }
 
@@ -264,43 +262,36 @@
       const s = document.createElement('div');
       s.className = 'shooting-star';
       const startX = Math.random() * stage.clientWidth;
-      const startY = 10 + Math.random() * 120;
+      const startY = 8 + Math.random() * 200;
       s.style.left = startX + 'px';
       s.style.top = startY + 'px';
       stage.appendChild(s);
-
-      const dx = 120 + Math.random() * 220;
-      const dy = 80 + Math.random() * 150;
+      const dx = 140 + Math.random() * 280;
+      const dy = 90 + Math.random() * 170;
       s.animate([
-        { transform: 'translate(0,0) scale(1)', opacity: 1 },
-        { transform: `translate(${dx}px, ${dy}px) scale(0.4)`, opacity: 0 }
-      ], { duration: 700 + Math.random() * 500, easing: 'ease-out' });
-      setTimeout(() => s.remove(), 1300);
+        { transform:'translate(0,0) scale(1)', opacity:1 },
+        { transform:`translate(${dx}px,${dy}px) scale(0.35)`, opacity:0 }
+      ], { duration: 760 + Math.random() * 520, easing:'ease-out' });
+      setTimeout(() => s.remove(), 1400);
     }
 
-    stage.addEventListener('click', (e) => {
-      const r = stage.getBoundingClientRect();
-      ping(e.clientX - r.left, e.clientY - r.top);
-    });
+    stage.addEventListener('click', (e) => ping(e.clientX, e.clientY));
 
     window.addEventListener('keydown', (e) => {
       if (e.code === 'Space') {
         e.preventDefault();
-        for (let i=0;i<9;i++) setTimeout(shootingStar, i*85);
-        for (let i=0;i<4;i++) setTimeout(spawnStar, i*140);
-        statusEl.innerHTML = 'Meteor shower triggered ☄️';
+        for (let i = 0; i < 10; i++) setTimeout(shootingStar, i * 85);
+        for (let i = 0; i < 5; i++) setTimeout(spawnStar, i * 120);
       }
     });
 
-    // ambient star spawning
     setInterval(() => {
       if (document.hidden) return;
       if (Math.random() < 0.75) spawnStar();
       if (Math.random() < 0.35) shootingStar();
-    }, 2400);
+    }, 2300);
 
-    // starter set
-    for (let i=0;i<4;i++) setTimeout(spawnStar, 300 + i*300);
+    for (let i = 0; i < 5; i++) setTimeout(spawnStar, 250 + i * 250);
   </script>
 </body>
 </html>
