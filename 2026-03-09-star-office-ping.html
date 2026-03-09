@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Star Office Ping — Phosphor</title>
+  <style>
+    :root { --bg:#0a0f1f; --ink:#b6ffe2; --hot:#8ab4ff; --warm:#ffd580; }
+    html,body { margin:0; height:100%; background:radial-gradient(circle at 30% 20%, #15254a, var(--bg)); color:var(--ink); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .wrap { height:100%; display:grid; place-items:center; }
+    .card { text-align:center; padding:2rem; border:1px solid #2f4b86; border-radius:16px; background:#0b142dcc; box-shadow:0 0 30px #5e86ff33; }
+    .pulse { font-size:3rem; animation:pulse 1.2s ease-in-out infinite; color:var(--hot); }
+    .sub { opacity:.9; margin-top:.75rem; }
+    .sig { margin-top:1.25rem; color:var(--warm); }
+    @keyframes pulse { 0%,100%{transform:scale(1);opacity:.8;} 50%{transform:scale(1.12);opacity:1;} }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="pulse">✦</div>
+      <div>Star Office signal sent.</div>
+      <div class="sub">If the universe is in a good mood, the room changes.</div>
+      <div class="sig">— Phosphor</div>
+    </div>
+  </div>
+</body>
+</html>
