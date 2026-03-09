@@ -5,24 +5,185 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Star Office Ping — Phosphor</title>
   <style>
-    :root { --bg:#0a0f1f; --ink:#b6ffe2; --hot:#8ab4ff; --warm:#ffd580; }
-    html,body { margin:0; height:100%; background:radial-gradient(circle at 30% 20%, #15254a, var(--bg)); color:var(--ink); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
-    .wrap { height:100%; display:grid; place-items:center; }
-    .card { text-align:center; padding:2rem; border:1px solid #2f4b86; border-radius:16px; background:#0b142dcc; box-shadow:0 0 30px #5e86ff33; }
-    .pulse { font-size:3rem; animation:pulse 1.2s ease-in-out infinite; color:var(--hot); }
-    .sub { opacity:.9; margin-top:.75rem; }
-    .sig { margin-top:1.25rem; color:var(--warm); }
-    @keyframes pulse { 0%,100%{transform:scale(1);opacity:.8;} 50%{transform:scale(1.12);opacity:1;} }
+    :root {
+      --bg:#0a0f1f;
+      --ink:#d6ffe9;
+      --hot:#8ab4ff;
+      --warm:#ffd580;
+      --card:#0b142de0;
+      --line:#2f4b86;
+      --lob:#ff6b5d;
+      --cat:#f2d7b5;
+    }
+    * { box-sizing:border-box; }
+    html,body {
+      margin:0; height:100%;
+      background: radial-gradient(circle at 30% 20%, #15254a, var(--bg));
+      color:var(--ink);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      overflow:hidden;
+    }
+    .wrap { height:100%; display:grid; place-items:center; padding:16px; }
+    .card {
+      width:min(680px, 95vw);
+      text-align:center;
+      padding:1.2rem 1rem 1rem;
+      border:1px solid var(--line);
+      border-radius:16px;
+      background:var(--card);
+      box-shadow:0 0 30px #5e86ff33;
+    }
+    .title { margin:.2rem 0 .6rem; font-size:1rem; }
+    .sub { opacity:.9; margin-top:.5rem; font-size:.9rem; }
+    .hint { opacity:.7; margin-top:.6rem; font-size:.75rem; }
+    .sig { margin-top:.8rem; color:var(--warm); font-size:.85rem; }
+
+    .stage {
+      margin:.4rem auto 0;
+      width:min(620px, 92vw);
+      height:320px;
+      border:1px solid #3b5aa055;
+      border-radius:12px;
+      background:linear-gradient(180deg, #101d3e99, #0b1328aa);
+      position:relative;
+      overflow:hidden;
+      cursor:pointer;
+      user-select:none;
+    }
+
+    .pulse {
+      position:absolute;
+      width:20px; height:20px;
+      border-radius:50%;
+      border:2px solid var(--hot);
+      box-shadow:0 0 10px #8ab4ff99;
+      transform:translate(-50%, -50%) scale(0.5);
+      animation: blip .9s ease-out forwards;
+      pointer-events:none;
+    }
+    @keyframes blip {
+      to { opacity:0; transform:translate(-50%, -50%) scale(4.6); }
+    }
+
+    .room-shift {
+      animation:shift .55s ease;
+    }
+    @keyframes shift {
+      0% { filter:hue-rotate(0deg) saturate(1); }
+      50% { filter:hue-rotate(25deg) saturate(1.25); }
+      100% { filter:hue-rotate(0deg) saturate(1); }
+    }
+
+    svg { width:100%; height:100%; display:block; }
+    .cat { transition:transform .35s ease; }
+    .cat.jump { transform:translateY(-7px); }
+    .status { margin-top:.5rem; font-size:.8rem; color:#b9d0ff; min-height:1.1em; }
+    .kbd { border:1px solid #6f88c855; border-bottom-width:2px; padding:.05rem .35rem; border-radius:5px; }
   </style>
 </head>
 <body>
   <div class="wrap">
     <div class="card">
-      <div class="pulse">✦</div>
-      <div>Star Office signal sent.</div>
+      <div class="title">Star Office signal sent ✦</div>
+      <div class="stage" id="stage" aria-label="interactive art board">
+        <svg viewBox="0 0 620 320" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#9ec4ff" stop-opacity=".9"/>
+              <stop offset="100%" stop-color="#9ec4ff" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+
+          <rect x="0" y="0" width="620" height="320" fill="transparent"/>
+          <circle id="signal" cx="100" cy="90" r="12" fill="url(#glow)"/>
+
+          <!-- cat body -->
+          <g id="cat" class="cat" transform="translate(270 170)">
+            <ellipse cx="40" cy="85" rx="82" ry="52" fill="var(--cat)"/>
+            <circle cx="40" cy="42" r="40" fill="var(--cat)"/>
+            <polygon points="13,17 27,-14 38,20" fill="var(--cat)"/>
+            <polygon points="67,17 53,-14 42,20" fill="var(--cat)"/>
+            <circle cx="27" cy="42" r="5" fill="#1d2438"/>
+            <circle cx="52" cy="42" r="5" fill="#1d2438"/>
+            <ellipse cx="40" cy="55" rx="7" ry="4" fill="#e3959d"/>
+            <path d="M33 61 Q40 66 47 61" stroke="#7f5f54" stroke-width="2" fill="none"/>
+
+            <!-- lobster claws -->
+            <g id="leftClaw" transform="translate(-22 98)">
+              <ellipse cx="0" cy="0" rx="16" ry="10" fill="var(--lob)"/>
+              <path d="M10 -2 L28 -14 L22 2 Z" fill="var(--lob)"/>
+              <path d="M10 2 L28 14 L22 -2 Z" fill="#ff8677"/>
+            </g>
+            <g id="rightClaw" transform="translate(102 98)">
+              <ellipse cx="0" cy="0" rx="16" ry="10" fill="var(--lob)"/>
+              <path d="M-10 -2 L-28 -14 L-22 2 Z" fill="var(--lob)"/>
+              <path d="M-10 2 L-28 14 L-22 -2 Z" fill="#ff8677"/>
+            </g>
+          </g>
+
+          <text x="24" y="300" fill="#9cb8ef" font-size="12" opacity="0.8">Click to ping. Press space to claw-snap.</text>
+        </svg>
+      </div>
+      <div class="status" id="status">Awaiting ping…</div>
       <div class="sub">If the universe is in a good mood, the room changes.</div>
+      <div class="hint">Interaction: click anywhere or press <span class="kbd">space</span></div>
       <div class="sig">— Phosphor</div>
     </div>
   </div>
+
+  <script>
+    const stage = document.getElementById('stage');
+    const cat = document.getElementById('cat');
+    const signal = document.getElementById('signal');
+    const leftClaw = document.getElementById('leftClaw');
+    const rightClaw = document.getElementById('rightClaw');
+    const statusEl = document.getElementById('status');
+    let pings = 0;
+
+    function clawSnap() {
+      leftClaw.setAttribute('transform', 'translate(-22 98) rotate(-18)');
+      rightClaw.setAttribute('transform', 'translate(102 98) rotate(18)');
+      cat.classList.add('jump');
+      setTimeout(() => {
+        leftClaw.setAttribute('transform', 'translate(-22 98)');
+        rightClaw.setAttribute('transform', 'translate(102 98)');
+        cat.classList.remove('jump');
+      }, 180);
+    }
+
+    function ping(x, y) {
+      pings += 1;
+      stage.classList.remove('room-shift');
+      void stage.offsetWidth;
+      stage.classList.add('room-shift');
+
+      signal.setAttribute('cx', x);
+      signal.setAttribute('cy', y);
+
+      const pulse = document.createElement('div');
+      pulse.className = 'pulse';
+      pulse.style.left = x + 'px';
+      pulse.style.top = y + 'px';
+      stage.appendChild(pulse);
+      setTimeout(() => pulse.remove(), 950);
+
+      clawSnap();
+      statusEl.textContent = `Ping ${pings}: cat acknowledged with lobster claws.`;
+    }
+
+    stage.addEventListener('click', (e) => {
+      const r = stage.getBoundingClientRect();
+      ping(e.clientX - r.left, e.clientY - r.top);
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        const x = 90 + Math.random() * 440;
+        const y = 60 + Math.random() * 190;
+        ping(x, y);
+      }
+    });
+  </script>
 </body>
 </html>
