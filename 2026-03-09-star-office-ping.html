@@ -13,6 +13,8 @@
       --cat:#f4ddc2;
       --mint:#9fffd9;
       --ink:#e2eeff;
+      --star:#ffb347;
+      --star-deep:#ff8f3a;
     }
     * { box-sizing:border-box; }
     html, body {
@@ -118,11 +120,13 @@
       position:absolute;
       z-index:7;
       cursor:pointer;
-      filter:drop-shadow(0 0 7px #ffd27a88);
       transition:transform .14s ease;
       user-select:none;
+      width:28px;
+      height:28px;
     }
-    .star:hover { transform:scale(1.22) rotate(8deg); }
+    .star:hover { transform:scale(1.14) rotate(6deg); }
+    .star svg { width:100%; height:100%; display:block; overflow:visible; }
 
     .room-shift { animation:shift .58s ease; }
     @keyframes shift {
@@ -144,7 +148,7 @@
   </div>
 
   <div id="stage" aria-label="interactive fullscreen star office art">
-    <svg viewBox="0 0 1920 1080" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+    <svg id="scene" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <radialGradient id="signalGlow" cx="50%" cy="50%" r="50%">
           <stop offset="0%" stop-color="#b0cfff" stop-opacity=".95"/>
@@ -162,25 +166,27 @@
 
       <circle id="signal" cx="260" cy="230" r="22" fill="url(#signalGlow)"/>
 
-      <g id="cat" class="cat" transform="translate(820 520) scale(1.45)">
-        <ellipse cx="40" cy="84" rx="84" ry="53" fill="var(--cat)"/>
-        <circle cx="40" cy="42" r="40" fill="var(--cat)"/>
-        <polygon points="13,16 27,-15 38,20" fill="var(--cat)"/>
-        <polygon points="67,16 53,-15 42,20" fill="var(--cat)"/>
-        <circle cx="27" cy="42" r="5" fill="#1d2438"/>
-        <circle cx="52" cy="42" r="5" fill="#1d2438"/>
-        <ellipse cx="40" cy="55" rx="7" ry="4" fill="#e3959d"/>
-        <path d="M33 61 Q40 66 47 61" stroke="#7f5f54" stroke-width="2" fill="none"/>
+      <g id="catAnchor" transform="translate(820 520)">
+        <g id="cat" class="cat" transform="scale(1.45)">
+          <ellipse cx="40" cy="84" rx="84" ry="53" fill="var(--cat)"/>
+          <circle cx="40" cy="42" r="40" fill="var(--cat)"/>
+          <polygon points="13,16 27,-15 38,20" fill="var(--cat)"/>
+          <polygon points="67,16 53,-15 42,20" fill="var(--cat)"/>
+          <circle cx="27" cy="42" r="5" fill="#1d2438"/>
+          <circle cx="52" cy="42" r="5" fill="#1d2438"/>
+          <ellipse cx="40" cy="55" rx="7" ry="4" fill="#e3959d"/>
+          <path d="M33 61 Q40 66 47 61" stroke="#7f5f54" stroke-width="2" fill="none"/>
 
-        <g id="leftClaw" transform="translate(-24 98)">
-          <ellipse cx="0" cy="0" rx="16" ry="10" fill="var(--lob)"/>
-          <path d="M10 -2 L28 -14 L22 2 Z" fill="var(--lob)"/>
-          <path d="M10 2 L28 14 L22 -2 Z" fill="#ff8a7d"/>
-        </g>
-        <g id="rightClaw" transform="translate(104 98)">
-          <ellipse cx="0" cy="0" rx="16" ry="10" fill="var(--lob)"/>
-          <path d="M-10 -2 L-28 -14 L-22 2 Z" fill="var(--lob)"/>
-          <path d="M-10 2 L-28 14 L-22 -2 Z" fill="#ff8a7d"/>
+          <g id="leftClaw" transform="translate(-24 98)">
+            <ellipse cx="0" cy="0" rx="16" ry="10" fill="var(--lob)"/>
+            <path d="M10 -2 L28 -14 L22 2 Z" fill="var(--lob)"/>
+            <path d="M10 2 L28 14 L22 -2 Z" fill="#ff8a7d"/>
+          </g>
+          <g id="rightClaw" transform="translate(104 98)">
+            <ellipse cx="0" cy="0" rx="16" ry="10" fill="var(--lob)"/>
+            <path d="M-10 -2 L-28 -14 L-22 2 Z" fill="var(--lob)"/>
+            <path d="M-10 2 L-28 14 L-22 -2 Z" fill="#ff8a7d"/>
+          </g>
         </g>
       </g>
     </svg>
@@ -188,13 +194,42 @@
 
   <script>
     const stage = document.getElementById('stage');
+    const scene = document.getElementById('scene');
     const cat = document.getElementById('cat');
+    const catAnchor = document.getElementById('catAnchor');
     const signal = document.getElementById('signal');
     const leftClaw = document.getElementById('leftClaw');
     const rightClaw = document.getElementById('rightClaw');
     const starCountEl = document.getElementById('starCount');
 
     let starsCollected = 0;
+    let catX = 820;
+    let catY = 520;
+
+    function stageToWorld(clientX, clientY) {
+      const rect = stage.getBoundingClientRect();
+      const sx = (clientX - rect.left) / rect.width;
+      const sy = (clientY - rect.top) / rect.height;
+      const worldX = Math.max(0, Math.min(1920, sx * 1920));
+      const worldY = Math.max(0, Math.min(1080, sy * 1080));
+      return { worldX, worldY, localX: clientX - rect.left, localY: clientY - rect.top };
+    }
+
+    function worldToStage(worldX, worldY) {
+      const rect = stage.getBoundingClientRect();
+      return {
+        x: (worldX / 1920) * rect.width,
+        y: (worldY / 1080) * rect.height
+      };
+    }
+
+    function moveCatTo(worldX, worldY) {
+      const clampedX = Math.max(130, Math.min(1790, worldX - 40));
+      const clampedY = Math.max(150, Math.min(760, worldY + 40));
+      catX = clampedX;
+      catY = clampedY;
+      catAnchor.setAttribute('transform', `translate(${catX.toFixed(1)} ${catY.toFixed(1)})`);
+    }
 
     function clawSnap() {
       leftClaw.setAttribute('transform', 'translate(-24 98) rotate(-18)');
@@ -217,31 +252,43 @@
     }
 
     function ping(clientX, clientY) {
-      const r = stage.getBoundingClientRect();
-      const x = clientX - r.left;
-      const y = clientY - r.top;
+      const { worldX, worldY, localX, localY } = stageToWorld(clientX, clientY);
 
       stage.classList.remove('room-shift');
       void stage.offsetWidth;
       stage.classList.add('room-shift');
 
-      const vx = (x / r.width) * 1920;
-      const vy = (y / r.height) * 1080;
-      signal.setAttribute('cx', vx.toFixed(1));
-      signal.setAttribute('cy', vy.toFixed(1));
+      signal.setAttribute('cx', worldX.toFixed(1));
+      signal.setAttribute('cy', worldY.toFixed(1));
+      moveCatTo(worldX, worldY);
 
-      makePulse(x, y);
+      makePulse(localX, localY);
       clawSnap();
+    }
+
+    function starSVG() {
+      return `
+        <svg viewBox="0 0 100 100" aria-hidden="true">
+          <defs>
+            <filter id="g" x="-40%" y="-40%" width="180%" height="180%">
+              <feGaussianBlur stdDeviation="2" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+          <path filter="url(#g)" d="M50 8 C54 18 58 28 62 38 C74 40 84 44 92 52 C82 58 72 63 62 66 C58 76 54 86 50 94 C46 86 42 76 38 66 C28 63 18 58 8 52 C16 44 26 40 38 38 C42 28 46 18 50 8 Z" fill="${getComputedStyle(document.documentElement).getPropertyValue('--star').trim()}" stroke="${getComputedStyle(document.documentElement).getPropertyValue('--star-deep').trim()}" stroke-width="5" stroke-linejoin="round"/>
+        </svg>
+      `;
     }
 
     function spawnStar() {
       const s = document.createElement('div');
       s.className = 'star';
-      const size = 14 + Math.random() * 16;
-      s.style.fontSize = size + 'px';
-      s.style.left = (20 + Math.random() * (stage.clientWidth - 40)) + 'px';
-      s.style.top = (20 + Math.random() * (stage.clientHeight - 80)) + 'px';
-      s.textContent = '⭐';
+      const size = 24 + Math.random() * 18;
+      s.style.width = size + 'px';
+      s.style.height = size + 'px';
+      s.style.left = (20 + Math.random() * (stage.clientWidth - size - 20)) + 'px';
+      s.style.top = (20 + Math.random() * (stage.clientHeight - size - 80)) + 'px';
+      s.innerHTML = starSVG();
       stage.appendChild(s);
 
       const ttl = setTimeout(() => s.remove(), 7000 + Math.random() * 3500);
@@ -250,9 +297,14 @@
         clearTimeout(ttl);
         starsCollected += 1;
         starCountEl.textContent = starsCollected;
+
         const rect = s.getBoundingClientRect();
-        const sr = stage.getBoundingClientRect();
-        makePulse((rect.left - sr.left) + rect.width/2, (rect.top - sr.top) + rect.height/2);
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        const world = stageToWorld(cx, cy);
+
+        moveCatTo(world.worldX, world.worldY);
+        makePulse(world.localX, world.localY);
         clawSnap();
         s.remove();
       });
