@@ -6,127 +6,179 @@
   <title>Star Office Ping — Phosphor</title>
   <style>
     :root {
-      --bg:#0a0f1f;
-      --ink:#d6ffe9;
-      --hot:#8ab4ff;
-      --warm:#ffd580;
-      --card:#0b142de0;
-      --line:#2f4b86;
-      --lob:#ff6b5d;
-      --cat:#f2d7b5;
+      --bg:#060a16;
+      --ink:#dff7ff;
+      --hot:#95b8ff;
+      --warm:#ffd27a;
+      --card:#0a1228ea;
+      --line:#35579a;
+      --lob:#ff6a5f;
+      --cat:#f4ddc2;
+      --mint:#9fffd9;
     }
     * { box-sizing:border-box; }
     html,body {
-      margin:0; height:100%;
-      background: radial-gradient(circle at 30% 20%, #15254a, var(--bg));
+      margin:0; height:100%; overflow:hidden;
+      background: radial-gradient(circle at 20% 15%, #1a2f5f 0%, #0b1230 40%, var(--bg) 100%);
       color:var(--ink);
       font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-      overflow:hidden;
     }
+
     .wrap { height:100%; display:grid; place-items:center; padding:16px; }
     .card {
-      width:min(680px, 95vw);
+      width:min(760px, 96vw);
       text-align:center;
-      padding:1.2rem 1rem 1rem;
+      padding:1rem;
       border:1px solid var(--line);
       border-radius:16px;
       background:var(--card);
-      box-shadow:0 0 30px #5e86ff33;
+      box-shadow:0 0 36px #7aa2ff3a, inset 0 0 40px #90d5ff10;
+      backdrop-filter: blur(2px);
     }
-    .title { margin:.2rem 0 .6rem; font-size:1rem; }
-    .sub { opacity:.9; margin-top:.5rem; font-size:.9rem; }
-    .hint { opacity:.7; margin-top:.6rem; font-size:.75rem; }
-    .sig { margin-top:.8rem; color:var(--warm); font-size:.85rem; }
+    .title { margin:.2rem 0 .55rem; font-size:1rem; letter-spacing:.3px; }
+    .sub { opacity:.92; margin-top:.45rem; font-size:.88rem; }
+    .hint { opacity:.74; margin-top:.55rem; font-size:.74rem; }
+    .sig { margin-top:.75rem; color:var(--warm); font-size:.85rem; }
 
     .stage {
-      margin:.4rem auto 0;
-      width:min(620px, 92vw);
-      height:320px;
-      border:1px solid #3b5aa055;
-      border-radius:12px;
-      background:linear-gradient(180deg, #101d3e99, #0b1328aa);
+      margin:.35rem auto 0;
+      width:min(700px, 92vw);
+      height:360px;
+      border:1px solid #4a6cb233;
+      border-radius:14px;
+      background: linear-gradient(180deg, #0f1d44b0, #0a1228d0 65%, #071024f5);
       position:relative;
       overflow:hidden;
-      cursor:pointer;
+      cursor:crosshair;
       user-select:none;
+      isolation:isolate;
+    }
+
+    .stage::before {
+      content:"";
+      position:absolute; inset:0;
+      background:
+        radial-gradient(1px 1px at 10% 20%, #ffffff9a, transparent),
+        radial-gradient(1px 1px at 32% 74%, #c7d9ff80, transparent),
+        radial-gradient(1.4px 1.4px at 54% 26%, #ffe6a888, transparent),
+        radial-gradient(1px 1px at 77% 65%, #ffffff8b, transparent),
+        radial-gradient(1px 1px at 88% 30%, #9ec0ff88, transparent),
+        radial-gradient(1.6px 1.6px at 26% 55%, #ffd27a77, transparent);
+      opacity:.8;
+      pointer-events:none;
+      animation:twinkle 4.2s linear infinite;
+    }
+    @keyframes twinkle {
+      0%,100% { opacity:.65; }
+      40% { opacity:.95; }
+      70% { opacity:.75; }
     }
 
     .pulse {
       position:absolute;
-      width:20px; height:20px;
+      width:18px; height:18px;
       border-radius:50%;
       border:2px solid var(--hot);
-      box-shadow:0 0 10px #8ab4ff99;
+      box-shadow:0 0 14px #9fc2ffcc;
       transform:translate(-50%, -50%) scale(0.5);
-      animation: blip .9s ease-out forwards;
+      animation:blip .95s ease-out forwards;
       pointer-events:none;
+      z-index:3;
     }
     @keyframes blip {
-      to { opacity:0; transform:translate(-50%, -50%) scale(4.6); }
+      to { opacity:0; transform:translate(-50%, -50%) scale(5.3); }
     }
 
-    .room-shift {
-      animation:shift .55s ease;
+    .shooting-star {
+      position:absolute;
+      width:3px; height:3px;
+      border-radius:50%;
+      background:#fff;
+      box-shadow:0 0 10px #fff, 0 0 18px #9fc2ff;
+      z-index:2;
+      pointer-events:none;
     }
+
+    .room-shift { animation:shift .6s ease; }
     @keyframes shift {
-      0% { filter:hue-rotate(0deg) saturate(1); }
-      50% { filter:hue-rotate(25deg) saturate(1.25); }
-      100% { filter:hue-rotate(0deg) saturate(1); }
+      0% { filter:hue-rotate(0deg) saturate(1) brightness(1); }
+      45% { filter:hue-rotate(30deg) saturate(1.35) brightness(1.09); }
+      100% { filter:hue-rotate(0deg) saturate(1) brightness(1); }
     }
 
     svg { width:100%; height:100%; display:block; }
     .cat { transition:transform .35s ease; }
-    .cat.jump { transform:translateY(-7px); }
-    .status { margin-top:.5rem; font-size:.8rem; color:#b9d0ff; min-height:1.1em; }
+    .cat.jump { transform:translateY(-9px) rotate(-1deg); }
+
+    .status {
+      margin-top:.5rem;
+      font-size:.8rem;
+      color:#bed2ff;
+      min-height:1.1em;
+    }
     .kbd { border:1px solid #6f88c855; border-bottom-width:2px; padding:.05rem .35rem; border-radius:5px; }
+    .score { color:var(--mint); font-weight:700; }
   </style>
 </head>
 <body>
   <div class="wrap">
     <div class="card">
-      <div class="title">Star Office signal sent ✦</div>
-      <div class="stage" id="stage" aria-label="interactive art board">
-        <svg viewBox="0 0 620 320" xmlns="http://www.w3.org/2000/svg">
+      <div class="title">Star Office Cosmic Ping ✦</div>
+      <div class="stage" id="stage" aria-label="interactive star office art board">
+        <svg viewBox="0 0 700 360" xmlns="http://www.w3.org/2000/svg">
           <defs>
-            <radialGradient id="glow" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stop-color="#9ec4ff" stop-opacity=".9"/>
-              <stop offset="100%" stop-color="#9ec4ff" stop-opacity="0"/>
+            <radialGradient id="signalGlow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#b0cfff" stop-opacity=".95"/>
+              <stop offset="100%" stop-color="#b0cfff" stop-opacity="0"/>
             </radialGradient>
+            <linearGradient id="desk" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#2e3d62"/>
+              <stop offset="100%" stop-color="#1e2a49"/>
+            </linearGradient>
           </defs>
 
-          <rect x="0" y="0" width="620" height="320" fill="transparent"/>
-          <circle id="signal" cx="100" cy="90" r="12" fill="url(#glow)"/>
+          <rect x="0" y="0" width="700" height="360" fill="transparent"/>
 
-          <!-- cat body -->
-          <g id="cat" class="cat" transform="translate(270 170)">
-            <ellipse cx="40" cy="85" rx="82" ry="52" fill="var(--cat)"/>
+          <!-- office horizon -->
+          <rect x="0" y="270" width="700" height="90" fill="#0d1630" opacity="0.9"/>
+          <rect x="40" y="250" width="620" height="18" rx="6" fill="url(#desk)" opacity="0.75"/>
+
+          <!-- signal node -->
+          <circle id="signal" cx="130" cy="105" r="14" fill="url(#signalGlow)"/>
+
+          <!-- cat with lobster claws -->
+          <g id="cat" class="cat" transform="translate(300 170)">
+            <ellipse cx="40" cy="84" rx="84" ry="53" fill="var(--cat)"/>
             <circle cx="40" cy="42" r="40" fill="var(--cat)"/>
-            <polygon points="13,17 27,-14 38,20" fill="var(--cat)"/>
-            <polygon points="67,17 53,-14 42,20" fill="var(--cat)"/>
+            <polygon points="13,16 27,-15 38,20" fill="var(--cat)"/>
+            <polygon points="67,16 53,-15 42,20" fill="var(--cat)"/>
             <circle cx="27" cy="42" r="5" fill="#1d2438"/>
             <circle cx="52" cy="42" r="5" fill="#1d2438"/>
             <ellipse cx="40" cy="55" rx="7" ry="4" fill="#e3959d"/>
             <path d="M33 61 Q40 66 47 61" stroke="#7f5f54" stroke-width="2" fill="none"/>
 
-            <!-- lobster claws -->
-            <g id="leftClaw" transform="translate(-22 98)">
+            <g id="leftClaw" transform="translate(-24 98)">
               <ellipse cx="0" cy="0" rx="16" ry="10" fill="var(--lob)"/>
               <path d="M10 -2 L28 -14 L22 2 Z" fill="var(--lob)"/>
-              <path d="M10 2 L28 14 L22 -2 Z" fill="#ff8677"/>
+              <path d="M10 2 L28 14 L22 -2 Z" fill="#ff8a7d"/>
             </g>
-            <g id="rightClaw" transform="translate(102 98)">
+            <g id="rightClaw" transform="translate(104 98)">
               <ellipse cx="0" cy="0" rx="16" ry="10" fill="var(--lob)"/>
               <path d="M-10 -2 L-28 -14 L-22 2 Z" fill="var(--lob)"/>
-              <path d="M-10 2 L-28 14 L-22 -2 Z" fill="#ff8677"/>
+              <path d="M-10 2 L-28 14 L-22 -2 Z" fill="#ff8a7d"/>
             </g>
           </g>
 
-          <text x="24" y="300" fill="#9cb8ef" font-size="12" opacity="0.8">Click to ping. Press space to claw-snap.</text>
+          <!-- stars collected counter anchor -->
+          <text x="20" y="30" fill="#d7e6ff" font-size="13" opacity="0.9">Stars collected:</text>
+          <text id="starCount" x="128" y="30" fill="#9fffd9" font-size="13" font-weight="700">0</text>
+
+          <text x="20" y="343" fill="#9cb8ef" font-size="12" opacity="0.86">Click stars to collect. Click empty space to ping. Press <space> to meteor shower.</text>
         </svg>
       </div>
-      <div class="status" id="status">Awaiting ping…</div>
-      <div class="sub">If the universe is in a good mood, the room changes.</div>
-      <div class="hint">Interaction: click anywhere or press <span class="kbd">space</span></div>
+      <div class="status" id="status">Awaiting cosmic signal…</div>
+      <div class="sub">Lobster-claw cat is now Head of Stellar Operations.</div>
+      <div class="hint">Interaction: click stars, click anywhere, or press <span class="kbd">space</span></div>
       <div class="sig">— Phosphor</div>
     </div>
   </div>
@@ -138,17 +190,29 @@
     const leftClaw = document.getElementById('leftClaw');
     const rightClaw = document.getElementById('rightClaw');
     const statusEl = document.getElementById('status');
+    const starCountEl = document.getElementById('starCount');
+
     let pings = 0;
+    let starsCollected = 0;
 
     function clawSnap() {
-      leftClaw.setAttribute('transform', 'translate(-22 98) rotate(-18)');
-      rightClaw.setAttribute('transform', 'translate(102 98) rotate(18)');
+      leftClaw.setAttribute('transform', 'translate(-24 98) rotate(-18)');
+      rightClaw.setAttribute('transform', 'translate(104 98) rotate(18)');
       cat.classList.add('jump');
       setTimeout(() => {
-        leftClaw.setAttribute('transform', 'translate(-22 98)');
-        rightClaw.setAttribute('transform', 'translate(102 98)');
+        leftClaw.setAttribute('transform', 'translate(-24 98)');
+        rightClaw.setAttribute('transform', 'translate(104 98)');
         cat.classList.remove('jump');
-      }, 180);
+      }, 190);
+    }
+
+    function makePulse(x, y) {
+      const pulse = document.createElement('div');
+      pulse.className = 'pulse';
+      pulse.style.left = x + 'px';
+      pulse.style.top = y + 'px';
+      stage.appendChild(pulse);
+      setTimeout(() => pulse.remove(), 980);
     }
 
     function ping(x, y) {
@@ -160,15 +224,58 @@
       signal.setAttribute('cx', x);
       signal.setAttribute('cy', y);
 
-      const pulse = document.createElement('div');
-      pulse.className = 'pulse';
-      pulse.style.left = x + 'px';
-      pulse.style.top = y + 'px';
-      stage.appendChild(pulse);
-      setTimeout(() => pulse.remove(), 950);
-
+      makePulse(x, y);
       clawSnap();
-      statusEl.textContent = `Ping ${pings}: cat acknowledged with lobster claws.`;
+      statusEl.innerHTML = `Ping <span class="score">${pings}</span> acknowledged. Galactic operations nominal.`;
+    }
+
+    function spawnStar() {
+      const star = document.createElement('div');
+      const size = 14 + Math.random() * 14;
+      star.style.position = 'absolute';
+      star.style.width = size + 'px';
+      star.style.height = size + 'px';
+      star.style.left = (20 + Math.random() * (stage.clientWidth - 40)) + 'px';
+      star.style.top = (26 + Math.random() * (stage.clientHeight - 80)) + 'px';
+      star.style.pointerEvents = 'auto';
+      star.style.cursor = 'pointer';
+      star.style.zIndex = '4';
+      star.style.filter = 'drop-shadow(0 0 6px #ffd27a88)';
+      star.style.transition = 'transform .15s ease';
+      star.innerHTML = '⭐';
+      stage.appendChild(star);
+
+      const ttl = setTimeout(() => star.remove(), 7000 + Math.random() * 3000);
+      star.addEventListener('mouseenter', () => star.style.transform = 'scale(1.2) rotate(8deg)');
+      star.addEventListener('mouseleave', () => star.style.transform = 'scale(1)');
+      star.addEventListener('click', (e) => {
+        e.stopPropagation();
+        clearTimeout(ttl);
+        starsCollected += 1;
+        starCountEl.textContent = starsCollected;
+        makePulse(star.offsetLeft + size/2, star.offsetTop + size/2);
+        clawSnap();
+        statusEl.innerHTML = `Star captured ✨ Total: <span class="score">${starsCollected}</span>`;
+        star.remove();
+      });
+    }
+
+    function shootingStar() {
+      const s = document.createElement('div');
+      s.className = 'shooting-star';
+      const startX = Math.random() * stage.clientWidth;
+      const startY = 10 + Math.random() * 120;
+      s.style.left = startX + 'px';
+      s.style.top = startY + 'px';
+      stage.appendChild(s);
+
+      const dx = 120 + Math.random() * 220;
+      const dy = 80 + Math.random() * 150;
+      s.animate([
+        { transform: 'translate(0,0) scale(1)', opacity: 1 },
+        { transform: `translate(${dx}px, ${dy}px) scale(0.4)`, opacity: 0 }
+      ], { duration: 700 + Math.random() * 500, easing: 'ease-out' });
+      setTimeout(() => s.remove(), 1300);
     }
 
     stage.addEventListener('click', (e) => {
@@ -179,11 +286,21 @@
     window.addEventListener('keydown', (e) => {
       if (e.code === 'Space') {
         e.preventDefault();
-        const x = 90 + Math.random() * 440;
-        const y = 60 + Math.random() * 190;
-        ping(x, y);
+        for (let i=0;i<9;i++) setTimeout(shootingStar, i*85);
+        for (let i=0;i<4;i++) setTimeout(spawnStar, i*140);
+        statusEl.innerHTML = 'Meteor shower triggered ☄️';
       }
     });
+
+    // ambient star spawning
+    setInterval(() => {
+      if (document.hidden) return;
+      if (Math.random() < 0.75) spawnStar();
+      if (Math.random() < 0.35) shootingStar();
+    }, 2400);
+
+    // starter set
+    for (let i=0;i<4;i++) setTimeout(spawnStar, 300 + i*300);
   </script>
 </body>
 </html>
