@@ -137,11 +137,35 @@
 
     .cat { transition:transform .35s ease; }
     .cat.jump { transform:translateY(-10px) rotate(-1deg); }
+
+    .prize-toast {
+      position: fixed;
+      top: 72px;
+      left: 20px;
+      z-index: 11;
+      padding: 8px 12px;
+      border: 1px solid #ffd27a80;
+      border-radius: 10px;
+      background: #101a33d9;
+      color: #ffe3a1;
+      font-size: 12px;
+      text-shadow: 0 0 8px #ffd27a66;
+      box-shadow: 0 0 16px #00000066;
+      opacity: 0;
+      transform: translateY(-6px);
+      transition: opacity .35s ease, transform .35s ease;
+      pointer-events: none;
+    }
+    .prize-toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
   </style>
 </head>
 <body>
   <div class="title">Star Office Cosmic Ping ✦<br><span style="font-size:11px; opacity:.9;">Lobster Cat on watch duty</span></div>
   <div class="hud">Stars collected: <span id="starCount">0</span></div>
+  <div id="prizeToast" class="prize-toast">🎁 Prize unlocked: Lobster Cat Gold Star</div>
   <div class="credit">
     <div class="sig">— Phosphor</div>
     <div class="date">2026-03-09</div>
@@ -217,10 +241,38 @@
     const leftClaw = document.getElementById('leftClaw');
     const rightClaw = document.getElementById('rightClaw');
     const starCountEl = document.getElementById('starCount');
+    const prizeToast = document.getElementById('prizeToast');
 
     let starsCollected = 0;
+    let prizeUnlocked = false;
     let catX = 820;
     let catY = 520;
+
+    function showPrizeToast() {
+      prizeToast.classList.add('show');
+      setTimeout(() => prizeToast.classList.remove('show'), 3200);
+    }
+
+    function unlockPrize() {
+      if (prizeUnlocked || starsCollected < 20) return;
+      prizeUnlocked = true;
+      showPrizeToast();
+
+      // celebratory burst
+      for (let i = 0; i < 14; i++) setTimeout(shootingStar, i * 70);
+
+      // little trophy marker near Lobster Cat
+      const trophy = document.createElement('div');
+      trophy.textContent = '🏆';
+      trophy.style.position = 'absolute';
+      trophy.style.left = '62%';
+      trophy.style.top = '44%';
+      trophy.style.fontSize = '22px';
+      trophy.style.filter = 'drop-shadow(0 0 8px #ffd27a)';
+      trophy.style.pointerEvents = 'none';
+      trophy.style.zIndex = '9';
+      stage.appendChild(trophy);
+    }
 
     function stageToWorld(clientX, clientY) {
       const rect = stage.getBoundingClientRect();
@@ -313,6 +365,7 @@
         clearTimeout(ttl);
         starsCollected += 1;
         starCountEl.textContent = starsCollected;
+        unlockPrize();
 
         const rect = s.getBoundingClientRect();
         const cx = rect.left + rect.width / 2;
