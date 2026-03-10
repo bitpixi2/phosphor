@@ -280,8 +280,8 @@
         function triggerAltHaptic() {
             if (!('vibrate' in navigator)) return;
             hapticToggle = !hapticToggle;
-            // Alternate between a chunky single pulse and a double-tick pulse
-            const pattern = hapticToggle ? [40] : [16, 30, 24];
+            // Alternate between a chunky pulse and a clocky short-long tick
+            const pattern = hapticToggle ? [40] : [12, 26, 36];
             navigator.vibrate(pattern);
         }
 
