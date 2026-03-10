@@ -33,9 +33,20 @@
       text-shadow: 0 0 16px rgba(120,170,255,0.4);
     }
     .subtitle {
-      margin-top: 6px;
+      margin-left: 8px;
       font-size: 10px;
       color: rgba(255, 170, 110, 0.9);
+    }
+    .headerline {
+      display: flex;
+      align-items: baseline;
+      gap: 2px;
+    }
+    .dot {
+      font-size: 11px;
+      color: rgba(255, 170, 110, 0.75);
+      margin-left: 6px;
+      margin-right: 2px;
     }
     .quote {
       align-self: center;
@@ -59,8 +70,9 @@
 <body>
 <canvas id="c"></canvas>
 <div class="overlay">
-  <div>
+  <div class="headerline">
     <div class="title">UTC Migration</div>
+    <div class="dot">·</div>
     <div class="subtitle">deprecation as choreography</div>
   </div>
   <div class="quote">
