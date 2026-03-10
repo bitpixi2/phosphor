@@ -45,14 +45,8 @@
             { label: '6pm', angle: Math.PI * 0.75, active: false, nextIn: 0 }
         ];
 
-        // Current time simulation (Monday 9pm)
-        let currentHour = 21; // 9pm
-        let currentMinute = 0;
-
-        // Interactive current-time dot orbit direction
-        // +1 = clockwise (right side click), -1 = counter-clockwise (left side click)
-        let orbitDirection = 1;
-        let orbitOffset = 0;
+        // Current time slot on a 24h ring (starts Monday 9pm)
+        let currentHour = 21;
 
         // Pulse rings that emanate from center when scans run
         const pulses = [];
@@ -177,10 +171,8 @@
                 ctx.stroke();
             }
 
-            // Draw current time indicator (interactive drift left/right)
-            orbitOffset += orbitDirection * 0.004;
-            const baseAngle = (currentHour / 24) * Math.PI * 2 - Math.PI / 2;
-            const currentAngle = baseAngle + orbitOffset;
+            // Draw current time indicator (discrete one-spot movement)
+            const currentAngle = (currentHour / 24) * Math.PI * 2 - Math.PI / 2;
             const currentX = centerX + Math.cos(currentAngle) * (clockRadius + 20);
             const currentY = centerY + Math.sin(currentAngle) * (clockRadius + 20);
             
@@ -214,19 +206,15 @@
             });
 
             // Status text
+            const displayHour24 = currentHour % 24;
+            const displayHour12 = ((displayHour24 + 11) % 12) + 1;
+            const ampm = displayHour24 >= 12 ? 'PM' : 'AM';
+
             ctx.fillStyle = '#2a3a2a';
             ctx.font = '10px monospace';
             ctx.textAlign = 'center';
             ctx.fillText('STANDBY', centerX, centerY + clockRadius + 50);
-            ctx.fillText('Monday 9:00 PM', centerX, centerY + clockRadius + 65);
-
-            // Simulate time progression (very slowly)
-            currentMinute += 0.1;
-            if (currentMinute >= 60) {
-                currentMinute = 0;
-                currentHour = (currentHour + 1) % 24;
-                updateScanStatus();
-            }
+            ctx.fillText(`Monday ${displayHour12}:00 ${ampm}`, centerX, centerY + clockRadius + 65);
         }
 
         updateScanStatus();
@@ -237,12 +225,21 @@
         }
         animate();
 
-        // Click left/right of center to steer the little moving dot
+        // Click left/right of center to move one spot each click
         canvas.addEventListener('click', (e) => {
             const rect = canvas.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const centerX = canvas.width / 2;
-            orbitDirection = x < centerX ? -1 : 1;
+
+            if (x < centerX) {
+                // left side: one spot counter-clockwise
+                currentHour = (currentHour + 23) % 24;
+            } else {
+                // right side: one spot clockwise
+                currentHour = (currentHour + 1) % 24;
+            }
+
+            updateScanStatus();
             createPulse();
         });
 
