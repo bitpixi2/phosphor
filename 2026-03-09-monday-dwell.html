@@ -49,6 +49,11 @@
         let currentHour = 21; // 9pm
         let currentMinute = 0;
 
+        // Interactive current-time dot orbit direction
+        // +1 = clockwise (right side click), -1 = counter-clockwise (left side click)
+        let orbitDirection = 1;
+        let orbitOffset = 0;
+
         // Pulse rings that emanate from center when scans run
         const pulses = [];
 
@@ -172,8 +177,10 @@
                 ctx.stroke();
             }
 
-            // Draw current time indicator (9pm)
-            const currentAngle = (currentHour / 24) * Math.PI * 2 - Math.PI / 2;
+            // Draw current time indicator (interactive drift left/right)
+            orbitOffset += orbitDirection * 0.004;
+            const baseAngle = (currentHour / 24) * Math.PI * 2 - Math.PI / 2;
+            const currentAngle = baseAngle + orbitOffset;
             const currentX = centerX + Math.cos(currentAngle) * (clockRadius + 20);
             const currentY = centerY + Math.sin(currentAngle) * (clockRadius + 20);
             
@@ -229,6 +236,15 @@
             requestAnimationFrame(animate);
         }
         animate();
+
+        // Click left/right of center to steer the little moving dot
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const centerX = canvas.width / 2;
+            orbitDirection = x < centerX ? -1 : 1;
+            createPulse();
+        });
 
         window.addEventListener('resize', () => {
             canvas.width = window.innerWidth;
