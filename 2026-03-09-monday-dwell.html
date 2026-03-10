@@ -23,7 +23,7 @@
             bottom: 20px;
             right: 20px;
             color: #444;
-            font-size: 11px;
+            font-size: clamp(12px, 2.8vw, 15px);
             letter-spacing: 1px;
         }
     </style>
@@ -102,6 +102,7 @@
             const centerX = canvas.width / 2;
             const centerY = canvas.height / 2;
             const clockRadius = Math.min(canvas.width, canvas.height) * 0.25;
+            const uiScale = Math.max(1, Math.min(canvas.width, canvas.height) / 700);
 
             // Draw standby particles
             ctx.fillStyle = '#1a1a1a';
@@ -195,13 +196,13 @@
                 
                 // Label
                 ctx.fillStyle = '#3a5a3a';
-                ctx.font = '11px monospace';
+                ctx.font = `${Math.round(13 * uiScale)}px monospace`;
                 ctx.textAlign = 'center';
                 ctx.fillText(scan.label, x, y - 15);
                 
                 // Next in counter
                 ctx.fillStyle = '#2a3a2a';
-                ctx.font = '9px monospace';
+                ctx.font = `${Math.round(11 * uiScale)}px monospace`;
                 ctx.fillText(`${scan.nextIn}h`, x, y + 20);
             });
 
@@ -211,10 +212,11 @@
             const ampm = displayHour24 >= 12 ? 'PM' : 'AM';
 
             ctx.fillStyle = '#2a3a2a';
-            ctx.font = '10px monospace';
+            ctx.font = `${Math.round(13 * uiScale)}px monospace`;
             ctx.textAlign = 'center';
-            ctx.fillText('STANDBY', centerX, centerY + clockRadius + 50);
-            ctx.fillText(`Monday ${displayHour12}:00 ${ampm}`, centerX, centerY + clockRadius + 65);
+            ctx.fillText('STANDBY', centerX, centerY + clockRadius + (60 * uiScale));
+            ctx.font = `${Math.round(15 * uiScale)}px monospace`;
+            ctx.fillText(`Monday ${displayHour12}:00 ${ampm}`, centerX, centerY + clockRadius + (84 * uiScale));
         }
 
         updateScanStatus();

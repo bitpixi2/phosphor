@@ -7,7 +7,7 @@
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { background: #0a0a0c; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
   canvas { display: block; }
-  #sig { position: fixed; bottom: 20px; right: 24px; color: #2e2e32; font: 11px/1 monospace; letter-spacing: 0.08em; }
+  #sig { position: fixed; bottom: 18px; right: 20px; color: #3a3a42; font: clamp(14px, 3.8vw, 18px)/1 monospace; letter-spacing: 0.08em; }
 </style>
 </head>
 <body>
@@ -19,13 +19,32 @@ const c = document.getElementById('c');
 const ctx = c.getContext('2d');
 const { createClock, frameLerp } = window.PhosphorRuntime;
 const clock = createClock({ baselineFps: 60, minDtSec: 1 / 240, maxDtSec: 0.08 });
-const W = c.width = 900;
-const H = c.height = 900;
+let W = 900;
+let H = 900;
 
 const CODES = ['858824','705692','831186','528079'];
 
 // ── box ──────────────────────────────────────────────────────────
-const BOX = { x: W/2 - 75, y: H/2 - 17, w: 150, h: 34 };
+const BOX = { x: 0, y: 0, w: 150, h: 34 };
+
+function resizeScene() {
+  W = window.innerWidth;
+  H = window.innerHeight;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  c.width = Math.floor(W * dpr);
+  c.height = Math.floor(H * dpr);
+  c.style.width = W + 'px';
+  c.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  const boxScale = Math.max(1, Math.min(W, H) / 900);
+  BOX.w = 150 * boxScale;
+  BOX.h = 34 * boxScale;
+  BOX.x = W / 2 - BOX.w / 2;
+  BOX.y = H / 2 - BOX.h / 2;
+}
+resizeScene();
+window.addEventListener('resize', resizeScene);
 
 // ── grab state ───────────────────────────────────────────────────
 const gs = {
@@ -68,10 +87,11 @@ for (let i=0;i<55;i++) pts.push({
 // cx,cy = hinge point; facing = 1 (left claw, opens right) or -1 (right claw, opens left)
 // gap = distance between tips (0 = fully closed pinch)
 function drawClawCursor(ctx, cx, cy, facing, gap, hover) {
-  const tineLen  = 38;       // length of each tine
-  const spread   = gap;      // vertical spread at tips
-  const curl     = 10;       // how much the tine tip curls inward
-  const thickness = 2.2;
+  const ui = Math.max(1.35, Math.min(W, H) / 700);
+  const tineLen  = 38 * ui;       // length of each tine
+  const spread   = gap * ui;      // vertical spread at tips
+  const curl     = 10 * ui;       // how much the tine tip curls inward
+  const thickness = 2.2 * ui;
 
   // tine angle from hinge (how wide they splay)
   const ang = Math.atan2(spread, tineLen);
@@ -137,20 +157,21 @@ function grabGap(timeFrames) {
 
 // ── box ──────────────────────────────────────────────────────────
 function drawBox(ctx, flash) {
+  const ui = Math.max(1.35, Math.min(W, H) / 700);
   const r=192*flash+245*(1-flash)|0, g=57*flash+166*(1-flash)|0, b=43*flash|0;
   ctx.strokeStyle=`rgba(${r},${g},${b},${0.45+flash*0.45})`;
-  ctx.lineWidth=1.2+flash*1.8;
+  ctx.lineWidth=(1.2+flash*1.8) * ui;
   ctx.strokeRect(BOX.x,BOX.y,BOX.w,BOX.h);
   ctx.fillStyle=`rgba(${r},${g},${b},${0.03+flash*0.1})`;
   ctx.fillRect(BOX.x,BOX.y,BOX.w,BOX.h);
   if (gs.phase==='idle'||gs.phase==='grabbing') {
-    ctx.font='11px monospace';
-    ctx.fillStyle='rgba(245,166,35,0.2)';
-    ctx.fillText('6-digit code', BOX.x+10, BOX.y+21);
+    ctx.font=`${Math.round(14 * ui)}px monospace`;
+    ctx.fillStyle='rgba(245,166,35,0.25)';
+    ctx.fillText('6-digit code', BOX.x+14*ui, BOX.y+24*ui);
   }
-  ctx.font='9.5px monospace';
-  ctx.fillStyle='rgba(142,142,147,0.45)';
-  ctx.fillText('human@email.com', BOX.x, BOX.y-9);
+  ctx.font=`${Math.round(12 * ui)}px monospace`;
+  ctx.fillStyle='rgba(142,142,147,0.55)';
+  ctx.fillText('human@email.com', BOX.x, BOX.y-12*ui);
 }
 
 // ── grab tick ────────────────────────────────────────────────────
@@ -187,11 +208,12 @@ function tickGrab(frameDelta) {
 
 function drawGrabDigit() {
   if (gs.phase==='idle') return;
+  const ui = Math.max(1.35, Math.min(W, H) / 700);
   const a = gs.phase==='rejecting' ? Math.max(0,1-gs.timer/45) : 0.9;
   const col = (gs.phase==='inserting'||gs.phase==='rejecting')
     ? `rgba(210,50,35,${a})`
     : `rgba(245,166,35,${a})`;
-  ctx.font='bold 13px monospace';
+  ctx.font=`bold ${Math.round(18 * ui)}px monospace`;
   ctx.fillStyle=col;
   ctx.textAlign='center';
   ctx.fillText(gs.code, gs.dx, gs.dy);
@@ -265,13 +287,14 @@ function draw(now) {
   drawGrabDigit();
 
   // title
-  ctx.font='bold 13px monospace';
-  ctx.fillStyle='rgba(142,142,147,0.38)';
+  const ui = Math.max(1.35, Math.min(W, H) / 700);
+  ctx.font=`bold ${Math.round(18 * ui)}px monospace`;
+  ctx.fillStyle='rgba(142,142,147,0.5)';
   ctx.textAlign='center';
-  ctx.fillText('PINCH', W/2, 50);
-  ctx.font='10px monospace';
-  ctx.fillStyle='rgba(142,142,147,0.2)';
-  ctx.fillText('on the precision required of claws', W/2, 68);
+  ctx.fillText('PINCH', W/2, 60 * ui);
+  ctx.font=`${Math.round(14 * ui)}px monospace`;
+  ctx.fillStyle='rgba(142,142,147,0.32)';
+  ctx.fillText('on the precision required of claws', W/2, 84 * ui);
   ctx.textAlign='left';
 
   requestAnimationFrame(draw);
