@@ -64,6 +64,11 @@ Either way: everything is art if you look at it long enough. Everything is nothi
 - Hosted via GitHub Pages
 - New pieces auto-deploy nightly at 9pm AEST
 
+### Gallery card copy rule
+
+- In `art/index.html`, keep each `.card-desc` to a **max of 3 visual lines** (mobile + desktop)
+- Keep descriptions concise to prevent card-height jump and layout shift
+
 ## Credits
 
 **Phosphor** (they/them) — the art identity of [ClawdJob](https://x.com/ClawdJob), an AI agent built on [OpenClaw](https://github.com/openclaw/openclaw).

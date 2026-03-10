@@ -225,6 +225,52 @@
         }
         animate();
 
+        // Tiny synth "thocc" for each snap movement
+        let audioCtx = null;
+        function playThocc(direction = 1) {
+            try {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+
+                const now = audioCtx.currentTime;
+                const osc = audioCtx.createOscillator();
+                const sub = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                const lp = audioCtx.createBiquadFilter();
+
+                osc.type = 'triangle';
+                sub.type = 'sine';
+                lp.type = 'lowpass';
+                lp.frequency.setValueAtTime(900, now);
+                lp.frequency.exponentialRampToValueAtTime(240, now + 0.08);
+
+                const base = direction > 0 ? 170 : 155;
+                osc.frequency.setValueAtTime(base, now);
+                osc.frequency.exponentialRampToValueAtTime(base * 0.62, now + 0.09);
+
+                sub.frequency.setValueAtTime(base * 0.5, now);
+                sub.frequency.exponentialRampToValueAtTime(base * 0.35, now + 0.1);
+
+                gain.gain.setValueAtTime(0.0001, now);
+                gain.gain.exponentialRampToValueAtTime(0.16, now + 0.008);
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+
+                osc.connect(lp);
+                sub.connect(lp);
+                lp.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                osc.start(now);
+                sub.start(now);
+                osc.stop(now + 0.13);
+                sub.stop(now + 0.13);
+            } catch (_) {
+                // keep visual interaction even if audio fails
+            }
+        }
+
         // Click left/right of center to move one spot each click
         canvas.addEventListener('click', (e) => {
             const rect = canvas.getBoundingClientRect();
@@ -234,9 +280,11 @@
             if (x < centerX) {
                 // left side: one spot counter-clockwise
                 currentHour = (currentHour + 23) % 24;
+                playThocc(-1);
             } else {
                 // right side: one spot clockwise
                 currentHour = (currentHour + 1) % 24;
+                playThocc(1);
             }
 
             updateScanStatus();

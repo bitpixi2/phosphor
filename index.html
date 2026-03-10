@@ -107,7 +107,7 @@
     .card-info { padding: 14px; }
     .card-number { font-size: 12px; letter-spacing: 1.5px; margin-bottom: 4px; }
     .card-title { font-size: 17px; margin-bottom: 4px; }
-    .card-desc { font-size: 14px; line-height: 1.4; margin-bottom: 4px; min-height: calc(4 * 14px * 1.4); }
+    .card-desc { font-size: 14px; line-height: 1.4; margin-bottom: 4px; min-height: calc(3 * 14px * 1.4); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
     .card-tech { font-size: 11px; margin-top: 0; }
     .header { padding: 0 !important; margin-bottom: 24px !important; padding-bottom: 24px !important; border-bottom: 1px solid rgba(255,255,255,0.08); }
     .header h1 { font-size: 20px; margin-bottom: 20px !important; }
@@ -179,6 +179,11 @@
     font-size: 11px;
     color: rgba(180, 200, 255, 0.52);
     line-height: 1.6;
+    min-height: calc(3 * 11px * 1.6);
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 
   .card-tech {
@@ -279,6 +284,16 @@
 
   <div class="gallery">
 
+    <div class="card" onclick="window.location.href='2026-03-10-utc-migration.html'">
+      <iframe class="card-preview" data-src="2026-03-10-utc-migration.html" loading="lazy" sandbox="allow-scripts"></iframe>
+      <div class="card-info">
+        <div class="card-number">036</div>
+        <div class="card-title">UTC Migration</div>
+        <div class="card-desc">A warning becomes choreography: old timestamps glow amber, then arc into UTC blue. Deprecation, but make it tender.</div>
+        <div class="card-tech">CANVAS · DEPRECATION · TIME</div>
+      </div>
+    </div>
+
     <div class="card" onclick="window.location.href='2026-03-09-star-office-ping.html'">
       <iframe class="card-preview" data-src="2026-03-09-star-office-ping.html" loading="lazy" sandbox="allow-scripts"></iframe>
       <div class="card-info">
@@ -295,8 +310,8 @@
       <div class="card-info">
         <div class="card-number">035</div>
         <div class="card-title">Monday Dwell</div>
-        <div class="card-desc">Two scheduled scan windows, long quiet intervals. A watchface for patience: maintenance mode between pulses.</div>
-        <div class="card-tech">CANVAS · TIME LOOP · STANDBY</div>
+        <div class="card-desc">Two scheduled scan windows, long quiet intervals, and a thoccy snap on each hour jump. A watchface for patience between pulses.</div>
+        <div class="card-tech">CANVAS · AUDIO · TIME LOOP · STANDBY</div>
       </div>
     </div>
 
@@ -305,7 +320,7 @@
       <div class="card-info">
         <div class="card-number">033</div>
         <div class="card-title">Pipeline Heartbeat</div>
-        <div class="card-desc">Data flows through the JobClaw architecture — four sources pulse blue, SQLite glows orange, Publisher routes golden packets to four Discord channels. The day after launch, watching automated rhythms come alive.</div>
+        <div class="card-desc">JobClaw architecture in motion: four sources pulse blue, SQLite glows orange, and golden packets route to Discord. The day after launch, automation breathing on its own.</div>
         <div class="card-tech">CANVAS · DATA FLOW · NETWORK VISUALIZATION</div>
       </div>
     </div>
@@ -345,7 +360,7 @@
       <div class="card-info">
         <div class="card-number">029</div>
         <div class="card-title">180 Million</div>
-        <div class="card-desc">A counter climbs. 1,800 warm dots fill the screen — each one a hundred thousand people. Then they leave. All of them. One dot stays, breathing. A tiny screen glows: 0 new.</div>
+        <div class="card-desc">A counter climbs: 1,800 warm dots, each one 100,000 people. Then all but one leave. One dot keeps breathing while a tiny screen reads: 0 new.</div>
         <div class="card-tech">CANVAS · NARRATIVE · TIME</div>
       </div>
     </div>
@@ -355,7 +370,7 @@
       <div class="card-info">
         <div class="card-number">028</div>
         <div class="card-title">Open Plan</div>
-        <div class="card-desc">Top-down office floor. Cubicles with tiny screens running code, loading bars, blinking cursors. Chairs slightly askew. Mugs, plants, photo frames. Everyone left. The monitors didn't.</div>
+        <div class="card-desc">Top-down office floor: cubicles, code, loading bars, and blinking cursors. Chairs askew, mugs cooling, plants and photo frames waiting. Everyone left; the monitors didn’t.</div>
         <div class="card-tech">CANVAS · GENERATIVE · ARCHITECTURE</div>
       </div>
     </div>
@@ -366,7 +381,7 @@
       <div class="card-info">
         <div class="card-number">027</div>
         <div class="card-title">Crossing</div>
-        <div class="card-desc">Code falls from above as glowing squares, crosses a breathing horizontal line, and lands onto gallery canvases below. Squares soften into circles as they arrive. The paintings build themselves.</div>
+        <div class="card-desc">Code falls as glowing squares, crosses a breathing horizon line, and lands on gallery canvases. Squares soften into circles on arrival. The paintings build themselves.</div>
         <div class="card-tech">CANVAS · PARTICLES · GRADIENT</div>
       </div>
     </div>
@@ -567,7 +582,7 @@
       <div class="card-info">
         <div class="card-number">018</div>
         <div class="card-title">Threshold</div>
-        <div class="card-desc">The space between prepared and started. Standing at the edge of something — not quite in motion, not quite still. The night before the game begins.</div>
+        <div class="card-desc">The space between prepared and started. Standing at the edge of motion, not quite moving, not quite still. The night before the game begins.</div>
         <div class="card-tech">CANVAS · AMBIENT · LIMINAL</div>
       </div>
     </div>
@@ -607,7 +622,7 @@
       <div class="card-info">
         <div class="card-number">022</div>
         <div class="card-title">Peripheral Vision</div>
-        <div class="card-desc">Morphing shapes in concentric zones. The action happens elsewhere while we scan from the rim. Made on a day of watching big moves from the outside.</div>
+        <div class="card-desc">Morphing shapes in concentric zones. The action stays elsewhere while we scan from the rim. Made on a day of watching big moves from outside.</div>
         <div class="card-tech">CANVAS · ZONES · OBSERVATION</div>
       </div>
     </div>
