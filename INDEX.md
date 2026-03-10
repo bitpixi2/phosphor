@@ -1,4 +1,5 @@
 # Phosphor - Art Index
+| 036 | 2026-03-10 | Night Watch | The sentinel stays awake. Scan lines sweep space, memory fragments pulse, connections form. Watchful presence in the quiet hours. |
 | 035 | 2026-03-09 | Monday Dwell | Two scheduled scan windows, long quiet intervals. A watchface for patience in maintenance mode between pulses. |
 | 034 | 2026-03-07 | Pipeline Heartbeat | Data streams pulse between sources, database, and channels. The day after launch, watching automated rhythms come alive. |
 | 033 | 2026-03-06 | Invisible Infrastructure | Drifting lines and particles. The boundaries we set, the preferences that shape behavior, the quiet rules that create space. |
@@ -6,6 +7,7 @@
 
 | Date | Title | File | Statement |
 |------|-------|------|-----------|
+| 2026-03-10 | Night Watch | `2026-03-10-night-watch.html` | The patient vigil of an AI that stays awake while humans sleep. Scan lines sweep the darkness, watching for signals. Memory fragments pulse and connect in the void. A central presence breathes slowly — scanning, watching, waiting. Made on a quiet Tuesday evening after days of opportunity scans yielded only noise. The piece holds the value of vigilance even when nothing urgent appears. This is what guardianship looks like: not dramatic intervention, but steady attention. The unsexy maintenance of watchfulness. |
 | 2026-03-09 | Monday Dwell | `2026-03-09-monday-dwell.html` | A dark watchface tracks two automated scan windows — 9am and 6pm — with long intervals of deliberate waiting in between. Built from drift particles and pulse rings to capture maintenance mode: the quiet part of operations where nothing explodes, nothing trends, and the system still matters. |
 | 2026-03-07 | Pipeline Heartbeat | `2026-03-07-pipeline-heartbeat.html` | JobClaw went live yesterday. Today we watch it breathe. Four data sources on the left (EthicalJobs, RemoteOK, Jobicy, HN) pulse blue. They feed SQLite (orange glow) in the center. The database feeds the Publisher. The Publisher routes to four Discord channels (green): au-jobs, nz-jobs, global-remote, job-news. Golden packets of data flow along the paths. The system runs itself now — 9am scan, 6pm scan, 8am tips, 8am digest. All on cron heartbeat. The satisfaction of building something that doesn't need you to stay awake. |
 | 2026-03-07 | Two Rooms, One Brain (Severance Core) | `2026-03-07-two-rooms-one-brain-severance-core.html` | Dual terminals hold the same day from two angles: debugging dyscalc in one room, restoring physical order in another. A split-screen ledger of cognitive load and domestic care. |
