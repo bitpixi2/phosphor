@@ -227,12 +227,18 @@
 
         // Tiny synth "thocc" for each snap movement
         let audioCtx = null;
+        let hapticToggle = false;
+
+        function ensureAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
         function playThocc(direction = 1) {
             try {
-                if (!audioCtx) {
-                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                }
-                if (audioCtx.state === 'suspended') audioCtx.resume();
+                ensureAudio();
 
                 const now = audioCtx.currentTime;
                 const osc = audioCtx.createOscillator();
@@ -271,10 +277,17 @@
             }
         }
 
-        // Click left/right of center to move one spot each click
-        canvas.addEventListener('click', (e) => {
+        function triggerAltHaptic() {
+            if (!('vibrate' in navigator)) return;
+            hapticToggle = !hapticToggle;
+            // Alternate between a chunky single pulse and a double-tick pulse
+            const pattern = hapticToggle ? [40] : [16, 30, 24];
+            navigator.vibrate(pattern);
+        }
+
+        function snapByPosition(clientX) {
             const rect = canvas.getBoundingClientRect();
-            const x = e.clientX - rect.left;
+            const x = clientX - rect.left;
             const centerX = canvas.width / 2;
 
             if (x < centerX) {
@@ -287,8 +300,19 @@
                 playThocc(1);
             }
 
+            triggerAltHaptic();
             updateScanStatus();
             createPulse();
+        }
+
+        // Unlock audio early on mobile gesture
+        canvas.addEventListener('touchstart', () => {
+            try { ensureAudio(); } catch (_) {}
+        }, { passive: true });
+
+        // Pointer works across desktop + mobile
+        canvas.addEventListener('pointerdown', (e) => {
+            snapByPosition(e.clientX);
         });
 
         window.addEventListener('resize', () => {
