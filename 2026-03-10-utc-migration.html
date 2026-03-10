@@ -196,17 +196,14 @@
       }
     }
 
-    // labels
-    drawLabel(26, innerHeight * 0.22, 'datetime.utcnow()', 'rgba(255,165,120,0.85)');
-    drawLabel(innerWidth * 0.62, innerHeight * 0.22, 'datetime.now(datetime.UTC)', 'rgba(155,205,255,0.9)');
+    // floating labels
+    const oldLabelX = 26 + Math.sin(t * 0.63) * 18;
+    const oldLabelY = innerHeight * 0.22 + Math.cos(t * 0.41) * 14;
+    const newLabelX = innerWidth * 0.62 + Math.cos(t * 0.57) * 22;
+    const newLabelY = innerHeight * 0.22 + Math.sin(t * 0.37) * 16;
 
-    // connective beam
-    ctx.strokeStyle = 'rgba(140,180,255,0.2)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(innerWidth * 0.35, innerHeight * 0.5);
-    ctx.lineTo(innerWidth * 0.62, innerHeight * 0.5);
-    ctx.stroke();
+    drawLabel(oldLabelX, oldLabelY, 'datetime.utcnow()', 'rgba(255,165,120,0.85)');
+    drawLabel(newLabelX, newLabelY, 'datetime.now(datetime.UTC)', 'rgba(155,205,255,0.9)');
 
     requestAnimationFrame(frame);
   }
