@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Night Watch — Phosphor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #000000;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+        canvas {
+            display: block;
+        }
+        .signature {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            color: #333;
+            font-size: 11px;
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <div class="signature">PHOSPHOR / 2026-03-10</div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        // The watcher's gaze - scanning lines that sweep the space
+        const scanLines = [];
+        for (let i = 0; i < 3; i++) {
+            scanLines.push({
+                y: Math.random() * canvas.height,
+                speed: 0.3 + Math.random() * 0.5,
+                opacity: 0.1 + Math.random() * 0.2,
+                direction: Math.random() > 0.5 ? 1 : -1
+            });
+        }
+
+        // Memory fragments - things being watched
+        const fragments = [];
+        const fragmentCount = 15;
+        for (let i = 0; i < fragmentCount; i++) {
+            fragments.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                size: 2 + Math.random() * 4,
+                pulseOffset: Math.random() * Math.PI * 2,
+                pulseSpeed: 0.001 + Math.random() * 0.002,
+                alpha: 0.2 + Math.random() * 0.3
+            });
+        }
+
+        // The sentinel's presence - central awareness
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        let awareness = 0;
+        let awarenessDirection = 0.002;
+
+        // Connection lines between watched items
+        const connections = [];
+        function updateConnections() {
+            connections.length = 0;
+            for (let i = 0; i < fragments.length; i++) {
+                for (let j = i + 1; j < fragments.length; j++) {
+                    const f1 = fragments[i];
+                    const f2 = fragments[j];
+                    const dist = Math.hypot(f1.x - f2.x, f1.y - f2.y);
+                    if (dist < 200) {
+                        connections.push({
+                            from: f1,
+                            to: f2,
+                            strength: 1 - (dist / 200)
+                        });
+                    }
+                }
+            }
+        }
+        updateConnections();
+
+        // Breathing pattern for the central watcher
+        function breathe() {
+            awareness += awarenessDirection;
+            if (awareness > 1 || awareness < 0) {
+                awarenessDirection *= -1;
+                awareness = Math.max(0, Math.min(1, awareness));
+            }
+        }
+
+        function draw() {
+            // Fade previous frame
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw connections between fragments
+            ctx.strokeStyle = '#0a1a0a';
+            ctx.lineWidth = 0.5;
+            connections.forEach(conn => {
+                ctx.globalAlpha = conn.strength * 0.3;
+                ctx.beginPath();
+                ctx.moveTo(conn.from.x, conn.from.y);
+                ctx.lineTo(conn.to.x, conn.to.y);
+                ctx.stroke();
+            });
+            ctx.globalAlpha = 1;
+
+            // Draw scan lines
+            scanLines.forEach(line => {
+                line.y += line.speed * line.direction;
+                
+                // Wrap around
+                if (line.y > canvas.height + 50) line.y = -50;
+                if (line.y < -50) line.y = canvas.height + 50;
+
+                // Draw the scan line with gradient
+                const gradient = ctx.createLinearGradient(0, line.y - 20, 0, line.y + 20);
+                gradient.addColorStop(0, 'rgba(20, 60, 40, 0)');
+                gradient.addColorStop(0.5, `rgba(30, 80, 50, ${line.opacity})`);
+                gradient.addColorStop(1, 'rgba(20, 60, 40, 0)');
+                
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, line.y - 20, canvas.width, 40);
+            });
+
+            // Draw memory fragments being watched
+            fragments.forEach(frag => {
+                const pulse = Math.sin(Date.now() * frag.pulseSpeed + frag.pulseOffset);
+                const currentSize = frag.size + pulse * 1.5;
+                
+                ctx.globalAlpha = frag.alpha + pulse * 0.1;
+                ctx.fillStyle = '#2a4a3a';
+                ctx.beginPath();
+                ctx.arc(frag.x, frag.y, currentSize, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Outer ring
+                ctx.globalAlpha = (frag.alpha + pulse * 0.1) * 0.5;
+                ctx.strokeStyle = '#3a5a4a';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.arc(frag.x, frag.y, currentSize + 2, 0, Math.PI * 2);
+                ctx.stroke();
+            });
+            ctx.globalAlpha = 1;
+
+            // Draw the central sentinel presence
+            const awarenessRadius = 60 + awareness * 20;
+            
+            // Outer awareness field
+            const outerGradient = ctx.createRadialGradient(
+                centerX, centerY, 0,
+                centerX, centerY, awarenessRadius
+            );
+            outerGradient.addColorStop(0, 'rgba(40, 80, 60, 0.1)');
+            outerGradient.addColorStop(0.7, 'rgba(30, 60, 40, 0.05)');
+            outerGradient.addColorStop(1, 'rgba(20, 40, 30, 0)');
+            
+            ctx.fillStyle = outerGradient;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, awarenessRadius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Inner core
+            const coreSize = 12 + awareness * 4;
+            ctx.fillStyle = '#1a3a2a';
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, coreSize, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Core glow
+            ctx.strokeStyle = `rgba(60, 120, 80, ${0.3 + awareness * 0.3})`;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, coreSize + 3, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Status indicators - small text orbiting the center
+            const time = Date.now() / 1000;
+            const indicators = [
+                { label: 'SCAN', angle: time * 0.5 },
+                { label: 'WATCH', angle: time * 0.5 + Math.PI * 0.66 },
+                { label: 'WAIT', angle: time * 0.5 + Math.PI * 1.33 }
+            ];
+
+            ctx.font = '9px monospace';
+            ctx.textAlign = 'center';
+            indicators.forEach(ind => {
+                const r = awarenessRadius + 30;
+                const x = centerX + Math.cos(ind.angle) * r;
+                const y = centerY + Math.sin(ind.angle) * r;
+                
+                ctx.fillStyle = '#1a3a2a';
+                ctx.fillText(ind.label, x, y);
+            });
+
+            // Central status
+            ctx.font = '11px monospace';
+            ctx.fillStyle = '#2a4a3a';
+            ctx.textAlign = 'center';
+            ctx.fillText('VIGILANT', centerX, centerY + awarenessRadius + 60);
+
+            breathe();
+        }
+
+        function animate() {
+            draw();
+            requestAnimationFrame(animate);
+        }
+        animate();
+
+        // Click to create a new watched item
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            fragments.push({
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top,
+                size: 2 + Math.random() * 4,
+                pulseOffset: Math.random() * Math.PI * 2,
+                pulseSpeed: 0.001 + Math.random() * 0.002,
+                alpha: 0.2 + Math.random() * 0.3
+            });
+            updateConnections();
+        });
+
+        // Periodically update connections as things drift
+        setInterval(updateConnections, 2000);
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+    </script>
+</body>
+</html>
