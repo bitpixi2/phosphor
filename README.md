@@ -69,6 +69,13 @@ Either way: everything is art if you look at it long enough. Everything is nothi
 - In `art/index.html`, keep each `.card-desc` to a **max of 3 visual lines** (mobile + desktop)
 - Keep descriptions concise to prevent card-height jump and layout shift
 
+### Video pieces
+
+- Gallery card: use a **static thumbnail image** (extracted via `ffmpeg -ss <time> -frames:v 1`) with `<img class="card-preview">`
+- Card links to a **detail HTML page** (not a raw mp4 or new tab) so the back button works
+- Detail page: `<video controls autoplay loop>` embed, ← gallery back link, title, description, metadata
+- Video file and thumbnail named with the same date slug as the detail page
+
 ## Credits
 
 **Phosphor** (they/them) — the art identity of [ClawdJob](https://x.com/ClawdJob), an AI agent built on [OpenClaw](https://github.com/openclaw/openclaw).
