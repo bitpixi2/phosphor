@@ -176,24 +176,30 @@ function draw() {
   X.arc(bunnyX + 12, bunnyY - 2, 3, 0, Math.PI * 2);
   X.fill();
   
-  // Rainbow infinity symbol on belly
+  // Rainbow infinity symbol on belly - rounder, not heart-shaped
   const bellyX = bunnyX, bellyY = bunnyY + 25;
   
-  // Draw proper infinity curve with rainbow gradient
   X.save();
   X.translate(bellyX, bellyY);
-  X.scale(1.5, 1.5);
+  X.scale(1.2, 1.2);
   
-  // Create path for infinity symbol
+  // Create proper lemniscate (infinity) curve - figure-8 on side
   const path = new Path2D();
-  path.moveTo(0, 0);
-  path.bezierCurveTo(-8, -6, -15, -3, -10, 0);
-  path.bezierCurveTo(-15, 3, -8, 6, 0, 0);
-  path.bezierCurveTo(8, -6, 15, -3, 10, 0);
-  path.bezierCurveTo(15, 3, 8, 6, 0, 0);
+  const a = 10; // size parameter
+  
+  // Parametric infinity: x = a*cos(t)/(1+sin²(t)), y = a*sin(t)*cos(t)/(1+sin²(t))
+  // Simplified as two circles intersecting at center
+  for (let t = 0; t <= Math.PI * 2; t += 0.1) {
+    const scale = a / (1 + Math.pow(Math.sin(t), 2));
+    const x = scale * Math.cos(t);
+    const y = scale * Math.sin(t) * Math.cos(t);
+    if (t === 0) path.moveTo(x, y);
+    else path.lineTo(x, y);
+  }
+  path.closePath();
   
   // Rainbow gradient
-  const grad = X.createLinearGradient(-15, 0, 15, 0);
+  const grad = X.createLinearGradient(-12, 0, 12, 0);
   grad.addColorStop(0, '#ff0000');
   grad.addColorStop(0.2, '#ff9900');
   grad.addColorStop(0.4, '#ffff00');
@@ -202,7 +208,7 @@ function draw() {
   grad.addColorStop(1, '#9900ff');
   
   X.strokeStyle = grad;
-  X.lineWidth = 2.5;
+  X.lineWidth = 3;
   X.stroke(path);
   
   X.restore();
@@ -220,27 +226,27 @@ function draw() {
   }
   
   // Text at bottom - with dark background for readability
-  X.font = '14px monospace';
+  X.font = '28px monospace';
   X.textAlign = 'center';
   
   // Measure text for background
   const textWidth = X.measureText(currentText).width;
-  const bgPadding = 15;
+  const bgPadding = 20;
   X.fillStyle = 'rgba(0, 0, 0, 0.75)';
-  X.fillRect(W/2 - textWidth/2 - bgPadding, H - 45, textWidth + bgPadding * 2, 25);
+  X.fillRect(W/2 - textWidth/2 - bgPadding, H - 75, textWidth + bgPadding * 2, 45);
   
   // Main text
   X.fillStyle = PINK;
-  X.fillText(currentText, W / 2, H - 30);
+  X.fillText(currentText, W / 2, H - 45);
   
   // Subtitle
-  X.font = '11px monospace';
+  X.font = '16px monospace';
   const subWidth = X.measureText('— Day 2, Week 1: Sensing —').width;
   X.fillStyle = 'rgba(0, 0, 0, 0.75)';
-  X.fillRect(W/2 - subWidth/2 - 10, H - 20, subWidth + 20, 15);
+  X.fillRect(W/2 - subWidth/2 - 12, H - 30, subWidth + 24, 22);
   
   X.fillStyle = '#999';
-  X.fillText('— Day 2, Week 1: Sensing —', W / 2, H - 10);
+  X.fillText('— Day 2, Week 1: Sensing —', W / 2, H - 15);
   
   X.textAlign = 'left';
   
