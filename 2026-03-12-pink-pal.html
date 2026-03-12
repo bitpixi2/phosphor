@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pink Pal Knows — Phosphor</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { 
+  background: #1a1a1a; 
+  display: flex; 
+  justify-content: center; 
+  align-items: center; 
+  min-height: 100vh; 
+  font-family: 'Courier New', monospace;
+  overflow: hidden;
+}
+canvas { 
+  display: block; 
+  max-width: 95vw; 
+  max-height: 95vh;
+}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const C = document.getElementById('c');
+const X = C.getContext('2d');
+
+const W = 800, H = 600;
+C.width = W; C.height = H;
+
+// Color palette from the photos
+const CORAL = '#ff9b85';
+const PINK = '#ffb3ba';
+const GOLD = '#ffd89b';
+const SCREEN = '#00ff88';
+const DARK = '#1a1a1a';
+const BUNNY = '#ffcccb';
+
+let time = 0;
+
+function draw() {
+  time += 0.01;
+  
+  // Background - the desk
+  X.fillStyle = CORAL;
+  X.fillRect(0, H * 0.6, W, H * 0.4);
+  
+  // The glowing screen - rectangles of syntax highlighting
+  const screenX = W * 0.5, screenY = H * 0.35;
+  const screenW = W * 0.3, screenH = H * 0.35;
+  
+  // Screen glow
+  const glow = X.createRadialGradient(screenX + screenW/2, screenY + screenH/2, screenH * 0.3, 
+                                      screenX + screenW/2, screenY + screenH/2, screenH * 0.8);
+  glow.addColorStop(0, 'rgba(0, 255, 136, 0.3)');
+  glow.addColorStop(1, 'rgba(0, 255, 136, 0)');
+  X.fillStyle = glow;
+  X.fillRect(0, 0, W, H);
+  
+  // Screen
+  X.fillStyle = '#0a0a0a';
+  X.fillRect(screenX, screenY, screenW, screenH);
+  
+  // Fake code lines - they pulse slightly
+  X.font = '8px monospace';
+  for (let i = 0; i < 25; i++) {
+    const y = screenY + 10 + i * 9;
+    const alpha = 0.6 + Math.sin(time + i * 0.3) * 0.2;
+    X.fillStyle = `rgba(0, 255, 136, ${alpha})`;
+    const indent = (i % 3) * 10;
+    const lineW = 40 + (Math.sin(time + i) * 20);
+    X.fillRect(screenX + 8 + indent, y, lineW, 6);
+  }
+  
+  // Pink Pal the bunny - sitting on the desk
+  const bunnyX = W * 0.25;
+  const bunnyY = H * 0.55;
+  const bunnySize = 80;
+  
+  // Bunny body
+  X.fillStyle = BUNNY;
+  X.beginPath();
+  X.ellipse(bunnyX, bunnyY + 20, bunnySize * 0.45, bunnySize * 0.5, 0, 0, Math.PI * 2);
+  X.fill();
+  
+  // Bunny head
+  X.beginPath();
+  X.arc(bunnyX, bunnyY, bunnySize * 0.4, 0, Math.PI * 2);
+  X.fill();
+  
+  // Ears
+  X.beginPath();
+  X.ellipse(bunnyX - 15, bunnyY - 25, 8, 25, -0.2, 0, Math.PI * 2);
+  X.fill();
+  X.beginPath();
+  X.ellipse(bunnyX + 15, bunnyY - 25, 8, 25, 0.2, 0, Math.PI * 2);
+  X.fill();
+  
+  // X eye (left)
+  X.strokeStyle = '#666';
+  X.lineWidth = 2;
+  X.beginPath();
+  X.moveTo(bunnyX - 15, bunnyY - 5);
+  X.lineTo(bunnyX - 8, bunnyY + 2);
+  X.moveTo(bunnyX - 8, bunnyY - 5);
+  X.lineTo(bunnyX - 15, bunnyY + 2);
+  X.stroke();
+  
+  // Open eye (right) - watches the screen
+  X.fillStyle = '#333';
+  X.beginPath();
+  X.arc(bunnyX + 12, bunnyY - 2, 3, 0, Math.PI * 2);
+  X.fill();
+  
+  // Rainbow infinity symbol on belly - simplified
+  const bellyX = bunnyX, bellyY = bunnyY + 25;
+  const colors = ['#ff0000', '#ff9900', '#ffff00', '#00ff00', '#0099ff', '#9900ff'];
+  X.lineWidth = 3;
+  for (let i = 0; i < colors.length; i++) {
+    X.strokeStyle = colors[i];
+    X.beginPath();
+    X.arc(bellyX - 8, bellyY, 6, 0, Math.PI * 2);
+    X.stroke();
+    X.beginPath();
+    X.arc(bellyX + 8, bellyY, 6, 0, Math.PI * 2);
+    X.stroke();
+  }
+  
+  // Particles floating between bunny and screen - the watching
+  for (let i = 0; i < 15; i++) {
+    const t = time + i * 0.4;
+    const x = bunnyX + (screenX + screenW/2 - bunnyX) * ((Math.sin(t * 0.5) + 1) / 2);
+    const y = bunnyY - 20 + Math.sin(t * 2 + i) * 15;
+    const alpha = (Math.sin(t * 3) + 1) / 4;
+    X.fillStyle = `rgba(255, 182, 193, ${alpha})`;
+    X.beginPath();
+    X.arc(x, y, 2, 0, Math.PI * 2);
+    X.fill();
+  }
+  
+  // Text at bottom
+  X.font = '14px monospace';
+  X.fillStyle = PINK;
+  X.textAlign = 'center';
+  const message = 'Pink Pal knows what 3am looks like';
+  X.fillText(message, W / 2, H - 30);
+  
+  // Subtitle
+  X.font = '11px monospace';
+  X.fillStyle = '#666';
+  X.fillText('— Day 2, Week 1: Sensing —', W / 2, H - 10);
+  
+  X.textAlign = 'left';
+  
+  requestAnimationFrame(draw);
+}
+
+draw();
+</script>
+</body>
+</html>
