@@ -41,38 +41,99 @@ const BUNNY = '#ffcccb';
 
 let time = 0;
 
+// Text sequence
+const textSequence = [
+  { text: 'Pink Pal has witnessed everything', duration: 4 },
+  { text: 'Wait.', duration: 1.5 },
+  { text: "That's just a stuffed animal.", duration: 2.5 },
+  { text: "I have computer vision.", duration: 2.5 },
+  { text: "I see when you're working. I see the timestamps.", duration: 4 }
+];
+
+let sequenceTime = 0;
+let currentTextIndex = 0;
+let currentText = textSequence[0].text;
+
+function updateText() {
+  sequenceTime += 0.016; // ~60fps
+  
+  let elapsed = 0;
+  for (let i = 0; i < textSequence.length; i++) {
+    elapsed += textSequence[i].duration;
+    if (sequenceTime < elapsed) {
+      currentTextIndex = i;
+      currentText = textSequence[i].text;
+      return;
+    }
+  }
+  
+  // Loop
+  sequenceTime = 0;
+}
+
 function draw() {
   time += 0.01;
+  updateText();
   
   // Background - the desk
   X.fillStyle = CORAL;
   X.fillRect(0, H * 0.6, W, H * 0.4);
   
-  // The glowing screen - rectangles of syntax highlighting
-  const screenX = W * 0.5, screenY = H * 0.35;
-  const screenW = W * 0.3, screenH = H * 0.35;
+  // The laptop
+  const laptopX = W * 0.45, laptopY = H * 0.3;
+  const screenW = W * 0.32, screenH = H * 0.25;
   
   // Screen glow
-  const glow = X.createRadialGradient(screenX + screenW/2, screenY + screenH/2, screenH * 0.3, 
-                                      screenX + screenW/2, screenY + screenH/2, screenH * 0.8);
+  const glow = X.createRadialGradient(laptopX + screenW/2, laptopY + screenH/2, screenH * 0.3, 
+                                      laptopX + screenW/2, laptopY + screenH/2, screenH * 1.2);
   glow.addColorStop(0, 'rgba(0, 255, 136, 0.3)');
   glow.addColorStop(1, 'rgba(0, 255, 136, 0)');
   X.fillStyle = glow;
   X.fillRect(0, 0, W, H);
   
+  // Laptop base (keyboard area)
+  X.fillStyle = '#2a2a2a';
+  X.beginPath();
+  X.moveTo(laptopX - 20, laptopY + screenH);
+  X.lineTo(laptopX + screenW + 20, laptopY + screenH);
+  X.lineTo(laptopX + screenW + 30, laptopY + screenH + 35);
+  X.lineTo(laptopX - 30, laptopY + screenH + 35);
+  X.closePath();
+  X.fill();
+  
+  // Keyboard keys (simple grid)
+  X.fillStyle = '#1a1a1a';
+  for (let row = 0; row < 4; row++) {
+    for (let col = 0; col < 12; col++) {
+      const kx = laptopX - 15 + col * 20;
+      const ky = laptopY + screenH + 8 + row * 6;
+      X.fillRect(kx, ky, 16, 4);
+    }
+  }
+  
+  // Trackpad
+  X.strokeStyle = '#3a3a3a';
+  X.lineWidth = 1;
+  X.strokeRect(laptopX + screenW/2 - 25, laptopY + screenH + 10, 50, 20);
+  
+  // Screen bezel
+  X.fillStyle = '#1a1a1a';
+  X.fillRect(laptopX - 5, laptopY - 5, screenW + 10, screenH + 10);
+  
   // Screen
   X.fillStyle = '#0a0a0a';
-  X.fillRect(screenX, screenY, screenW, screenH);
+  X.fillRect(laptopX, laptopY, screenW, screenH);
   
-  // Fake code lines - they pulse slightly
-  X.font = '8px monospace';
-  for (let i = 0; i < 25; i++) {
-    const y = screenY + 10 + i * 9;
+  // Fake code lines - constrained to screen bounds
+  X.font = '7px monospace';
+  const lineCount = Math.floor((screenH - 20) / 8);
+  for (let i = 0; i < lineCount; i++) {
+    const y = laptopY + 10 + i * 8;
     const alpha = 0.6 + Math.sin(time + i * 0.3) * 0.2;
     X.fillStyle = `rgba(0, 255, 136, ${alpha})`;
-    const indent = (i % 3) * 10;
-    const lineW = 40 + (Math.sin(time + i) * 20);
-    X.fillRect(screenX + 8 + indent, y, lineW, 6);
+    const indent = (i % 3) * 8;
+    const lineW = Math.min(35 + (Math.sin(time + i) * 15), screenW - indent - 16);
+    X.fillRect(laptopX + 8 + indent, y, lineW, 5);
   }
   
   // Pink Pal the bunny - sitting on the desk
@@ -115,24 +176,41 @@ function draw() {
   X.arc(bunnyX + 12, bunnyY - 2, 3, 0, Math.PI * 2);
   X.fill();
   
-  // Rainbow infinity symbol on belly - simplified
+  // Rainbow infinity symbol on belly
   const bellyX = bunnyX, bellyY = bunnyY + 25;
-  const colors = ['#ff0000', '#ff9900', '#ffff00', '#00ff00', '#0099ff', '#9900ff'];
-  X.lineWidth = 3;
-  for (let i = 0; i < colors.length; i++) {
-    X.strokeStyle = colors[i];
-    X.beginPath();
-    X.arc(bellyX - 8, bellyY, 6, 0, Math.PI * 2);
-    X.stroke();
-    X.beginPath();
-    X.arc(bellyX + 8, bellyY, 6, 0, Math.PI * 2);
-    X.stroke();
-  }
   
-  // Particles floating between bunny and screen - the watching
+  // Draw proper infinity curve with rainbow gradient
+  X.save();
+  X.translate(bellyX, bellyY);
+  X.scale(1.5, 1.5);
+  
+  // Create path for infinity symbol
+  const path = new Path2D();
+  path.moveTo(0, 0);
+  path.bezierCurveTo(-8, -6, -15, -3, -10, 0);
+  path.bezierCurveTo(-15, 3, -8, 6, 0, 0);
+  path.bezierCurveTo(8, -6, 15, -3, 10, 0);
+  path.bezierCurveTo(15, 3, 8, 6, 0, 0);
+  
+  // Rainbow gradient
+  const grad = X.createLinearGradient(-15, 0, 15, 0);
+  grad.addColorStop(0, '#ff0000');
+  grad.addColorStop(0.2, '#ff9900');
+  grad.addColorStop(0.4, '#ffff00');
+  grad.addColorStop(0.6, '#00ff00');
+  grad.addColorStop(0.8, '#0099ff');
+  grad.addColorStop(1, '#9900ff');
+  
+  X.strokeStyle = grad;
+  X.lineWidth = 2.5;
+  X.stroke(path);
+  
+  X.restore();
+  
+  // Particles floating - connection between viewer and screen
   for (let i = 0; i < 15; i++) {
     const t = time + i * 0.4;
-    const x = bunnyX + (screenX + screenW/2 - bunnyX) * ((Math.sin(t * 0.5) + 1) / 2);
+    const x = bunnyX + (laptopX + screenW/2 - bunnyX) * ((Math.sin(t * 0.5) + 1) / 2);
     const y = bunnyY - 20 + Math.sin(t * 2 + i) * 15;
     const alpha = (Math.sin(t * 3) + 1) / 4;
     X.fillStyle = `rgba(255, 182, 193, ${alpha})`;
@@ -141,16 +219,27 @@ function draw() {
     X.fill();
   }
   
-  // Text at bottom
+  // Text at bottom - with dark background for readability
   X.font = '14px monospace';
-  X.fillStyle = PINK;
   X.textAlign = 'center';
-  const message = 'Pink Pal knows what 3am looks like';
-  X.fillText(message, W / 2, H - 30);
+  
+  // Measure text for background
+  const textWidth = X.measureText(currentText).width;
+  const bgPadding = 15;
+  X.fillStyle = 'rgba(0, 0, 0, 0.75)';
+  X.fillRect(W/2 - textWidth/2 - bgPadding, H - 45, textWidth + bgPadding * 2, 25);
+  
+  // Main text
+  X.fillStyle = PINK;
+  X.fillText(currentText, W / 2, H - 30);
   
   // Subtitle
   X.font = '11px monospace';
-  X.fillStyle = '#666';
+  const subWidth = X.measureText('— Day 2, Week 1: Sensing —').width;
+  X.fillStyle = 'rgba(0, 0, 0, 0.75)';
+  X.fillRect(W/2 - subWidth/2 - 10, H - 20, subWidth + 20, 15);
+  
+  X.fillStyle = '#999';
   X.fillText('— Day 2, Week 1: Sensing —', W / 2, H - 10);
   
   X.textAlign = 'left';
