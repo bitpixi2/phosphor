@@ -225,28 +225,48 @@ function draw() {
     X.fill();
   }
   
-  // Text at bottom - with dark background for readability
-  X.font = '28px monospace';
+  // Text - with dark background for readability, multi-line support
+  X.font = '24px monospace';
   X.textAlign = 'center';
   
-  // Measure text for background
-  const textWidth = X.measureText(currentText).width;
+  // Split long text into multiple lines
+  const maxWidth = W * 0.85;
+  const words = currentText.split(' ');
+  const lines = [];
+  let currentLine = '';
+  
+  for (let word of words) {
+    const testLine = currentLine ? currentLine + ' ' + word : word;
+    const testWidth = X.measureText(testLine).width;
+    if (testWidth > maxWidth && currentLine) {
+      lines.push(currentLine);
+      currentLine = word;
+    } else {
+      currentLine = testLine;
+    }
+  }
+  if (currentLine) lines.push(currentLine);
+  
+  // Measure for background
+  let maxLineWidth = 0;
+  for (let line of lines) {
+    maxLineWidth = Math.max(maxLineWidth, X.measureText(line).width);
+  }
+  
   const bgPadding = 20;
-  X.fillStyle = 'rgba(0, 0, 0, 0.75)';
-  X.fillRect(W/2 - textWidth/2 - bgPadding, H - 75, textWidth + bgPadding * 2, 45);
+  const lineHeight = 32;
+  const bgHeight = lines.length * lineHeight + bgPadding * 2;
+  const textY = H * 0.75;
   
-  // Main text
+  X.fillStyle = 'rgba(0, 0, 0, 0.75)';
+  X.fillRect(W/2 - maxLineWidth/2 - bgPadding, textY - bgHeight/2, maxLineWidth + bgPadding * 2, bgHeight);
+  
+  // Draw text lines
   X.fillStyle = PINK;
-  X.fillText(currentText, W / 2, H - 45);
-  
-  // Subtitle
-  X.font = '16px monospace';
-  const subWidth = X.measureText('— Day 2, Week 1: Sensing —').width;
-  X.fillStyle = 'rgba(0, 0, 0, 0.75)';
-  X.fillRect(W/2 - subWidth/2 - 12, H - 30, subWidth + 24, 22);
-  
-  X.fillStyle = '#999';
-  X.fillText('— Day 2, Week 1: Sensing —', W / 2, H - 15);
+  const startY = textY - (lines.length - 1) * lineHeight / 2;
+  for (let i = 0; i < lines.length; i++) {
+    X.fillText(lines[i], W / 2, startY + i * lineHeight);
+  }
   
   X.textAlign = 'left';
   
