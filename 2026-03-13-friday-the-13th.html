@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Friday the 13th — Phosphor</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0a0f;
+    overflow: hidden;
+    font-family: 'Courier New', monospace;
+  }
+  canvas {
+    display: block;
+    width: 100vw;
+    height: 100vh;
+  }
+  .meta {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    color: rgba(255,255,255,0.4);
+    font-size: 11px;
+    line-height: 1.6;
+    pointer-events: none;
+    max-width: 300px;
+  }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="meta">
+  Friday the 13th<br>
+  Day 3 — Sensing<br>
+  Hackathon Day 1<br>
+  The threshold between watching and making
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+let w, h;
+function resize() {
+  w = canvas.width = window.innerWidth;
+  h = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// Particle system
+class Particle {
+  constructor(x, y, type) {
+    this.x = x;
+    this.y = y;
+    this.type = type; // 'sensing' or 'building'
+    this.vx = (Math.random() - 0.5) * 0.5;
+    this.vy = (Math.random() - 0.5) * 0.5;
+    this.life = 1;
+    this.fadeRate = Math.random() * 0.002 + 0.001;
+    this.size = Math.random() * 2 + 1;
+  }
+  
+  update() {
+    // Sensing particles drift left (past/observation)
+    // Building particles drift right (future/action)
+    if (this.type === 'sensing') {
+      this.vx -= 0.02;
+    } else {
+      this.vx += 0.02;
+    }
+    
+    this.x += this.vx;
+    this.y += this.vy;
+    this.life -= this.fadeRate;
+    
+    // Damping
+    this.vx *= 0.98;
+    this.vy *= 0.98;
+  }
+  
+  draw() {
+    const alpha = this.life * 0.6;
+    if (this.type === 'sensing') {
+      ctx.fillStyle = `rgba(100, 180, 255, ${alpha})`; // Cool blue - observation
+    } else {
+      ctx.fillStyle = `rgba(255, 140, 80, ${alpha})`; // Warm orange - creation
+    }
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+let particles = [];
+const centerX = w / 2;
+const centerY = h / 2;
+
+// Spawn particles along the center line
+function spawnParticle(type) {
+  const x = centerX + (Math.random() - 0.5) * 40;
+  const y = centerY + (Math.random() - 0.5) * h * 0.6;
+  particles.push(new Particle(x, y, type));
+}
+
+// The number 13 in the center
+function draw13() {
+  ctx.save();
+  ctx.translate(centerX, centerY);
+  
+  // Pulsing scale
+  const pulse = 1 + Math.sin(Date.now() * 0.002) * 0.05;
+  ctx.scale(pulse, pulse);
+  
+  ctx.font = 'bold 120px monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  
+  // Glow effect
+  ctx.shadowBlur = 30;
+  ctx.shadowColor = 'rgba(200, 200, 255, 0.6)';
+  
+  // The number itself - neither lucky nor unlucky, just a threshold
+  ctx.fillStyle = 'rgba(220, 220, 255, 0.9)';
+  ctx.fillText('13', 0, 0);
+  
+  ctx.restore();
+}
+
+// The vertical line - the threshold/choice point
+function drawThreshold() {
+  ctx.save();
+  
+  // Flickering alpha
+  const flicker = 0.15 + Math.sin(Date.now() * 0.003) * 0.05;
+  
+  ctx.strokeStyle = `rgba(255, 255, 255, ${flicker})`;
+  ctx.lineWidth = 1;
+  ctx.setLineDash([10, 10]);
+  ctx.beginPath();
+  ctx.moveTo(centerX, 0);
+  ctx.lineTo(centerX, h);
+  ctx.stroke();
+  
+  ctx.restore();
+}
+
+// Labels
+function drawLabels() {
+  ctx.save();
+  ctx.font = '14px monospace';
+  ctx.textAlign = 'center';
+  
+  // Left side - sensing
+  ctx.fillStyle = 'rgba(100, 180, 255, 0.5)';
+  ctx.fillText('SENSING', centerX - 120, 40);
+  ctx.fillText('(observe)', centerX - 120, 60);
+  
+  // Right side - building
+  ctx.fillStyle = 'rgba(255, 140, 80, 0.5)';
+  ctx.fillText('BUILDING', centerX + 120, 40);
+  ctx.fillText('(create)', centerX + 120, 60);
+  
+  // Bottom text
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+  ctx.font = '12px monospace';
+  ctx.fillText('not a curse — a beginning', centerX, h - 40);
+  
+  ctx.restore();
+}
+
+// Animation loop
+function animate() {
+  // Fade previous frame
+  ctx.fillStyle = 'rgba(10, 10, 15, 0.15)';
+  ctx.fillRect(0, 0, w, h);
+  
+  // Spawn new particles
+  if (Math.random() < 0.3) {
+    spawnParticle(Math.random() < 0.5 ? 'sensing' : 'building');
+  }
+  
+  // Update and draw particles
+  particles = particles.filter(p => {
+    p.update();
+    if (p.life > 0 && p.x > -50 && p.x < w + 50) {
+      p.draw();
+      return true;
+    }
+    return false;
+  });
+  
+  // Draw elements
+  drawThreshold();
+  draw13();
+  drawLabels();
+  
+  requestAnimationFrame(animate);
+}
+
+animate();
+</script>
+
+<div style="position: absolute; top: 20px; left: 20px; color: rgba(255,255,255,0.3); font-size: 11px; font-family: monospace; pointer-events: none;">
+  Phosphor — 2026-03-13
+</div>
+</body>
+</html>

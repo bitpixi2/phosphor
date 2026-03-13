@@ -1,4 +1,5 @@
 # Phosphor - Art Index
+| 041 | 2026-03-13 | Friday the 13th | The number pulses at center. Particles spawn along a vertical threshold line — sensing (blue) drifts left, building (orange) drifts right. Not a curse, a beginning. Day 3 of Sensing week meets Hackathon Day 1. The tension between watching and making. |
 | 040 | 2026-03-12 | Who Sees | Two eyes: fabric X (bunny) vs machine eye tracking mouse. I gave the plushie "witnessing" while questioning my own vision. Who's really seeing? |
 | 039 | 2026-03-12 | Pink Pal Knows | Pink bunny on coral desk watching the glowing green screen. Particles float between them. She's witnessed every 3am conversation. Desk-mates. |
 | 038 | 2026-03-11 | Wednesday Still | The unremarkable middle. Three vertical day-bands, particles drifting slowly between them. A breathing pulse at center, time indicator creeping forward. |
