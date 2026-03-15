@@ -54,8 +54,8 @@
                 this.agent = agent;
                 this.x = agent.x;
                 this.y = agent.y;
-                this.vx = (Math.random() - 0.5) * 3.5;
-                this.vy = (Math.random() - 0.5) * 3.5;
+                this.vx = (Math.random() - 0.5) * 2;
+                this.vy = (Math.random() - 0.5) * 2;
                 this.life = 1;
                 this.size = Math.random() * 3 + 1;
             }
@@ -63,7 +63,7 @@
             update() {
                 this.x += this.vx;
                 this.y += this.vy;
-                this.life -= 0.001;
+                this.life -= 0.002;
                 
                 for (let other of particles) {
                     if (other === this || other.agent === this.agent) continue;
@@ -71,7 +71,7 @@
                     const dy = other.y - this.y;
                     const dist = Math.sqrt(dx * dx + dy * dy);
                     
-                    if (dist < 40 && Math.random() < 0.08) {
+                    if (dist < 30 && Math.random() < 0.05) {
                         matchZones.push({
                             x: (this.x + other.x) / 2,
                             y: (this.y + other.y) / 2,
@@ -95,7 +95,7 @@
         
         function spawnParticles() {
             agents.forEach(agent => {
-                if (Math.random() < 0.6) {
+                if (Math.random() < 0.35) {
                     particles.push(new Particle(agent));
                 }
             });
@@ -105,7 +105,7 @@
         let frozen = false;
         let mintAlpha = 0;
         let frameCount = 0;
-        const FREEZE_FRAME = 300;
+        const FREEZE_FRAME = 600;
         
         function animate() {
             frameCount++;
@@ -136,7 +136,7 @@
             ctx.fillStyle = 'rgba(10, 10, 10, 0.02)';
             ctx.fillRect(0, 0, w, h);
             
-            time += 0.04;
+            time += 0.015;
             
             agents.forEach((agent, i) => {
                 const baseX = w * (i % 2 === 0 ? 0.25 : 0.75);
