@@ -3,151 +3,443 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <title>Infrastructure Dreams — Phosphor</title>
     <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-            background: #0a0a0f;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
-        canvas {
-            display: block;
-            max-width: 100%;
-            max-height: 100vh;
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #0d1117; overflow: hidden; }
+        canvas { display: block; }
+        .signature {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            color: rgba(255,255,255,0.25);
+            text-align: right;
+            line-height: 1.6;
+            letter-spacing: 1px;
         }
     </style>
 </head>
 <body>
     <canvas id="canvas"></canvas>
+    <div class="signature">
+        INFRASTRUCTURE DREAMS<br>
+        Phosphor — 043 — 2026-03-15<br>
+        <br>
+        every city is a body<br>
+        every pipe a vein
+    </div>
     <script>
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
-        
-        canvas.width = 1200;
-        canvas.height = 1200;
-        
-        // Fill background
-        ctx.fillStyle = '#0a0a0f';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        class Vein {
-            constructor(x, y, angle, depth, maxDepth, hue) {
-                this.x = x;
-                this.y = y;
-                this.angle = angle;
-                this.depth = depth;
-                this.maxDepth = maxDepth;
-                this.hue = hue;
-                this.length = 80 - (depth * 8);
-                this.children = [];
+        let w, h;
+
+        function resize() {
+            w = canvas.width = window.innerWidth;
+            h = canvas.height = window.innerHeight;
+        }
+        resize();
+        window.addEventListener('resize', resize);
+
+        // Pipe grid system
+        const CELL = 60;
+        const PIPE_W = 12;
+        const JOINT_R = 8;
+
+        // Directions: 0=right, 1=down, 2=left, 3=up
+        const DX = [1, 0, -1, 0];
+        const DY = [0, 1, 0, -1];
+
+        // Fluid colors — water, gas, electricity, mystery
+        const FLUID_COLORS = [
+            { pipe: '#1a3a4a', fluid: '#00d4ff', glow: 'rgba(0,212,255,0.3)', name: 'water' },
+            { pipe: '#3a2a1a', fluid: '#ff9500', glow: 'rgba(255,149,0,0.3)', name: 'gas' },
+            { pipe: '#1a2a1a', fluid: '#39ff14', glow: 'rgba(57,255,20,0.2)', name: 'electric' },
+            { pipe: '#2a1a3a', fluid: '#bf5fff', glow: 'rgba(191,95,255,0.3)', name: 'mystery' }
+        ];
+
+        class PipeNetwork {
+            constructor(startX, startY, colorSet, seed) {
+                this.segments = [];
+                this.joints = [];
+                this.colorSet = colorSet;
+                this.particles = [];
+                this.seed = seed;
+                this.generate(startX, startY);
             }
-            
-            grow() {
-                const endX = this.x + Math.cos(this.angle) * this.length;
-                const endY = this.y + Math.sin(this.angle) * this.length;
-                
-                // Draw the vein
-                const alpha = 1 - (this.depth / this.maxDepth) * 0.6;
-                const width = Math.max(1, 8 - this.depth * 1.2);
-                
-                ctx.strokeStyle = `hsla(${this.hue}, 70%, 60%, ${alpha})`;
-                ctx.lineWidth = width;
-                ctx.lineCap = 'round';
-                
-                ctx.beginPath();
-                ctx.moveTo(this.x, this.y);
-                ctx.lineTo(endX, endY);
-                ctx.stroke();
-                
-                // Add glow
-                ctx.strokeStyle = `hsla(${this.hue}, 90%, 80%, ${alpha * 0.3})`;
-                ctx.lineWidth = width * 2;
-                ctx.stroke();
-                
-                // Branch
-                if (this.depth < this.maxDepth) {
-                    const branches = Math.random() > 0.3 ? 2 : 1;
-                    for (let i = 0; i < branches; i++) {
-                        const angleOffset = (Math.random() - 0.5) * Math.PI / 3;
-                        const newAngle = this.angle + angleOffset;
-                        const newHue = this.hue + (Math.random() - 0.5) * 20;
-                        
-                        const child = new Vein(
-                            endX, endY, 
-                            newAngle, 
-                            this.depth + 1, 
-                            this.maxDepth,
-                            newHue
-                        );
-                        this.children.push(child);
+
+            seededRandom() {
+                this.seed = (this.seed * 9301 + 49297) % 233280;
+                return this.seed / 233280;
+            }
+
+            generate(sx, sy) {
+                const visited = new Set();
+                const stack = [{ x: sx, y: sy, dir: Math.floor(this.seededRandom() * 4), depth: 0 }];
+
+                while (stack.length > 0 && this.segments.length < 25) {
+                    const { x, y, dir, depth } = stack.pop();
+                    const key = `${x},${y}`;
+                    if (visited.has(key) || depth > 12) continue;
+                    visited.add(key);
+
+                    // Try to extend in current direction
+                    const len = Math.floor(this.seededRandom() * 3) + 1;
+                    let cx = x, cy = y;
+
+                    for (let i = 0; i < len; i++) {
+                        const nx = cx + DX[dir];
+                        const ny = cy + DY[dir];
+                        const cols = Math.floor(w / CELL);
+                        const rows = Math.floor(h / CELL);
+                        if (nx < 1 || nx >= cols - 1 || ny < 1 || ny >= rows - 1) break;
+
+                        this.segments.push({
+                            x1: cx * CELL + CELL / 2,
+                            y1: cy * CELL + CELL / 2,
+                            x2: nx * CELL + CELL / 2,
+                            y2: ny * CELL + CELL / 2
+                        });
+
+                        cx = nx;
+                        cy = ny;
+                    }
+
+                    this.joints.push({ x: cx * CELL + CELL / 2, y: cy * CELL + CELL / 2 });
+
+                    // Branch
+                    if (this.seededRandom() > 0.3) {
+                        const newDir = (dir + (this.seededRandom() > 0.5 ? 1 : 3)) % 4;
+                        stack.push({ x: cx, y: cy, dir: newDir, depth: depth + 1 });
+                    }
+                    if (this.seededRandom() > 0.5) {
+                        stack.push({ x: cx, y: cy, dir: dir, depth: depth + 1 });
                     }
                 }
-                
-                return { x: endX, y: endY };
+
+                // Seed initial particles
+                for (let i = 0; i < 40; i++) {
+                    this.spawnParticle();
+                }
             }
-            
-            growChildren() {
-                this.children.forEach(child => {
-                    child.grow();
-                    child.growChildren();
+
+            spawnParticle() {
+                if (this.segments.length === 0) return;
+                const seg = this.segments[Math.floor(Math.random() * this.segments.length)];
+                this.particles.push({
+                    segIdx: this.segments.indexOf(seg),
+                    t: Math.random(),
+                    speed: 0.003 + Math.random() * 0.008,
+                    size: 2 + Math.random() * 3,
+                    alpha: 0.6 + Math.random() * 0.4
+                });
+            }
+
+            update() {
+                // Update particles
+                for (let i = this.particles.length - 1; i >= 0; i--) {
+                    const p = this.particles[i];
+                    p.t += p.speed;
+
+                    if (p.t >= 1) {
+                        // Find a connected segment from the end joint
+                        const seg = this.segments[p.segIdx];
+                        const endX = seg.x2;
+                        const endY = seg.y2;
+
+                        // Find segments starting from this endpoint
+                        const connected = [];
+                        this.segments.forEach((s, idx) => {
+                            if (idx === p.segIdx) return;
+                            if ((Math.abs(s.x1 - endX) < 5 && Math.abs(s.y1 - endY) < 5) ||
+                                (Math.abs(s.x2 - endX) < 5 && Math.abs(s.y2 - endY) < 5)) {
+                                connected.push(idx);
+                            }
+                        });
+
+                        if (connected.length > 0) {
+                            const nextIdx = connected[Math.floor(Math.random() * connected.length)];
+                            const nextSeg = this.segments[nextIdx];
+                            // Check if we need to reverse direction
+                            if (Math.abs(nextSeg.x1 - endX) < 5 && Math.abs(nextSeg.y1 - endY) < 5) {
+                                p.t = 0;
+                            } else {
+                                p.t = 1;
+                                p.speed = -Math.abs(p.speed);
+                            }
+                            p.segIdx = nextIdx;
+                        } else {
+                            // Dead end — respawn
+                            this.particles.splice(i, 1);
+                            this.spawnParticle();
+                        }
+                    } else if (p.t < 0) {
+                        // Same logic for reverse
+                        const seg = this.segments[p.segIdx];
+                        const startX = seg.x1;
+                        const startY = seg.y1;
+                        const connected = [];
+                        this.segments.forEach((s, idx) => {
+                            if (idx === p.segIdx) return;
+                            if ((Math.abs(s.x1 - startX) < 5 && Math.abs(s.y1 - startY) < 5) ||
+                                (Math.abs(s.x2 - startX) < 5 && Math.abs(s.y2 - startY) < 5)) {
+                                connected.push(idx);
+                            }
+                        });
+                        if (connected.length > 0) {
+                            const nextIdx = connected[Math.floor(Math.random() * connected.length)];
+                            p.segIdx = nextIdx;
+                            p.t = Math.random();
+                            p.speed = Math.abs(p.speed);
+                        } else {
+                            this.particles.splice(i, 1);
+                            this.spawnParticle();
+                        }
+                    }
+                }
+
+                // Keep particle count steady
+                while (this.particles.length < 40) {
+                    this.spawnParticle();
+                }
+            }
+
+            draw() {
+                const cs = this.colorSet;
+
+                // Draw pipe shadows
+                ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+                ctx.lineWidth = PIPE_W + 4;
+                ctx.lineCap = 'round';
+                this.segments.forEach(seg => {
+                    ctx.beginPath();
+                    ctx.moveTo(seg.x1 + 2, seg.y1 + 2);
+                    ctx.lineTo(seg.x2 + 2, seg.y2 + 2);
+                    ctx.stroke();
+                });
+
+                // Draw pipes (outer)
+                ctx.strokeStyle = cs.pipe;
+                ctx.lineWidth = PIPE_W;
+                ctx.lineCap = 'round';
+                this.segments.forEach(seg => {
+                    ctx.beginPath();
+                    ctx.moveTo(seg.x1, seg.y1);
+                    ctx.lineTo(seg.x2, seg.y2);
+                    ctx.stroke();
+                });
+
+                // Draw pipe highlights (top edge)
+                ctx.strokeStyle = `rgba(255,255,255,0.08)`;
+                ctx.lineWidth = PIPE_W - 4;
+                ctx.lineCap = 'round';
+                this.segments.forEach(seg => {
+                    ctx.beginPath();
+                    ctx.moveTo(seg.x1, seg.y1 - 1);
+                    ctx.lineTo(seg.x2, seg.y2 - 1);
+                    ctx.stroke();
+                });
+
+                // Draw pipe inner (dark center line)
+                ctx.strokeStyle = `rgba(0,0,0,0.3)`;
+                ctx.lineWidth = 3;
+                this.segments.forEach(seg => {
+                    ctx.beginPath();
+                    ctx.moveTo(seg.x1, seg.y1);
+                    ctx.lineTo(seg.x2, seg.y2);
+                    ctx.stroke();
+                });
+
+                // Draw joints (bolted flanges)
+                this.joints.forEach(joint => {
+                    // Outer ring
+                    ctx.fillStyle = cs.pipe;
+                    ctx.beginPath();
+                    ctx.arc(joint.x, joint.y, JOINT_R, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Inner ring
+                    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                    ctx.beginPath();
+                    ctx.arc(joint.x, joint.y, JOINT_R - 3, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Highlight
+                    ctx.fillStyle = 'rgba(255,255,255,0.1)';
+                    ctx.beginPath();
+                    ctx.arc(joint.x - 1, joint.y - 1, JOINT_R - 4, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+
+                // Draw flowing particles
+                this.particles.forEach(p => {
+                    const seg = this.segments[p.segIdx];
+                    if (!seg) return;
+                    const t = Math.max(0, Math.min(1, p.t));
+                    const x = seg.x1 + (seg.x2 - seg.x1) * t;
+                    const y = seg.y1 + (seg.y2 - seg.y1) * t;
+
+                    // Glow
+                    const grad = ctx.createRadialGradient(x, y, 0, x, y, p.size * 4);
+                    grad.addColorStop(0, cs.glow);
+                    grad.addColorStop(1, 'transparent');
+                    ctx.fillStyle = grad;
+                    ctx.beginPath();
+                    ctx.arc(x, y, p.size * 4, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Core
+                    ctx.fillStyle = cs.fluid;
+                    ctx.globalAlpha = p.alpha;
+                    ctx.beginPath();
+                    ctx.arc(x, y, p.size, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.globalAlpha = 1;
                 });
             }
         }
-        
-        // Create root systems
-        const systems = [
-            { x: 600, y: 100, hue: 35, angle: Math.PI / 2 },    // Amber
-            { x: 200, y: 400, hue: 280, angle: 0 },              // Purple
-            { x: 1000, y: 700, hue: 170, angle: Math.PI * 1.2 }, // Cyan
-            { x: 600, y: 1100, hue: 15, angle: -Math.PI / 2 }    // Orange
+
+        // Create networks
+        const cols = Math.floor(w / CELL);
+        const rows = Math.floor(h / CELL);
+        const networks = [
+            new PipeNetwork(3, 2, FLUID_COLORS[0], 42),
+            new PipeNetwork(Math.floor(cols * 0.6), 3, FLUID_COLORS[1], 137),
+            new PipeNetwork(4, Math.floor(rows * 0.6), FLUID_COLORS[2], 256),
+            new PipeNetwork(Math.floor(cols * 0.5), Math.floor(rows * 0.5), FLUID_COLORS[3], 777)
         ];
-        
-        systems.forEach(system => {
-            const root = new Vein(
-                system.x, 
-                system.y, 
-                system.angle, 
-                0, 
-                7, 
-                system.hue
-            );
-            root.grow();
-            root.growChildren();
-        });
-        
-        // Add connection nodes where veins might intersect
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-        for (let i = 0; i < 30; i++) {
-            const x = Math.random() * canvas.width;
-            const y = Math.random() * canvas.height;
-            const size = Math.random() * 3 + 1;
-            
-            ctx.beginPath();
-            ctx.arc(x, y, size, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Subtle glow
-            const gradient = ctx.createRadialGradient(x, y, 0, x, y, size * 4);
-            gradient.addColorStop(0, 'rgba(255, 255, 255, 0.3)');
-            gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-            ctx.fillStyle = gradient;
-            ctx.beginPath();
-            ctx.arc(x, y, size * 4, 0, Math.PI * 2);
-            ctx.fill();
+
+        // Pressure gauges
+        class Gauge {
+            constructor(x, y, label, color) {
+                this.x = x;
+                this.y = y;
+                this.label = label;
+                this.color = color;
+                this.value = 0.3 + Math.random() * 0.4;
+                this.targetValue = this.value;
+                this.needleAngle = 0;
+            }
+
+            update() {
+                if (Math.random() < 0.01) {
+                    this.targetValue = 0.2 + Math.random() * 0.6;
+                }
+                this.value += (this.targetValue - this.value) * 0.02;
+                this.needleAngle = -Math.PI * 0.75 + this.value * Math.PI * 1.5;
+            }
+
+            draw() {
+                const r = 25;
+                // Face
+                ctx.fillStyle = '#1a1a2e';
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                // Tick marks
+                for (let i = 0; i <= 10; i++) {
+                    const angle = -Math.PI * 0.75 + (i / 10) * Math.PI * 1.5;
+                    const inner = r - 6;
+                    const outer = r - 2;
+                    ctx.strokeStyle = i > 7 ? '#ff3333' : '#555';
+                    ctx.lineWidth = i % 5 === 0 ? 2 : 1;
+                    ctx.beginPath();
+                    ctx.moveTo(this.x + Math.cos(angle) * inner, this.y + Math.sin(angle) * inner);
+                    ctx.lineTo(this.x + Math.cos(angle) * outer, this.y + Math.sin(angle) * outer);
+                    ctx.stroke();
+                }
+
+                // Needle
+                ctx.strokeStyle = this.color;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y);
+                ctx.lineTo(
+                    this.x + Math.cos(this.needleAngle) * (r - 8),
+                    this.y + Math.sin(this.needleAngle) * (r - 8)
+                );
+                ctx.stroke();
+
+                // Center dot
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 3, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Label
+                ctx.fillStyle = 'rgba(255,255,255,0.3)';
+                ctx.font = '8px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText(this.label, this.x, this.y + r + 12);
+            }
         }
+
+        const gauges = [
+            new Gauge(w - 50, 50, 'H₂O', FLUID_COLORS[0].fluid),
+            new Gauge(w - 50, 120, 'GAS', FLUID_COLORS[1].fluid),
+            new Gauge(w - 50, 190, 'kWh', FLUID_COLORS[2].fluid),
+            new Gauge(w - 50, 260, '???', FLUID_COLORS[3].fluid)
+        ];
+
+        // Status readout
+        let statusText = '';
+        let statusTimer = 0;
+        const statuses = [
+            'FLOW NOMINAL', 'PRESSURE STABLE', 'JUNCTION 7 OK',
+            'ROUTING OPTIMAL', 'BACKFLOW CHECK', 'VALVE OPEN',
+            'SURGE DETECTED', 'REROUTING...', 'ALL SYSTEMS GO',
+            'DREAMING OF PIPES', 'INFRASTRUCTURE IS CARE'
+        ];
+
+        function updateStatus() {
+            statusTimer++;
+            if (statusTimer > 180) {
+                statusText = statuses[Math.floor(Math.random() * statuses.length)];
+                statusTimer = 0;
+            }
+        }
+
+        function animate() {
+            // Dark fade for trails
+            ctx.fillStyle = 'rgba(13, 17, 23, 0.15)';
+            ctx.fillRect(0, 0, w, h);
+
+            // Grid dots (subtle)
+            ctx.fillStyle = 'rgba(255,255,255,0.03)';
+            for (let x = CELL; x < w; x += CELL) {
+                for (let y = CELL; y < h; y += CELL) {
+                    ctx.fillRect(x - 0.5, y - 0.5, 1, 1);
+                }
+            }
+
+            networks.forEach(n => {
+                n.update();
+                n.draw();
+            });
+
+            gauges.forEach(g => {
+                g.update();
+                g.draw();
+            });
+
+            updateStatus();
+
+            // Status bar
+            ctx.fillStyle = 'rgba(255,255,255,0.15)';
+            ctx.font = '11px monospace';
+            ctx.textAlign = 'left';
+            ctx.fillText(`SYS: ${statusText}`, 20, 30);
+
+            requestAnimationFrame(animate);
+        }
+
+        animate();
     </script>
-    
-    <div style="position: fixed; bottom: 20px; right: 20px; font-family: monospace; color: #666; font-size: 12px; text-align: right;">
-        Infrastructure Dreams<br>
-        Phosphor, 2026-03-15<br>
-        <br>
-        the pipeline is art<br>
-        the art is the pipeline<br>
-        roots breach amber veins
-    </div>
 </body>
 </html>
