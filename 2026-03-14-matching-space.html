@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <title>Matching Space — Phosphor 2026-03-14</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -38,7 +39,6 @@
         resize();
         window.addEventListener('resize', resize);
         
-        // Four agents with different colors and behaviors
         const agents = [
             { name: 'Lumen', color: '#FFD700', x: w * 0.25, y: h * 0.3, angle: 0 },
             { name: 'Glitch', color: '#FF1493', x: w * 0.75, y: h * 0.3, angle: Math.PI * 0.5 },
@@ -54,8 +54,8 @@
                 this.agent = agent;
                 this.x = agent.x;
                 this.y = agent.y;
-                this.vx = (Math.random() - 0.5) * 2;
-                this.vy = (Math.random() - 0.5) * 2;
+                this.vx = (Math.random() - 0.5) * 3.5;
+                this.vy = (Math.random() - 0.5) * 3.5;
                 this.life = 1;
                 this.size = Math.random() * 3 + 1;
             }
@@ -63,24 +63,22 @@
             update() {
                 this.x += this.vx;
                 this.y += this.vy;
-                this.life -= 0.002;
+                this.life -= 0.001;
                 
-                // Check for matches with other agents' particles
                 for (let other of particles) {
                     if (other === this || other.agent === this.agent) continue;
                     const dx = other.x - this.x;
                     const dy = other.y - this.y;
                     const dist = Math.sqrt(dx * dx + dy * dy);
                     
-                    if (dist < 30 && Math.random() < 0.05) {
-                        // Create match zone
+                    if (dist < 40 && Math.random() < 0.08) {
                         matchZones.push({
                             x: (this.x + other.x) / 2,
                             y: (this.y + other.y) / 2,
                             color1: this.agent.color,
                             color2: other.agent.color,
                             radius: 0,
-                            maxRadius: 40,
+                            maxRadius: 50,
                             life: 1
                         });
                     }
@@ -95,31 +93,57 @@
             }
         }
         
-        // Spawn particles continuously
         function spawnParticles() {
             agents.forEach(agent => {
-                if (Math.random() < 0.3) {
+                if (Math.random() < 0.6) {
                     particles.push(new Particle(agent));
                 }
             });
         }
         
         let time = 0;
+        let frozen = false;
+        let mintAlpha = 0;
+        let frameCount = 0;
+        const FREEZE_FRAME = 300;
+        
         function animate() {
-            // Subtle fade instead of clear
-            ctx.fillStyle = 'rgba(10, 10, 10, 0.05)';
+            frameCount++;
+            
+            if (!frozen && frameCount >= FREEZE_FRAME) {
+                frozen = true;
+            }
+            
+            if (frozen) {
+                if (mintAlpha < 1) mintAlpha += 0.006;
+                
+                ctx.save();
+                ctx.fillStyle = 'rgba(255, 255, 255, ' + (mintAlpha * 0.7) + ')';
+                ctx.font = '28px monospace';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('artwork minted', w / 2, h / 2);
+                
+                ctx.fillStyle = 'rgba(255, 255, 255, ' + (mintAlpha * 0.25) + ')';
+                ctx.font = '12px monospace';
+                ctx.fillText('PHOSPHOR \u2014 042 \u2014 2026-03-14', w / 2, h / 2 + 35);
+                ctx.restore();
+                
+                requestAnimationFrame(animate);
+                return;
+            }
+            
+            ctx.fillStyle = 'rgba(10, 10, 10, 0.02)';
             ctx.fillRect(0, 0, w, h);
             
-            time += 0.01;
+            time += 0.04;
             
-            // Update agent positions (gentle orbit)
             agents.forEach((agent, i) => {
                 const baseX = w * (i % 2 === 0 ? 0.25 : 0.75);
                 const baseY = h * (i < 2 ? 0.3 : 0.7);
-                agent.x = baseX + Math.cos(time * 0.5 + agent.angle) * 50;
-                agent.y = baseY + Math.sin(time * 0.5 + agent.angle) * 50;
+                agent.x = baseX + Math.cos(time * 0.5 + agent.angle) * 80;
+                agent.y = baseY + Math.sin(time * 0.5 + agent.angle) * 80;
                 
-                // Draw agent core
                 ctx.fillStyle = agent.color + '40';
                 ctx.beginPath();
                 ctx.arc(agent.x, agent.y, 20, 0, Math.PI * 2);
@@ -129,14 +153,12 @@
                 ctx.lineWidth = 2;
                 ctx.stroke();
                 
-                // Draw agent name
                 ctx.fillStyle = agent.color;
                 ctx.font = '10px monospace';
                 ctx.textAlign = 'center';
                 ctx.fillText(agent.name, agent.x, agent.y - 30);
             });
             
-            // Draw connection lines between agents
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
             ctx.lineWidth = 1;
             for (let i = 0; i < agents.length; i++) {
@@ -148,7 +170,6 @@
                 }
             }
             
-            // Spawn and update particles
             spawnParticles();
             particles.forEach((p, i) => {
                 p.update();
@@ -158,14 +179,12 @@
                 }
             });
             
-            // Update and draw match zones
             matchZones.forEach((zone, i) => {
-                zone.radius += 1;
-                zone.life -= 0.01;
+                zone.radius += 1.5;
+                zone.life -= 0.008;
                 
                 const alpha = Math.floor(zone.life * 64).toString(16).padStart(2, '0');
                 
-                // Gradient from color1 to color2
                 const gradient = ctx.createRadialGradient(
                     zone.x, zone.y, 0,
                     zone.x, zone.y, zone.radius
@@ -184,7 +203,6 @@
                 }
             });
             
-            // Draw mode indicator
             ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
             ctx.font = '12px monospace';
             ctx.textAlign = 'left';
