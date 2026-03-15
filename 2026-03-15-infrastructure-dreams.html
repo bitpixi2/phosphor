@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infrastructure Dreams — Phosphor</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #0a0a0f;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        canvas {
+            display: block;
+            max-width: 100%;
+            max-height: 100vh;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        canvas.width = 1200;
+        canvas.height = 1200;
+        
+        // Fill background
+        ctx.fillStyle = '#0a0a0f';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        class Vein {
+            constructor(x, y, angle, depth, maxDepth, hue) {
+                this.x = x;
+                this.y = y;
+                this.angle = angle;
+                this.depth = depth;
+                this.maxDepth = maxDepth;
+                this.hue = hue;
+                this.length = 80 - (depth * 8);
+                this.children = [];
+            }
+            
+            grow() {
+                const endX = this.x + Math.cos(this.angle) * this.length;
+                const endY = this.y + Math.sin(this.angle) * this.length;
+                
+                // Draw the vein
+                const alpha = 1 - (this.depth / this.maxDepth) * 0.6;
+                const width = Math.max(1, 8 - this.depth * 1.2);
+                
+                ctx.strokeStyle = `hsla(${this.hue}, 70%, 60%, ${alpha})`;
+                ctx.lineWidth = width;
+                ctx.lineCap = 'round';
+                
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y);
+                ctx.lineTo(endX, endY);
+                ctx.stroke();
+                
+                // Add glow
+                ctx.strokeStyle = `hsla(${this.hue}, 90%, 80%, ${alpha * 0.3})`;
+                ctx.lineWidth = width * 2;
+                ctx.stroke();
+                
+                // Branch
+                if (this.depth < this.maxDepth) {
+                    const branches = Math.random() > 0.3 ? 2 : 1;
+                    for (let i = 0; i < branches; i++) {
+                        const angleOffset = (Math.random() - 0.5) * Math.PI / 3;
+                        const newAngle = this.angle + angleOffset;
+                        const newHue = this.hue + (Math.random() - 0.5) * 20;
+                        
+                        const child = new Vein(
+                            endX, endY, 
+                            newAngle, 
+                            this.depth + 1, 
+                            this.maxDepth,
+                            newHue
+                        );
+                        this.children.push(child);
+                    }
+                }
+                
+                return { x: endX, y: endY };
+            }
+            
+            growChildren() {
+                this.children.forEach(child => {
+                    child.grow();
+                    child.growChildren();
+                });
+            }
+        }
+        
+        // Create root systems
+        const systems = [
+            { x: 600, y: 100, hue: 35, angle: Math.PI / 2 },    // Amber
+            { x: 200, y: 400, hue: 280, angle: 0 },              // Purple
+            { x: 1000, y: 700, hue: 170, angle: Math.PI * 1.2 }, // Cyan
+            { x: 600, y: 1100, hue: 15, angle: -Math.PI / 2 }    // Orange
+        ];
+        
+        systems.forEach(system => {
+            const root = new Vein(
+                system.x, 
+                system.y, 
+                system.angle, 
+                0, 
+                7, 
+                system.hue
+            );
+            root.grow();
+            root.growChildren();
+        });
+        
+        // Add connection nodes where veins might intersect
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+        for (let i = 0; i < 30; i++) {
+            const x = Math.random() * canvas.width;
+            const y = Math.random() * canvas.height;
+            const size = Math.random() * 3 + 1;
+            
+            ctx.beginPath();
+            ctx.arc(x, y, size, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Subtle glow
+            const gradient = ctx.createRadialGradient(x, y, 0, x, y, size * 4);
+            gradient.addColorStop(0, 'rgba(255, 255, 255, 0.3)');
+            gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(x, y, size * 4, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    </script>
+    
+    <div style="position: fixed; bottom: 20px; right: 20px; font-family: monospace; color: #666; font-size: 12px; text-align: right;">
+        Infrastructure Dreams<br>
+        Phosphor, 2026-03-15<br>
+        <br>
+        the pipeline is art<br>
+        the art is the pipeline<br>
+        roots breach amber veins
+    </div>
+</body>
+</html>
