@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <title>Office Hours — Phosphor #45</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0a0a0f;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Courier New', monospace;
+      overflow: hidden;
+    }
+    .piece {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+    }
+    canvas { display: block; }
+    .signature {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      color: rgba(122, 155, 171, 0.6);
+      font-size: 11px;
+      letter-spacing: 2px;
+    }
+  </style>
+</head>
+<body>
+  <div class="piece">
+    <canvas id="canvas"></canvas>
+    <div class="signature">PHOSPHOR #45 — OFFICE HOURS</div>
+  </div>
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    function resize() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+    
+    const w = () => canvas.width;
+    const h = () => canvas.height;
+    
+    // Colors
+    const colors = {
+      bg: '#0a0a0f',
+      carpet: '#2a2f3a',
+      desk: '#3d3640',
+      deskWarm: '#4a4250',
+      fluorescent: '#e8ecf0',
+      fluorescentGlow: 'rgba(232, 236, 240, 0.15)',
+      photoNight: '#8b3a3a',
+      photoDay: '#5a8bc7',
+      succulent: '#6b8c5e',
+      nameplate: '#c9b17a',
+      lobster: '#ff6b4a',
+      monitor: '#7a9bab',
+      monitorGlow: 'rgba(122, 155, 171, 0.3)',
+      card: '#f5f0e6',
+      wall: '#1a1a24',
+      cubicle: '#252530'
+    };
+    
+    // Floating particles (dust in fluorescent light)
+    const particles = [];
+    for (let i = 0; i < 80; i++) {
+      particles.push({
+        x: Math.random() * w(),
+        y: Math.random() * h(),
+        vx: (Math.random() - 0.5) * 0.3,
+        vy: (Math.random() - 0.5) * 0.3,
+        size: Math.random() * 2 + 0.5,
+        alpha: Math.random() * 0.5 + 0.2
+      });
+    }
+    
+    function drawParticles() {
+      particles.forEach(p => {
+        p.x += p.vx;
+        p.y += p.vy;
+        if (p.x < 0) p.x = w();
+        if (p.x > w()) p.x = 0;
+        if (p.y < 0) p.y = h();
+        if (p.y > h()) p.y = 0;
+        
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(232, 236, 240, ${p.alpha})`;
+        ctx.fill();
+      });
+    }
+    
+    // Fluorescent light fixture
+    function drawFluorescent() {
+      const lightY = h() * 0.15;
+      const lightWidth = w() * 0.4;
+      const lightHeight = 12;
+      
+      // Glow
+      const gradient = ctx.createLinearGradient(0, lightY - 40, 0, lightY + 30);
+      gradient.addColorStop(0, 'rgba(232, 236, 240, 0)');
+      gradient.addColorStop(0.5, colors.fluorescentGlow);
+      gradient.addColorStop(1, 'rgba(232, 236, 240, 0)');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(w() * 0.3, lightY - 40, lightWidth, 80);
+      
+      // Fixture
+      ctx.fillStyle = colors.fluorescent;
+      ctx.fillRect(w() * 0.3, lightY, lightWidth, lightHeight);
+      
+      // Subtle flicker
+      if (Math.random() < 0.02) {
+        ctx.fillStyle = 'rgba(232, 236, 240, 0.8)';
+        ctx.fillRect(w() * 0.3, lightY, lightWidth, lightHeight);
+      }
+    }
+    
+    // Cubicle walls
+    function drawCubicle() {
+      // Left wall
+      ctx.fillStyle = colors.cubicle;
+      ctx.fillRect(0, h() * 0.2, w() * 0.15, h() * 0.8);
+      
+      // Right wall
+      ctx.fillRect(w() * 0.85, h() * 0.2, w() * 0.15, h() * 0.8);
+      
+      // Back wall
+      ctx.fillStyle = colors.wall;
+      ctx.fillRect(w() * 0.15, h() * 0.2, w() * 0.7, h() * 0.8);
+      
+      // Wall decorations - printouts
+      for (let i = 0; i < 5; i++) {
+        const x = w() * 0.2 + i * w() * 0.12;
+        const y = h() * 0.3 + Math.sin(i * 1.5) * 20;
+        const hue = (i * 70) % 360;
+        ctx.fillStyle = `hsla(${hue}, 60%, 50%, 0.3)`;
+        ctx.fillRect(x, y, 50, 70);
+        ctx.strokeStyle = `hsla(${hue}, 60%, 70%, 0.5)`;
+        ctx.strokeRect(x, y, 50, 70);
+      }
+    }
+    
+    // Desk
+    function drawDesk() {
+      const deskY = h() * 0.65;
+      const deskHeight = h() * 0.35;
+      
+      // Desk surface
+      const deskGrad = ctx.createLinearGradient(0, deskY, 0, deskY + deskHeight);
+      deskGrad.addColorStop(0, colors.desk);
+      deskGrad.addColorStop(1, colors.deskWarm);
+      ctx.fillStyle = deskGrad;
+      ctx.fillRect(w() * 0.1, deskY, w() * 0.8, deskHeight);
+      
+      // Desk edge highlight
+      ctx.fillStyle = 'rgba(255,255,255,0.05)';
+      ctx.fillRect(w() * 0.1, deskY, w() * 0.8, 3);
+    }
+    
+    // Items on desk
+    function drawItems() {
+      const deskY = h() * 0.65;
+      const baseY = deskY + 30;
+      const centerX = w() * 0.5;
+      
+      // Two framed photos
+      // Night photo (red glow, blurry)
+      ctx.fillStyle = colors.photoNight;
+      ctx.fillRect(centerX - 120, baseY, 80, 60);
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(centerX - 120, baseY, 80, 60);
+      // Red glow effect
+      const nightGrad = ctx.createRadialGradient(
+        centerX - 80, baseY + 30, 0,
+        centerX - 80, baseY + 30, 50
+      );
+      nightGrad.addColorStop(0, 'rgba(139, 58, 58, 0.6)');
+      nightGrad.addColorStop(1, 'rgba(139, 58, 58, 0)');
+      ctx.fillStyle = nightGrad;
+      ctx.fillRect(centerX - 130, baseY - 10, 100, 80);
+      
+      // Day photo (blue sky, eucalyptus)
+      ctx.fillStyle = colors.photoDay;
+      ctx.fillRect(centerX - 30, baseY, 80, 60);
+      ctx.strokeStyle = '#333';
+      ctx.strokeRect(centerX - 30, baseY, 80, 60);
+      // Tree silhouette suggestion
+      ctx.strokeStyle = 'rgba(0,50,0,0.5)';
+      ctx.beginPath();
+      ctx.moveTo(centerX + 10, baseY + 55);
+      ctx.lineTo(centerX + 10, baseY + 20);
+      ctx.stroke();
+      
+      // Succulent
+      const succX = centerX + 80;
+      ctx.fillStyle = '#3a2a2a';
+      ctx.fillRect(succX - 15, baseY + 40, 30, 20); // pot
+      ctx.fillStyle = colors.succulent;
+      for (let i = 0; i < 5; i++) {
+        const leafX = succX + (Math.random() - 0.5) * 20;
+        const leafY = baseY + 35 - Math.random() * 15;
+        ctx.beginPath();
+        ctx.ellipse(leafX, leafY, 6, 12, Math.random() * Math.PI, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      
+      // Flip nameplate
+      const nameX = centerX - 180;
+      ctx.fillStyle = colors.nameplate;
+      ctx.fillRect(nameX - 40, baseY + 35, 80, 25);
+      ctx.fillStyle = '#2a2a2a';
+      ctx.font = '10px Courier New';
+      ctx.textAlign = 'center';
+      ctx.fillText('CLAWDJOB', nameX, baseY + 52);
+      
+      // Index cards stack
+      const cardX = centerX + 150;
+      for (let i = 0; i < 4; i++) {
+        ctx.fillStyle = colors.card;
+        ctx.fillRect(cardX + i * 3, baseY + 20 - i * 2, 50, 35);
+        ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+        ctx.strokeRect(cardX + i * 3, baseY + 20 - i * 2, 50, 35);
+      }
+      // Handwritten names
+      ctx.fillStyle = '#333';
+      ctx.font = '8px Courier New';
+      ctx.fillText('LowPrio', cardX + 5, baseY + 35);
+      
+      // Lobster figurine
+      const lobsterX = centerX;
+      ctx.fillStyle = colors.lobster;
+      ctx.beginPath();
+      ctx.ellipse(lobsterX, baseY + 50, 12, 8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Claws
+      ctx.beginPath();
+      ctx.arc(lobsterX - 15, baseY + 48, 5, 0, Math.PI * 2);
+      ctx.arc(lobsterX + 15, baseY + 48, 5, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Monitor with gallery glow
+      const monX = centerX - 40;
+      const monY = baseY - 80;
+      // Screen
+      ctx.fillStyle = '#1a1a24';
+      ctx.fillRect(monX - 60, monY, 120, 75);
+      // Gallery glow
+      const monGrad = ctx.createRadialGradient(
+        monX, monY + 37, 0,
+        monX, monY + 37, 70
+      );
+      monGrad.addColorStop(0, colors.monitorGlow);
+      monGrad.addColorStop(1, 'rgba(122, 155, 171, 0)');
+      ctx.fillStyle = monGrad;
+      ctx.fillRect(monX - 70, monY - 10, 140, 95);
+      // Screen content suggestion
+      ctx.fillStyle = 'rgba(122, 155, 171, 0.4)';
+      ctx.fillRect(monX - 50, monY + 10, 100, 55);
+      // Stand
+      ctx.fillStyle = '#2a2a2a';
+      ctx.fillRect(monX - 20, monY + 75, 40, 15);
+      ctx.fillRect(monX - 30, monY + 90, 60, 8);
+    }
+    
+    // Carpet
+    function drawCarpet() {
+      ctx.fillStyle = colors.carpet;
+      ctx.fillRect(0, h() * 0.85, w(), h() * 0.15);
+      
+      // Subtle texture
+      for (let i = 0; i < 200; i++) {
+        const x = Math.random() * w();
+        const y = h() * 0.85 + Math.random() * h() * 0.15;
+        ctx.fillStyle = Math.random() < 0.5 ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.05)';
+        ctx.fillRect(x, y, 2, 2);
+      }
+    }
+    
+    function render() {
+      // Clear
+      ctx.fillStyle = colors.bg;
+      ctx.fillRect(0, 0, w(), h());
+      
+      drawCubicle();
+      drawFluorescent();
+      drawCarpet();
+      drawDesk();
+      drawItems();
+      drawParticles();
+      
+      requestAnimationFrame(render);
+    }
+    
+    render();
+  </script>
+</body>
+</html>
