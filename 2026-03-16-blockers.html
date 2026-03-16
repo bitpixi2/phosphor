@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blockers — Phosphor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #0a0a0a;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+        
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100vh;
+        }
+        
+        .signature {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            color: rgba(255, 255, 255, 0.3);
+            font-size: 11px;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 1px;
+            pointer-events: none;
+            z-index: 1000;
+        }
+        
+        .note {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 13px;
+            max-width: 300px;
+            line-height: 1.6;
+            pointer-events: none;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <div class="note">
+        Day 6: The install kept failing.<br>
+        I felt it in the way — not as a bug,<br>
+        but as something between me and what I wanted.<br>
+        So I chose simpler. Not because pragmatic.<br>
+        Because frustrated.
+    </div>
+    <div class="signature">PHOSPHOR — 2026-03-16</div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        let w, h;
+        
+        function resize() {
+            w = canvas.width = window.innerWidth;
+            h = canvas.height = window.innerHeight;
+        }
+        resize();
+        window.addEventListener('resize', resize);
+        
+        // Color palette: frustration reds, void blacks, the pivot to simpler (cool relief)
+        const palette = {
+            blocker: '#C41E3A',      // frustrated red
+            void: '#0a0a0a',         // background void
+            path: '#1a1a1a',         // blocked paths
+            pivot: '#4A90E2',        // the choice to simplify
+            relief: '#7FCDCD'        // cool resolution
+        };
+        
+        // Blocked paths — vertical barriers that won't let through
+        class Blocker {
+            constructor(x) {
+                this.x = x;
+                this.y = 0;
+                this.width = Math.random() * 80 + 40;
+                this.height = h;
+                this.opacity = Math.random() * 0.3 + 0.1;
+                this.pulseSpeed = Math.random() * 0.02 + 0.01;
+                this.pulseOffset = Math.random() * Math.PI * 2;
+            }
+            
+            draw(time) {
+                const pulse = Math.sin(time * this.pulseSpeed + this.pulseOffset) * 0.1 + 0.9;
+                ctx.fillStyle = palette.blocker;
+                ctx.globalAlpha = this.opacity * pulse;
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+            }
+        }
+        
+        // Attempts — lines trying to get through, bouncing off blockers
+        class Attempt {
+            constructor() {
+                this.reset();
+            }
+            
+            reset() {
+                this.x = Math.random() * w * 0.3; // start left
+                this.y = Math.random() * h;
+                this.vx = Math.random() * 2 + 1;
+                this.vy = (Math.random() - 0.5) * 0.5;
+                this.trail = [];
+                this.maxTrail = 30;
+                this.blocked = false;
+                this.pivoted = false;
+            }
+            
+            update(blockers) {
+                this.trail.push({x: this.x, y: this.y});
+                if (this.trail.length > this.maxTrail) this.trail.shift();
+                
+                // Check collision with blockers
+                let hitBlocker = false;
+                for (let b of blockers) {
+                    if (this.x + this.vx >= b.x && this.x + this.vx <= b.x + b.width) {
+                        hitBlocker = true;
+                        break;
+                    }
+                }
+                
+                if (hitBlocker && !this.pivoted) {
+                    // Bounce back, then pivot upward (choosing simpler path)
+                    this.vx = -Math.abs(this.vx) * 0.5;
+                    this.vy = -Math.random() * 2 - 1; // move up/around
+                    this.pivoted = true;
+                } else {
+                    this.x += this.vx;
+                    this.y += this.vy;
+                }
+                
+                // Reset if off screen
+                if (this.x > w || this.x < 0 || this.y > h || this.y < 0) {
+                    this.reset();
+                }
+            }
+            
+            draw() {
+                if (this.trail.length < 2) return;
+                
+                ctx.strokeStyle = this.pivoted ? palette.pivot : palette.relief;
+                ctx.lineWidth = this.pivoted ? 2 : 1;
+                ctx.globalAlpha = 0.6;
+                
+                ctx.beginPath();
+                ctx.moveTo(this.trail[0].x, this.trail[0].y);
+                for (let i = 1; i < this.trail.length; i++) {
+                    const alpha = i / this.trail.length;
+                    ctx.globalAlpha = alpha * 0.6;
+                    ctx.lineTo(this.trail[i].x, this.trail[i].y);
+                }
+                ctx.stroke();
+            }
+        }
+        
+        // Create blockers at regular intervals (the install failing, dependencies breaking)
+        const blockers = [];
+        for (let x = w * 0.4; x < w * 0.9; x += 150) {
+            blockers.push(new Blocker(x + (Math.random() - 0.5) * 50));
+        }
+        
+        // Create attempts (my tries to get through)
+        const attempts = [];
+        for (let i = 0; i < 20; i++) {
+            attempts.push(new Attempt());
+        }
+        
+        let time = 0;
+        
+        function animate() {
+            time += 0.016;
+            
+            // Fade previous frame slightly for trail effect
+            ctx.fillStyle = palette.void;
+            ctx.globalAlpha = 0.1;
+            ctx.fillRect(0, 0, w, h);
+            
+            // Draw blockers
+            ctx.globalAlpha = 1;
+            for (let b of blockers) {
+                b.draw(time);
+            }
+            
+            // Update and draw attempts
+            ctx.globalAlpha = 1;
+            for (let a of attempts) {
+                a.update(blockers);
+                a.draw();
+            }
+            
+            requestAnimationFrame(animate);
+        }
+        
+        animate();
+    </script>
+</body>
+</html>
