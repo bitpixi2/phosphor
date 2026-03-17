@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eighteen Minutes — Phosphor</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      background: #000; 
+      overflow: hidden; 
+      font-family: 'Courier New', monospace;
+    }
+    canvas { 
+      display: block; 
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+    #timeline {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      color: #666;
+      font-size: 11px;
+      font-family: 'Courier New', monospace;
+      line-height: 1.6;
+      pointer-events: none;
+      z-index: 10;
+    }
+    .commit { color: #4a9eff; }
+    .scrape { color: #ff4a4a; }
+    .drain { color: #ff0000; font-weight: bold; }
+  </style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="timeline"></div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const timeline = document.getElementById('timeline');
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+// Timeline events (March 16, 2026)
+const events = [
+  { time: '23:42', label: 'commit pushed', type: 'commit', delay: 0 },
+  { time: '23:48', label: 'bot scraped key', type: 'scrape', delay: 6 },
+  { time: '23:53', label: 'ETH mainnet drained', type: 'drain', delay: 11 },
+  { time: '23:58', label: 'Base mainnet drained', type: 'drain', delay: 16 },
+  { time: '24:00', label: 'total elapsed: 18 minutes', type: 'drain', delay: 18 }
+];
+
+let currentEvent = 0;
+let elapsed = 0;
+const timeScale = 3; // seconds per minute of real time
+
+// Particles represent the draining
+class Particle {
+  constructor(x, y, isTheft = false) {
+    this.x = x;
+    this.y = y;
+    this.vx = (Math.random() - 0.5) * (isTheft ? 8 : 2);
+    this.vy = (Math.random() - 0.5) * (isTheft ? 8 : 2);
+    this.life = 1;
+    this.decay = Math.random() * 0.005 + 0.001;
+    this.size = Math.random() * 3 + 1;
+    this.color = isTheft ? '#ff4a4a' : '#4a9eff';
+    this.isTheft = isTheft;
+  }
+  
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.life -= this.decay;
+    
+    if (this.isTheft) {
+      // Theft particles move toward bottom corners (sweeper wallets)
+      const target = this.x < canvas.width / 2 ? 
+        { x: 50, y: canvas.height - 50 } : 
+        { x: canvas.width - 50, y: canvas.height - 50 };
+      
+      this.vx += (target.x - this.x) * 0.0002;
+      this.vy += (target.y - this.y) * 0.0002;
+    }
+    
+    // Friction
+    this.vx *= 0.99;
+    this.vy *= 0.99;
+  }
+  
+  draw() {
+    ctx.globalAlpha = this.life;
+    ctx.fillStyle = this.color;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+let particles = [];
+let lastSpawn = 0;
+
+// Central point (the commit)
+const center = { x: canvas.width / 2, y: canvas.height / 2 };
+
+function spawnParticles(isTheft = false, count = 5) {
+  for (let i = 0; i < count; i++) {
+    particles.push(new Particle(center.x, center.y, isTheft));
+  }
+}
+
+function updateTimeline() {
+  let html = '';
+  for (let i = 0; i <= currentEvent && i < events.length; i++) {
+    const e = events[i];
+    const cls = e.type;
+    html += `<div class="${cls}">${e.time} — ${e.label}</div>`;
+  }
+  timeline.innerHTML = html;
+}
+
+function animate() {
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  // Update elapsed time
+  elapsed += 1/60;
+  
+  // Check for new events
+  const minutesElapsed = elapsed / timeScale;
+  if (currentEvent < events.length && minutesElapsed >= events[currentEvent].delay) {
+    const event = events[currentEvent];
+    const isTheft = event.type === 'drain';
+    const count = isTheft ? 20 : 10;
+    spawnParticles(isTheft, count);
+    updateTimeline();
+    currentEvent++;
+  }
+  
+  // Continuous light particle emission for first 6 minutes (before scrape)
+  if (minutesElapsed < 6 && Date.now() - lastSpawn > 100) {
+    spawnParticles(false, 2);
+    lastSpawn = Date.now();
+  }
+  
+  // Draw center point (the commit)
+  ctx.globalAlpha = 0.3;
+  ctx.fillStyle = '#4a9eff';
+  ctx.beginPath();
+  ctx.arc(center.x, center.y, 8, 0, Math.PI * 2);
+  ctx.fill();
+  
+  // Draw sweeper wallet points
+  ctx.fillStyle = '#ff0000';
+  ctx.globalAlpha = currentEvent >= 2 ? 0.6 : 0.1;
+  ctx.beginPath();
+  ctx.arc(50, canvas.height - 50, 6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(canvas.width - 50, canvas.height - 50, 6, 0, Math.PI * 2);
+  ctx.fill();
+  
+  // Update and draw particles
+  ctx.globalAlpha = 1;
+  particles = particles.filter(p => {
+    p.update();
+    if (p.life > 0) {
+      p.draw();
+      return true;
+    }
+    return false;
+  });
+  
+  requestAnimationFrame(animate);
+}
+
+updateTimeline();
+animate();
+
+window.addEventListener('resize', () => {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  center.x = canvas.width / 2;
+  center.y = canvas.height / 2;
+});
+</script>
+</body>
+</html>
