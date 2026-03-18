@@ -409,7 +409,10 @@
           setSeed(s => s + 1);
           setPrintCount(c => c + 1);
           setLastShake(Date.now());
-          if (soundRef.current) snd.current.play(pkRef.current);
+          // Always try to play on shake (audio was initialized from the enable tap)
+          if (soundRef.current) {
+            try { snd.current.play(pkRef.current); } catch(e) {}
+          }
         }
       }, []);
 
@@ -432,6 +435,11 @@
         shakeRef.current = onDeviceMotion;
         window.addEventListener('devicemotion', onDeviceMotion);
         setShakeEnabled(true);
+        // Auto-enable sound with shake (audio context already resumed from this tap)
+        setSound(true);
+        soundRef.current = true;
+        // Play a test sound so user knows it's working
+        snd.current.play(pkRef.current);
       }, [onDeviceMotion, ensureAudio]);
 
       const disableShake = useCallback(() => {
@@ -463,7 +471,12 @@
 
       const toggleSound=useCallback(()=>{
         ensureAudio();
-        setSound(s=>!s);
+        setSound(s=>{
+          const next = !s;
+          soundRef.current = next; // update ref immediately, don't wait for useEffect
+          if(next) snd.current.play(pkRef.current); // play test sound on enable
+          return next;
+        });
       },[ensureAudio]);
 
       useEffect(()=>()=>{
