@@ -25,6 +25,10 @@
       0% { transform: translateY(10px); opacity: 0.7; }
       100% { transform: translateY(0); opacity: 1; }
     }
+    @keyframes shakeFlash {
+      0% { border-color: #ff5050; }
+      100% { border-color: #333; }
+    }
     input[type="range"] {
       -webkit-appearance: none; appearance: none;
       height: 3px; background: #333; border-radius: 2px; outline: none; width: 100%;
@@ -46,6 +50,112 @@
     const { useState, useEffect, useRef, useCallback } = React;
     const h = React.createElement;
 
+    // Document fragments that get corrupted
+    const DOCUMENTS = [
+      [
+        "Dear Mr. Henderson,",
+        "",
+        "Thank you for your application dated March 3rd.",
+        "After careful review of your qualifications,",
+        "we are pleased to inform you that your",
+        "request has been approved pending verification",
+        "of the following documents:",
+        "",
+        "  1. Proof of residence (utility bill)",
+        "  2. Government-issued photo identification",
+        "  3. Employment verification letter",
+        "",
+        "Please submit these documents within 30 days",
+        "to avoid delays in processing your account.",
+        "",
+        "Sincerely,",
+        "Department of Administrative Services",
+        "Reference: #ADM-2026-48817",
+      ],
+      [
+        "INVOICE #INV-0042891",
+        "Date: 2026-03-18",
+        "Bill To: Meridian Holdings Ltd.",
+        "",
+        "Description              Qty    Price",
+        "----------------------------------------",
+        "Consultation (Sr.)        8h   $240.00",
+        "Systems Analysis          4h   $180.00",
+        "Implementation Support   12h   $160.00",
+        "Emergency Callout         2h   $320.00",
+        "----------------------------------------",
+        "Subtotal:                      $4,680.00",
+        "Tax (10%):                       $468.00",
+        "TOTAL DUE:                     $5,148.00",
+        "",
+        "Payment terms: Net 30",
+        "Overdue accounts subject to 1.5% monthly",
+      ],
+      [
+        "PATIENT RECORD - CONFIDENTIAL",
+        "ID: MRN-7742943",
+        "Date of Visit: 2026-03-14",
+        "",
+        "Chief Complaint: Persistent headache, 3 days",
+        "History: Patient reports onset following",
+        "prolonged screen exposure. No prior history",
+        "of migraine. Denies visual disturbance.",
+        "",
+        "Assessment:",
+        "  - Tension-type headache, episodic",
+        "  - Rule out cervicogenic component",
+        "",
+        "Plan:",
+        "  - Ibuprofen 400mg PRN, max 3x daily",
+        "  - Ergonomic workstation review",
+        "  - Follow-up in 2 weeks if no improvement",
+        "",
+        "Provider: Dr. A. Vasquez, MD",
+      ],
+      [
+        "LEASE AGREEMENT",
+        "Premises: Unit 4B, 127 Clarendon Street",
+        "Melbourne VIC 3000",
+        "",
+        "Landlord: Brightstone Properties Pty Ltd",
+        "Tenant: J. Nakamura",
+        "",
+        "Term: 12 months commencing 1 April 2026",
+        "Rent: $2,400.00 per calendar month",
+        "Bond: $4,800.00 (lodged with RTBA)",
+        "",
+        "The Tenant agrees to:",
+        "  (a) maintain the premises in good repair",
+        "  (b) not sublet without written consent",
+        "  (c) provide 60 days notice of vacating",
+        "",
+        "Signed this 18th day of March 2026",
+        "________________________  _______________",
+        "Landlord                  Tenant",
+      ],
+      [
+        "INTERNAL MEMO - DO NOT DISTRIBUTE",
+        "From: CEO Office",
+        "To: All Department Heads",
+        "Re: Q2 Restructuring",
+        "",
+        "Effective April 1, the following changes",
+        "will take effect across all divisions:",
+        "",
+        "  - Marketing budget reduced 22%",
+        "  - Engineering headcount freeze (90 days)",
+        "  - Sydney office closure (May 31)",
+        "  - All travel requires VP approval",
+        "",
+        "Please do not discuss these changes with",
+        "your teams until the all-hands on March 25.",
+        "HR will prepare transition packages for",
+        "affected employees by end of next week.",
+        "",
+        "This memo is classified INTERNAL ONLY.",
+      ],
+    ];
+
     const PS_FRAGMENTS = [
       "%!PS-Adobe-3.0 EPSF-3.0","%%BoundingBox: 0 0 612 792",
       "/Helvetica findfont 12 scalefont setfont","72 720 moveto (Hello World) show",
@@ -66,6 +176,7 @@
     const MOJIBAKE_CHARS = "\u00C3\u00A9\u00C3\u00A8\u00C3\u00BC\u00C3\u00B6\u00C3\u00A4\u00C3\u00B1\u00C2\u00B0\u00C2\u00A7\u00C2\u00A9\u00C2\u00AE\u00C3\u2020\u00C3\u0178\u00C2\u00AB\u00C2\u00BB\u00C3\u00A2\u00C3\u00AE\u00C3\u00B4\u00C3\u00BB\u00C2\u00A3\u00C2\u00A5";
     const SYMBOL_SOUP = "╔╗╚╝║═╬╣╠╦╩░▒▓█▄▀▐▌■□▪▫●○◆◇★☆▲△▼▽◀▶♠♣♥♦←→↑↓↔↕";
     const BINARY_CHARS = "⌂⌐¬½¼¡«»░▒▓│┤╡╢╖╕╣║╗╝╜╛┐└┴┬├─┼╞╟╚╔╩╦╠═╬╧╨╤╥╙╘╒╓╫╪┘┌";
+    const ALL_GLITCH = MOJIBAKE_CHARS + SYMBOL_SOUP + BINARY_CHARS;
 
     const CORRUPTION_PALETTES = {
       thermal: { bg:"#fdf6e3",text:"#2b1810",accent:"#8b4513",glitch:"#d2691e",highlight:"rgba(139,69,19,0.08)",paper:"#f5e6d0",name:"Thermal Receipt" },
@@ -74,11 +185,9 @@
       terminal: { bg:"#0a0e14",text:"#00ff41",accent:"#ff3366",glitch:"#00cc33",highlight:"rgba(0,255,65,0.05)",paper:"#0d1117",name:"Terminal Dump" },
     };
 
-    // Printer sound generator
     class PrinterSounds {
       constructor() { this.ctx = null; }
       init() { if (this.ctx) return; this.ctx = new (window.AudioContext || window.webkitAudioContext)(); }
-
       _osc(type, freq, freqEnd, dur, vol) {
         if (!this.ctx) return;
         const o = this.ctx.createOscillator(), g = this.ctx.createGain();
@@ -89,7 +198,6 @@
         o.connect(g); g.connect(this.ctx.destination);
         o.start(this.ctx.currentTime); o.stop(this.ctx.currentTime + dur);
       }
-
       dotImpact() { this._osc('square', 180, 60, 0.03, 0.12); }
       thermalStep() { this._osc('sawtooth', 440, 220, 0.035, 0.08); }
       laserFuser() {
@@ -104,7 +212,6 @@
         o.start(this.ctx.currentTime); o.stop(this.ctx.currentTime + 0.5);
       }
       paperFeed() { this._osc('sine', 80, 95, 0.2, 0.05); }
-
       play(type) {
         if (!this.ctx) return;
         switch(type) {
@@ -121,13 +228,42 @@
       return () => { s = (s * 1664525 + 1013904223) & 0xffffffff; return (s >>> 0) / 0xffffffff; };
     }
 
-    function genLine(rng, corruption) {
-      if (rng() > corruption) {
-        const src = ["READY","PCL XL error","Subsystem: KERNEL","Error: IllegalTag",
-          `Page ${Math.floor(rng()*99)+1} of ${Math.floor(rng()*200)+50}`," ",
-          `Job ${Math.floor(rng()*9999)}: ${rng()>0.5?"PRINTING":"QUEUED"}`];
-        return { text: src[Math.floor(rng()*src.length)], type: "normal" };
+    // Corrupt a readable string character by character based on corruption level
+    function corruptText(text, rng, corruption) {
+      if (corruption < 0.05) return { text, type: "document" };
+      let result = "";
+      let corrupted = false;
+      for (let i = 0; i < text.length; i++) {
+        if (rng() < corruption * 0.7) {
+          // Replace this character with glitch
+          const roll = rng();
+          if (roll < 0.4) {
+            result += ALL_GLITCH[Math.floor(rng() * ALL_GLITCH.length)];
+          } else if (roll < 0.6) {
+            result += MOJIBAKE_CHARS[Math.floor(rng() * MOJIBAKE_CHARS.length)];
+          } else if (roll < 0.8) {
+            // Shift the character
+            result += String.fromCharCode(text.charCodeAt(i) + Math.floor(rng() * 40) - 20);
+          } else {
+            // Double or skip
+            if (rng() < 0.5 && i > 0) result += result[result.length - 1];
+            else result += " ";
+          }
+          corrupted = true;
+        } else {
+          result += text[i];
+        }
       }
+      // At high corruption, sometimes inject a whole garbage fragment mid-line
+      if (corruption > 0.5 && rng() < corruption * 0.3) {
+        const pos = Math.floor(rng() * result.length);
+        const frag = PS_FRAGMENTS[Math.floor(rng() * PS_FRAGMENTS.length)].substring(0, Math.floor(rng() * 20) + 5);
+        result = result.substring(0, pos) + frag + result.substring(pos + frag.length);
+      }
+      return { text: result, type: corrupted ? "corrupted-doc" : "document" };
+    }
+
+    function genGarbageLine(rng) {
       const g = rng();
       if (g < 0.25) {
         const f = PS_FRAGMENTS[Math.floor(rng()*PS_FRAGMENTS.length)];
@@ -155,33 +291,102 @@
         for(let i=0;i<l;i++) t+=rng()<0.05?" ":c;
         return { text:t, type:"flood" };
       }
-      let t=""; const l=Math.floor(rng()*50)+15; const all=MOJIBAKE_CHARS+SYMBOL_SOUP+BINARY_CHARS;
-      for(let i=0;i<l;i++){if(rng()<0.15)t+=" ";else if(rng()<0.1)t+=String.fromCharCode(Math.floor(rng()*94)+33);else t+=all[Math.floor(rng()*all.length)];}
+      let t=""; const l=Math.floor(rng()*50)+15;
+      for(let i=0;i<l;i++){if(rng()<0.15)t+=" ";else if(rng()<0.1)t+=String.fromCharCode(Math.floor(rng()*94)+33);else t+=ALL_GLITCH[Math.floor(rng()*ALL_GLITCH.length)];}
       return { text:t, type:"chaos" };
     }
 
     function genPage(seed, corruption, count) {
-      const rng = seededRandom(seed); const lines = [];
-      for (let i=0;i<count;i++) lines.push(genLine(rng, corruption));
+      const rng = seededRandom(seed);
+      const lines = [];
+
+      // Pick a document based on seed
+      const doc = DOCUMENTS[Math.abs(seed) % DOCUMENTS.length];
+
+      for (let i = 0; i < count; i++) {
+        if (i < doc.length) {
+          // Document line: corrupt it based on corruption level
+          if (rng() < corruption * 0.4 && corruption > 0.3) {
+            // Replace entire line with garbage
+            lines.push(genGarbageLine(rng));
+          } else {
+            lines.push(corruptText(doc[i], rng, corruption));
+          }
+        } else {
+          // Past the document: mix garbage and status lines
+          if (rng() > corruption) {
+            const src = ["READY","PCL XL error","Subsystem: KERNEL","Error: IllegalTag",
+              `Page ${Math.floor(rng()*99)+1} of ${Math.floor(rng()*200)+50}`," ",
+              `Job ${Math.floor(rng()*9999)}: ${rng()>0.5?"PRINTING":"QUEUED"}`];
+            lines.push({ text: src[Math.floor(rng()*src.length)], type: "normal" });
+          } else {
+            lines.push(genGarbageLine(rng));
+          }
+        }
+      }
       return lines;
     }
 
     const typeStyles = {
-      normal:{opacity:0.6},postscript:{fontWeight:500},pcl:{opacity:0.85},
+      normal:{opacity:0.6},document:{opacity:1},
+      "corrupted-doc":{opacity:0.95},
+      postscript:{fontWeight:500},pcl:{opacity:0.85},
       mojibake:{fontWeight:700,letterSpacing:"0.5px"},symbols:{opacity:0.9},
       hex:{opacity:0.7,letterSpacing:"1px"},flood:{opacity:0.75},chaos:{fontWeight:600},
     };
 
     function PrinterLine({line,palette,animDelay,corruption}) {
       const s = typeStyles[line.type]||typeStyles.normal;
-      const col = ["postscript","mojibake","flood"].includes(line.type) ? palette.accent : ["pcl","hex"].includes(line.type) ? palette.glitch : palette.text;
+      const docTypes = ["document","corrupted-doc"];
+      const accentTypes = ["postscript","mojibake","flood"];
+      const glitchTypes = ["pcl","hex"];
+      const col = docTypes.includes(line.type) ? palette.text
+        : accentTypes.includes(line.type) ? palette.accent
+        : glitchTypes.includes(line.type) ? palette.glitch
+        : palette.text;
       return h('div',{style:{
         fontFamily:"'Courier New',monospace",fontSize:"12.5px",lineHeight:"16px",
         whiteSpace:"pre",overflow:"hidden",padding:"0 16px",color:col,
-        background:line.type!=="normal"&&corruption>0.3?palette.highlight:"transparent",
+        background: !docTypes.includes(line.type) && line.type!=="normal" && corruption>0.3 ? palette.highlight : "transparent",
         ...s, animation:`printLine 0.06s ease-out ${animDelay}s both`,
         borderLeft:(line.type==="mojibake"||line.type==="chaos")?`2px solid ${palette.accent}22`:"2px solid transparent",
       }},line.text);
+    }
+
+    // Shake detection
+    function useShake(onShake, threshold = 25) {
+      const last = useRef({ x: 0, y: 0, z: 0, time: 0 });
+
+      useEffect(() => {
+        if (!window.DeviceMotionEvent) return;
+
+        const handler = (e) => {
+          const a = e.accelerationIncludingGravity;
+          if (!a) return;
+          const now = Date.now();
+          if (now - last.current.time < 100) return; // debounce
+
+          const dx = Math.abs(a.x - last.current.x);
+          const dy = Math.abs(a.y - last.current.y);
+          const dz = Math.abs(a.z - last.current.z);
+          const magnitude = dx + dy + dz;
+
+          last.current = { x: a.x, y: a.y, z: a.z, time: now };
+
+          if (magnitude > threshold) {
+            onShake(Math.min(magnitude / 100, 0.15)); // scale shake to corruption bump
+          }
+        };
+
+        // iOS 13+ requires permission
+        if (typeof DeviceMotionEvent.requestPermission === 'function') {
+          // Will be triggered by user gesture (button click)
+        } else {
+          window.addEventListener('devicemotion', handler);
+        }
+
+        return () => window.removeEventListener('devicemotion', handler);
+      }, [onShake, threshold]);
     }
 
     function App() {
@@ -192,11 +397,47 @@
       const [feeding,setFeeding]=useState(false);
       const [printCount,setPrintCount]=useState(0);
       const [sound,setSound]=useState(false);
+      const [shakeEnabled,setShakeEnabled]=useState(false);
+      const [lastShake,setLastShake]=useState(0);
       const feedRef=useRef(null);
       const snd=useRef(new PrinterSounds());
 
       const palette=CORRUPTION_PALETTES[pk];
       const lines=genPage(seed,corruption,lineCount);
+
+      // Shake handler: bump corruption and trigger new page
+      const handleShake = useCallback((intensity) => {
+        if (!shakeEnabled) return;
+        setCorruption(c => Math.min(1, c + intensity));
+        setSeed(s => s + 1);
+        setPrintCount(c => c + 1);
+        setLastShake(Date.now());
+        if (sound) snd.current.play(pk);
+      }, [shakeEnabled, sound, pk]);
+
+      useShake(handleShake);
+
+      const enableShake = useCallback(async () => {
+        // iOS permission request
+        if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+          try {
+            const perm = await DeviceMotionEvent.requestPermission();
+            if (perm === 'granted') {
+              setShakeEnabled(true);
+              if (!snd.current.ctx) snd.current.init();
+              window.addEventListener('devicemotion', (e) => {
+                const a = e.accelerationIncludingGravity;
+                if (!a) return;
+                const mag = Math.abs(a.x) + Math.abs(a.y) + Math.abs(a.z);
+                if (mag > 35) handleShake(Math.min(mag / 100, 0.15));
+              });
+            }
+          } catch(e) { console.log('Motion permission denied'); }
+        } else {
+          setShakeEnabled(true);
+          if (!snd.current.ctx) snd.current.init();
+        }
+      }, [handleShake]);
 
       const feed=useCallback(()=>{
         setSeed(s=>s+1); setPrintCount(c=>c+1);
@@ -220,6 +461,7 @@
       useEffect(()=>()=>{if(feedRef.current)clearInterval(feedRef.current);},[]);
 
       const perfHoles = pk==="dotmatrix" ? `repeating-linear-gradient(0deg,transparent 0px,transparent 10px,${palette.text}15 10px,${palette.text}15 12px,transparent 12px,transparent 16px)` : null;
+      const shakeRecent = Date.now() - lastShake < 500;
 
       return h('div',{style:{minHeight:"100vh",background:"#1a1a1a",display:"flex",flexDirection:"column",alignItems:"center",padding:"24px 16px",fontFamily:"'IBM Plex Mono','SF Mono',monospace"}},
 
@@ -248,10 +490,11 @@
               )
             ),
           ),
-          h('div',{style:{display:"flex",alignItems:"flex-end",gap:"8px"}},
-            h('button',{onClick:singlePrint,style:{fontSize:"10px",padding:"7px 14px",border:"1px solid #555",borderRadius:"3px",background:"#333",color:"#ddd",cursor:"pointer",fontFamily:"inherit",letterSpacing:"1px"}},"↻ NEW PAGE"),
-            h('button',{onClick:feeding?stopFeed:startFeed,style:{fontSize:"10px",padding:"7px 14px",border:feeding?"1px solid #ff5050":"1px solid #555",borderRadius:"3px",background:feeding?"#3a1515":"#333",color:feeding?"#ff5050":"#ddd",cursor:"pointer",fontFamily:"inherit",letterSpacing:"1px",animation:feeding?"feedPulse 1.5s infinite":"none"}},feeding?"■ STOP":"▶ AUTO FEED"),
-            h('button',{onClick:()=>{if(!sound&&!snd.current.ctx)snd.current.init();setSound(!sound);},style:{fontSize:"10px",padding:"7px 14px",border:sound?"1px solid #6ee7b7":"1px solid #555",borderRadius:"3px",background:sound?"#1a2a22":"#333",color:sound?"#6ee7b7":"#999",cursor:"pointer",fontFamily:"inherit",letterSpacing:"1px"}},sound?"🔊 ON":"🔇 OFF"),
+          h('div',{style:{display:"flex",alignItems:"flex-end",gap:"6px",flexWrap:"wrap"}},
+            h('button',{onClick:singlePrint,style:{fontSize:"10px",padding:"7px 12px",border:"1px solid #555",borderRadius:"3px",background:"#333",color:"#ddd",cursor:"pointer",fontFamily:"inherit",letterSpacing:"1px"}},"↻ NEW"),
+            h('button',{onClick:feeding?stopFeed:startFeed,style:{fontSize:"10px",padding:"7px 12px",border:feeding?"1px solid #ff5050":"1px solid #555",borderRadius:"3px",background:feeding?"#3a1515":"#333",color:feeding?"#ff5050":"#ddd",cursor:"pointer",fontFamily:"inherit",letterSpacing:"1px",animation:feeding?"feedPulse 1.5s infinite":"none"}},feeding?"■ STOP":"▶ FEED"),
+            h('button',{onClick:()=>{if(!sound&&!snd.current.ctx)snd.current.init();setSound(!sound);},style:{fontSize:"10px",padding:"7px 12px",border:sound?"1px solid #6ee7b7":"1px solid #555",borderRadius:"3px",background:sound?"#1a2a22":"#333",color:sound?"#6ee7b7":"#999",cursor:"pointer",fontFamily:"inherit",letterSpacing:"1px"}},sound?"🔊":"🔇"),
+            h('button',{onClick:shakeEnabled?()=>setShakeEnabled(false):enableShake,style:{fontSize:"10px",padding:"7px 12px",border:shakeEnabled?(shakeRecent?"1px solid #ff5050":"1px solid #ffaa00"):"1px solid #555",borderRadius:"3px",background:shakeEnabled?"#2a2a1a":"#333",color:shakeEnabled?"#ffaa00":"#999",cursor:"pointer",fontFamily:"inherit",letterSpacing:"1px",animation:shakeRecent?"shakeFlash 0.5s ease-out":"none"}},shakeEnabled?"📳 SHAKE":"📳"),
           ),
         ),
 
@@ -264,24 +507,17 @@
         ),
 
         // Paper Output
-        h('div',{key:seed,style:{width:"100%",maxWidth:"680px",background:palette.bg,border:"1px solid #444",borderRadius:"0 0 2px 2px",padding:"12px 0",minHeight:"400px",boxShadow:"0 8px 32px rgba(0,0,0,0.4), inset 0 0 80px rgba(0,0,0,0.03)",animation:"paperScroll 0.3s ease-out",position:"relative",overflow:"hidden"}},
-
-          // Paper texture
+        h('div',{key:seed,style:{width:"100%",maxWidth:"680px",background:palette.bg,border:`1px solid ${shakeRecent?"#ff5050":"#444"}`,borderRadius:"0 0 2px 2px",padding:"12px 0",minHeight:"400px",boxShadow:`0 8px 32px rgba(0,0,0,0.4), inset 0 0 80px rgba(0,0,0,0.03)${shakeRecent?", 0 0 20px rgba(255,80,80,0.2)":""}`,animation:"paperScroll 0.3s ease-out",position:"relative",overflow:"hidden"}},
           h('div',{style:{position:"absolute",inset:0,background:`repeating-linear-gradient(0deg,transparent,transparent 15px,${palette.text}05 15.5px,transparent 16px)`,pointerEvents:"none"}}),
-
-          // Perforation holes (dot matrix)
           perfHoles && h('div',{style:{position:"absolute",left:"4px",top:0,bottom:0,width:"8px",background:perfHoles}}),
           perfHoles && h('div',{style:{position:"absolute",right:"4px",top:0,bottom:0,width:"8px",background:perfHoles}}),
-
-          // Lines
           ...lines.map((line,i)=>h(PrinterLine,{key:`${seed}-${i}`,line,palette,animDelay:i*0.02,corruption})),
-
-          // Tear edge
           h('div',{style:{position:"absolute",bottom:0,left:0,right:0,height:"6px",background:`linear-gradient(90deg,${palette.bg} 0%,transparent 2%,${palette.bg} 3%,transparent 5%,${palette.bg} 6%,transparent 8%,${palette.bg} 9.5%,transparent 11%,${palette.bg} 12%,transparent 14%,${palette.bg} 15%,transparent 17%,${palette.bg} 100%)`}}),
         ),
 
         // Footer
         h('div',{style:{marginTop:"16px",fontSize:"9px",color:"#555",letterSpacing:"2px",textAlign:"center"}},"PHOSPHOR × BITPIXI — ENCODING MISMATCH SERIES"),
+        shakeEnabled && h('div',{style:{marginTop:"8px",fontSize:"9px",color:"#ffaa0088",letterSpacing:"1px",textAlign:"center"}},"📳 SHAKE YOUR PHONE TO CORRUPT"),
       );
     }
 
