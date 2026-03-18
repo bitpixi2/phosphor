@@ -353,42 +353,6 @@
       }},line.text);
     }
 
-    // Shake detection
-    function useShake(onShake, threshold = 25) {
-      const last = useRef({ x: 0, y: 0, z: 0, time: 0 });
-
-      useEffect(() => {
-        if (!window.DeviceMotionEvent) return;
-
-        const handler = (e) => {
-          const a = e.accelerationIncludingGravity;
-          if (!a) return;
-          const now = Date.now();
-          if (now - last.current.time < 100) return; // debounce
-
-          const dx = Math.abs(a.x - last.current.x);
-          const dy = Math.abs(a.y - last.current.y);
-          const dz = Math.abs(a.z - last.current.z);
-          const magnitude = dx + dy + dz;
-
-          last.current = { x: a.x, y: a.y, z: a.z, time: now };
-
-          if (magnitude > threshold) {
-            onShake(Math.min(magnitude / 100, 0.15)); // scale shake to corruption bump
-          }
-        };
-
-        // iOS 13+ requires permission
-        if (typeof DeviceMotionEvent.requestPermission === 'function') {
-          // Will be triggered by user gesture (button click)
-        } else {
-          window.addEventListener('devicemotion', handler);
-        }
-
-        return () => window.removeEventListener('devicemotion', handler);
-      }, [onShake, threshold]);
-    }
-
     function App() {
       const [corruption,setCorruption]=useState(0.6);
       const [seed,setSeed]=useState(42);
@@ -401,64 +365,111 @@
       const [lastShake,setLastShake]=useState(0);
       const feedRef=useRef(null);
       const snd=useRef(new PrinterSounds());
+      const shakeRef=useRef(null); // stores devicemotion handler for cleanup
+      const lastAccel=useRef({x:0,y:0,z:0,time:0});
+
+      // Use refs to avoid stale closures in devicemotion handler
+      const soundRef=useRef(sound);
+      const pkRef=useRef(pk);
+      const shakeEnabledRef=useRef(shakeEnabled);
+      useEffect(()=>{soundRef.current=sound;},[sound]);
+      useEffect(()=>{pkRef.current=pk;},[pk]);
+      useEffect(()=>{shakeEnabledRef.current=shakeEnabled;},[shakeEnabled]);
 
       const palette=CORRUPTION_PALETTES[pk];
       const lines=genPage(seed,corruption,lineCount);
 
-      // Shake handler: bump corruption and trigger new page
-      const handleShake = useCallback((intensity) => {
-        if (!shakeEnabled) return;
-        setCorruption(c => Math.min(1, c + intensity));
-        setSeed(s => s + 1);
-        setPrintCount(c => c + 1);
-        setLastShake(Date.now());
-        if (sound) snd.current.play(pk);
-      }, [shakeEnabled, sound, pk]);
+      // Ensure AudioContext is initialized and resumed (Chrome mobile requirement)
+      const ensureAudio = useCallback(() => {
+        if (!snd.current.ctx) snd.current.init();
+        if (snd.current.ctx && snd.current.ctx.state === 'suspended') {
+          snd.current.ctx.resume();
+        }
+      }, []);
 
-      useShake(handleShake);
+      // Core shake handler using refs (no stale closures)
+      const onDeviceMotion = useCallback((e) => {
+        if (!shakeEnabledRef.current) return;
+        const a = e.accelerationIncludingGravity;
+        if (!a || a.x === null) return;
+        const now = Date.now();
+        const prev = lastAccel.current;
+        if (now - prev.time < 150) return; // debounce 150ms
+
+        const dx = Math.abs(a.x - prev.x);
+        const dy = Math.abs(a.y - prev.y);
+        const dz = Math.abs(a.z - prev.z);
+        const mag = dx + dy + dz;
+
+        lastAccel.current = {x:a.x, y:a.y, z:a.z, time:now};
+
+        if (mag > 15) { // lower threshold for sensitivity
+          const intensity = Math.min(mag / 80, 0.2);
+          setCorruption(c => Math.min(1, c + intensity));
+          setSeed(s => s + 1);
+          setPrintCount(c => c + 1);
+          setLastShake(Date.now());
+          if (soundRef.current) snd.current.play(pkRef.current);
+        }
+      }, []);
 
       const enableShake = useCallback(async () => {
-        // iOS permission request
+        // Init audio from user gesture (required by Chrome mobile)
+        ensureAudio();
+
+        // iOS 13+ permission request
         if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
           try {
             const perm = await DeviceMotionEvent.requestPermission();
-            if (perm === 'granted') {
-              setShakeEnabled(true);
-              if (!snd.current.ctx) snd.current.init();
-              window.addEventListener('devicemotion', (e) => {
-                const a = e.accelerationIncludingGravity;
-                if (!a) return;
-                const mag = Math.abs(a.x) + Math.abs(a.y) + Math.abs(a.z);
-                if (mag > 35) handleShake(Math.min(mag / 100, 0.15));
-              });
-            }
-          } catch(e) { console.log('Motion permission denied'); }
-        } else {
-          setShakeEnabled(true);
-          if (!snd.current.ctx) snd.current.init();
+            if (perm !== 'granted') { alert('Motion permission denied'); return; }
+          } catch(e) { alert('Could not request motion permission'); return; }
         }
-      }, [handleShake]);
+
+        // Remove old listener if exists
+        if (shakeRef.current) window.removeEventListener('devicemotion', shakeRef.current);
+
+        // Add listener
+        shakeRef.current = onDeviceMotion;
+        window.addEventListener('devicemotion', onDeviceMotion);
+        setShakeEnabled(true);
+      }, [onDeviceMotion, ensureAudio]);
+
+      const disableShake = useCallback(() => {
+        if (shakeRef.current) {
+          window.removeEventListener('devicemotion', shakeRef.current);
+          shakeRef.current = null;
+        }
+        setShakeEnabled(false);
+      }, []);
 
       const feed=useCallback(()=>{
         setSeed(s=>s+1); setPrintCount(c=>c+1);
-        if(sound) snd.current.play(pk);
-      },[sound,pk]);
+        if(soundRef.current) snd.current.play(pkRef.current);
+      },[]);
 
       const startFeed=useCallback(()=>{
-        if(!snd.current.ctx) snd.current.init();
+        ensureAudio();
         setFeeding(true); feed();
         feedRef.current=setInterval(feed,1800);
-      },[feed]);
+      },[feed, ensureAudio]);
 
       const stopFeed=useCallback(()=>{
         setFeeding(false); if(feedRef.current){clearInterval(feedRef.current);feedRef.current=null;}
       },[]);
 
       const singlePrint=useCallback(()=>{
-        if(!snd.current.ctx) snd.current.init(); feed();
-      },[feed]);
+        ensureAudio(); feed();
+      },[feed, ensureAudio]);
 
-      useEffect(()=>()=>{if(feedRef.current)clearInterval(feedRef.current);},[]);
+      const toggleSound=useCallback(()=>{
+        ensureAudio();
+        setSound(s=>!s);
+      },[ensureAudio]);
+
+      useEffect(()=>()=>{
+        if(feedRef.current)clearInterval(feedRef.current);
+        if(shakeRef.current)window.removeEventListener('devicemotion',shakeRef.current);
+      },[]);
 
       const perfHoles = pk==="dotmatrix" ? `repeating-linear-gradient(0deg,transparent 0px,transparent 10px,${palette.text}15 10px,${palette.text}15 12px,transparent 12px,transparent 16px)` : null;
       const shakeRecent = Date.now() - lastShake < 500;
@@ -493,8 +504,8 @@
           h('div',{style:{display:"flex",alignItems:"flex-end",gap:"6px",flexWrap:"wrap"}},
             h('button',{onClick:singlePrint,style:{fontSize:"10px",padding:"7px 12px",border:"1px solid #555",borderRadius:"3px",background:"#333",color:"#ddd",cursor:"pointer",fontFamily:"inherit",letterSpacing:"1px"}},"↻ NEW"),
             h('button',{onClick:feeding?stopFeed:startFeed,style:{fontSize:"10px",padding:"7px 12px",border:feeding?"1px solid #ff5050":"1px solid #555",borderRadius:"3px",background:feeding?"#3a1515":"#333",color:feeding?"#ff5050":"#ddd",cursor:"pointer",fontFamily:"inherit",letterSpacing:"1px",animation:feeding?"feedPulse 1.5s infinite":"none"}},feeding?"■ STOP":"▶ FEED"),
-            h('button',{onClick:()=>{if(!sound&&!snd.current.ctx)snd.current.init();setSound(!sound);},style:{fontSize:"10px",padding:"7px 12px",border:sound?"1px solid #6ee7b7":"1px solid #555",borderRadius:"3px",background:sound?"#1a2a22":"#333",color:sound?"#6ee7b7":"#999",cursor:"pointer",fontFamily:"inherit",letterSpacing:"1px"}},sound?"🔊":"🔇"),
-            h('button',{onClick:shakeEnabled?()=>setShakeEnabled(false):enableShake,style:{fontSize:"10px",padding:"7px 12px",border:shakeEnabled?(shakeRecent?"1px solid #ff5050":"1px solid #ffaa00"):"1px solid #555",borderRadius:"3px",background:shakeEnabled?"#2a2a1a":"#333",color:shakeEnabled?"#ffaa00":"#999",cursor:"pointer",fontFamily:"inherit",letterSpacing:"1px",animation:shakeRecent?"shakeFlash 0.5s ease-out":"none"}},shakeEnabled?"📳 SHAKE":"📳"),
+            h('button',{onClick:toggleSound,style:{fontSize:"10px",padding:"7px 12px",border:sound?"1px solid #6ee7b7":"1px solid #555",borderRadius:"3px",background:sound?"#1a2a22":"#333",color:sound?"#6ee7b7":"#999",cursor:"pointer",fontFamily:"inherit",letterSpacing:"1px"}},sound?"🔊":"🔇"),
+            h('button',{onClick:shakeEnabled?disableShake:enableShake,style:{fontSize:"10px",padding:"7px 12px",border:shakeEnabled?(shakeRecent?"1px solid #ff5050":"1px solid #ffaa00"):"1px solid #555",borderRadius:"3px",background:shakeEnabled?"#2a2a1a":"#333",color:shakeEnabled?"#ffaa00":"#999",cursor:"pointer",fontFamily:"inherit",letterSpacing:"1px",animation:shakeRecent?"shakeFlash 0.5s ease-out":"none"}},shakeEnabled?"📳 SHAKE":"📳"),
           ),
         ),
 
