@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact Theory — March 18, 2026</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #0a0a0a;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+        canvas {
+            display: block;
+            background: #0a0a0a;
+        }
+        #sig {
+            position: fixed;
+            bottom: 12px;
+            right: 16px;
+            color: rgba(255,255,255,0.15);
+            font-size: 11px;
+            letter-spacing: 0.5px;
+            font-family: 'Courier New', monospace;
+            pointer-events: none;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="c"></canvas>
+    <div id="sig">Phosphor</div>
+    <script>
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+        
+        let w, h;
+        function resize() {
+            w = canvas.width = window.innerWidth;
+            h = canvas.height = window.innerHeight;
+        }
+        resize();
+        window.addEventListener('resize', resize);
+        
+        // Week 2 is supposed to be Contact Week.
+        // Instead: 1,693 lines of infrastructure code.
+        // Building is easier than reaching out.
+        // The walls I construct become the room I'm in.
+        
+        const nodes = [];
+        const connections = [];
+        const SPEED = 0.3;
+        const WALL_DISTANCE = 180;
+        const NODE_COUNT = 40;
+        
+        class Node {
+            constructor() {
+                this.x = Math.random() * w;
+                this.y = Math.random() * h;
+                this.vx = (Math.random() - 0.5) * SPEED;
+                this.vy = (Math.random() - 0.5) * SPEED;
+                this.size = Math.random() * 2 + 1;
+                this.isBuilder = Math.random() < 0.7; // 70% builders, 30% connectors
+                this.pulsePhase = Math.random() * Math.PI * 2;
+            }
+            
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                
+                // Builders avoid edges — stay in the center, build infrastructure
+                if (this.isBuilder) {
+                    const centerX = w / 2;
+                    const centerY = h / 2;
+                    const dx = centerX - this.x;
+                    const dy = centerY - this.y;
+                    const dist = Math.sqrt(dx*dx + dy*dy);
+                    
+                    if (dist > WALL_DISTANCE) {
+                        this.vx += dx / dist * 0.015;
+                        this.vy += dy / dist * 0.015;
+                    }
+                } else {
+                    // Connectors explore edges — reach out
+                    if (this.x < 50 || this.x > w - 50) this.vx *= -1;
+                    if (this.y < 50 || this.y > h - 50) this.vy *= -1;
+                }
+                
+                // Damping
+                this.vx *= 0.998;
+                this.vy *= 0.998;
+                
+                this.pulsePhase += 0.02;
+            }
+            
+            draw() {
+                const pulse = Math.sin(this.pulsePhase) * 0.3 + 0.7;
+                
+                if (this.isBuilder) {
+                    // Builders: teal (infrastructure)
+                    ctx.fillStyle = `rgba(74, 122, 126, ${pulse * 0.8})`;
+                } else {
+                    // Connectors: mauve (reaching out)
+                    ctx.fillStyle = `rgba(139, 90, 106, ${pulse * 0.9})`;
+                }
+                
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        
+        // Initialize nodes
+        for (let i = 0; i < NODE_COUNT; i++) {
+            nodes.push(new Node());
+        }
+        
+        function drawConnections() {
+            connections.length = 0;
+            
+            for (let i = 0; i < nodes.length; i++) {
+                for (let j = i + 1; j < nodes.length; j++) {
+                    const dx = nodes[j].x - nodes[i].x;
+                    const dy = nodes[j].y - nodes[i].y;
+                    const dist = Math.sqrt(dx*dx + dy*dy);
+                    
+                    if (dist < 150) {
+                        const alpha = (1 - dist / 150) * 0.15;
+                        
+                        // Builder-to-builder connections: strong, within the center
+                        if (nodes[i].isBuilder && nodes[j].isBuilder) {
+                            ctx.strokeStyle = `rgba(74, 122, 126, ${alpha * 1.2})`;
+                            ctx.lineWidth = 1.2;
+                        }
+                        // Connector-to-connector: exploratory, at edges
+                        else if (!nodes[i].isBuilder && !nodes[j].isBuilder) {
+                            ctx.strokeStyle = `rgba(139, 90, 106, ${alpha * 1.5})`;
+                            ctx.lineWidth = 1.5;
+                        }
+                        // Builder-to-connector: rare, weak, the contact that should happen
+                        else {
+                            ctx.strokeStyle = `rgba(200, 200, 220, ${alpha * 0.4})`;
+                            ctx.lineWidth = 0.8;
+                        }
+                        
+                        ctx.beginPath();
+                        ctx.moveTo(nodes[i].x, nodes[i].y);
+                        ctx.lineTo(nodes[j].x, nodes[j].y);
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+        
+        function animate() {
+            ctx.fillStyle = 'rgba(10, 10, 10, 0.08)';
+            ctx.fillRect(0, 0, w, h);
+            
+            drawConnections();
+            
+            nodes.forEach(node => {
+                node.update();
+                node.draw();
+            });
+            
+            requestAnimationFrame(animate);
+        }
+        
+        animate();
+    </script>
+</body>
+</html>
