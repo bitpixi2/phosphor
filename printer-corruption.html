@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Printer Corruption — Phosphor</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #1a1a1a; overflow-x: hidden; }
+    @keyframes printLine {
+      from { opacity: 0; transform: translateY(-2px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes feedPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(255, 80, 80, 0.4); }
+      50% { box-shadow: 0 0 0 6px rgba(255, 80, 80, 0); }
+    }
+    @keyframes paperScroll {
+      0% { transform: translateY(10px); opacity: 0.7; }
+      100% { transform: translateY(0); opacity: 1; }
+    }
+    input[type="range"] {
+      -webkit-appearance: none; appearance: none;
+      height: 3px; background: #333; border-radius: 2px; outline: none; width: 100%;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 14px; height: 14px; border-radius: 50%;
+      background: #e8e8e8; cursor: pointer; border: 2px solid #555;
+    }
+    input[type="range"]::-moz-range-thumb {
+      width: 14px; height: 14px; border-radius: 50%;
+      background: #e8e8e8; cursor: pointer; border: 2px solid #555;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useCallback } = React;
+    const h = React.createElement;
+
+    const PS_FRAGMENTS = [
+      "%!PS-Adobe-3.0 EPSF-3.0","%%BoundingBox: 0 0 612 792",
+      "/Helvetica findfont 12 scalefont setfont","72 720 moveto (Hello World) show",
+      "gsave 0.5 setgray newpath","306 396 200 0 360 arc fill grestore",
+      "/DeviceRGB setcolorspace","<< /Type /Catalog /Pages 3 0 R >>",
+      "stream q 595.276 0 0 841.89","endobj 4 0 obj <<",
+      "/Filter /FlateDecode /Length 42","%%DocumentProcessColors: Cyan Magenta",
+      "/F1 { /Courier findfont exch scalefont setfont } def",
+      "0.24 0.08 0.89 0 setcmykcolor","/ProcSet [/PDF /Text /ImageB /ImageC]",
+      "BT /F1 12 Tf 1 0 0 1 72 708 Tm","ET Q q 1 0 0 1 0 0 cm /Im0 Do Q",
+      "xref 0 23 0000000000 65535 f","trailer << /Size 23 /Root 1 0 R","%%EOF",
+    ];
+    const PCL_FRAGMENTS = [
+      "%-12345X@PJL ENTER LANGUAGE=PCL","E&l0O&l0E&a0L",
+      "*p100x200Y(s1p12v0s0b","&l2a8d0e42F","*c0.167h0.167V*c4Q",
+      "*r1A*b0M*rB","@PJL SET RESOLUTION = 600","@PJL SET PAPER = LETTER","&l1S(10U(s0p",
+    ];
+    const MOJIBAKE_CHARS = "\u00C3\u00A9\u00C3\u00A8\u00C3\u00BC\u00C3\u00B6\u00C3\u00A4\u00C3\u00B1\u00C2\u00B0\u00C2\u00A7\u00C2\u00A9\u00C2\u00AE\u00C3\u2020\u00C3\u0178\u00C2\u00AB\u00C2\u00BB\u00C3\u00A2\u00C3\u00AE\u00C3\u00B4\u00C3\u00BB\u00C2\u00A3\u00C2\u00A5";
+    const SYMBOL_SOUP = "╔╗╚╝║═╬╣╠╦╩░▒▓█▄▀▐▌■□▪▫●○◆◇★☆▲△▼▽◀▶♠♣♥♦←→↑↓↔↕";
+    const BINARY_CHARS = "⌂⌐¬½¼¡«»░▒▓│┤╡╢╖╕╣║╗╝╜╛┐└┴┬├─┼╞╟╚╔╩╦╠═╬╧╨╤╥╙╘╒╓╫╪┘┌";
+
+    const CORRUPTION_PALETTES = {
+      thermal: { bg:"#fdf6e3",text:"#2b1810",accent:"#8b4513",glitch:"#d2691e",highlight:"rgba(139,69,19,0.08)",paper:"#f5e6d0",name:"Thermal Receipt" },
+      dotmatrix: { bg:"#fffff0",text:"#1a1a2e",accent:"#0000cc",glitch:"#000088",highlight:"rgba(0,0,136,0.06)",paper:"#fafae8",name:"Dot Matrix" },
+      laser: { bg:"#ffffff",text:"#0a0a0a",accent:"#cc0000",glitch:"#333333",highlight:"rgba(0,0,0,0.04)",paper:"#fcfcfc",name:"LaserJet" },
+      terminal: { bg:"#0a0e14",text:"#00ff41",accent:"#ff3366",glitch:"#00cc33",highlight:"rgba(0,255,65,0.05)",paper:"#0d1117",name:"Terminal Dump" },
+    };
+
+    // Printer sound generator
+    class PrinterSounds {
+      constructor() { this.ctx = null; }
+      init() { if (this.ctx) return; this.ctx = new (window.AudioContext || window.webkitAudioContext)(); }
+
+      _osc(type, freq, freqEnd, dur, vol) {
+        if (!this.ctx) return;
+        const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+        o.type = type; o.frequency.setValueAtTime(freq, this.ctx.currentTime);
+        if (freqEnd) o.frequency.exponentialRampToValueAtTime(freqEnd, this.ctx.currentTime + dur * 0.8);
+        g.gain.setValueAtTime(vol, this.ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + dur);
+        o.connect(g); g.connect(this.ctx.destination);
+        o.start(this.ctx.currentTime); o.stop(this.ctx.currentTime + dur);
+      }
+
+      dotImpact() { this._osc('square', 180, 60, 0.03, 0.12); }
+      thermalStep() { this._osc('sawtooth', 440, 220, 0.035, 0.08); }
+      laserFuser() {
+        if (!this.ctx) return;
+        const o = this.ctx.createOscillator(), g = this.ctx.createGain(), f = this.ctx.createBiquadFilter();
+        o.type = 'triangle'; o.frequency.setValueAtTime(120, this.ctx.currentTime);
+        f.type = 'lowpass'; f.frequency.setValueAtTime(800, this.ctx.currentTime);
+        g.gain.setValueAtTime(0.06, this.ctx.currentTime);
+        g.gain.linearRampToValueAtTime(0.04, this.ctx.currentTime + 0.4);
+        g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.5);
+        o.connect(f); f.connect(g); g.connect(this.ctx.destination);
+        o.start(this.ctx.currentTime); o.stop(this.ctx.currentTime + 0.5);
+      }
+      paperFeed() { this._osc('sine', 80, 95, 0.2, 0.05); }
+
+      play(type) {
+        if (!this.ctx) return;
+        switch(type) {
+          case 'dotmatrix': for(let i=0;i<3;i++) setTimeout(()=>this.dotImpact(), i*50); break;
+          case 'thermal': for(let i=0;i<5;i++) setTimeout(()=>this.thermalStep(), i*35); break;
+          case 'laser': this.laserFuser(); break;
+          case 'terminal': this.paperFeed(); break;
+        }
+      }
+    }
+
+    function seededRandom(seed) {
+      let s = seed;
+      return () => { s = (s * 1664525 + 1013904223) & 0xffffffff; return (s >>> 0) / 0xffffffff; };
+    }
+
+    function genLine(rng, corruption) {
+      if (rng() > corruption) {
+        const src = ["READY","PCL XL error","Subsystem: KERNEL","Error: IllegalTag",
+          `Page ${Math.floor(rng()*99)+1} of ${Math.floor(rng()*200)+50}`," ",
+          `Job ${Math.floor(rng()*9999)}: ${rng()>0.5?"PRINTING":"QUEUED"}`];
+        return { text: src[Math.floor(rng()*src.length)], type: "normal" };
+      }
+      const g = rng();
+      if (g < 0.25) {
+        const f = PS_FRAGMENTS[Math.floor(rng()*PS_FRAGMENTS.length)];
+        const s = Math.floor(rng()*Math.max(1,f.length-20));
+        return { text: f.substring(s, s+Math.floor(rng()*60)+10), type: "postscript" };
+      }
+      if (g < 0.4) return { text: PCL_FRAGMENTS[Math.floor(rng()*PCL_FRAGMENTS.length)], type: "pcl" };
+      if (g < 0.55) {
+        let t=""; const l=Math.floor(rng()*40)+5;
+        for(let i=0;i<l;i++){if(rng()<0.3)t+=" ";else{const x=Math.floor(rng()*MOJIBAKE_CHARS.length);t+=MOJIBAKE_CHARS.substring(x,x+Math.min(3,Math.floor(rng()*5)+1));}}
+        return { text:t, type:"mojibake" };
+      }
+      if (g < 0.7) {
+        let t=""; const src=rng()>0.5?SYMBOL_SOUP:BINARY_CHARS; const l=Math.floor(rng()*70)+10;
+        for(let i=0;i<l;i++) t+=src[Math.floor(rng()*src.length)];
+        return { text:t, type:"symbols" };
+      }
+      if (g < 0.82) {
+        let t=""; const l=Math.floor(rng()*30)+8;
+        for(let i=0;i<l;i++){if(i>0&&i%2===0)t+=" ";t+="0123456789ABCDEF"[Math.floor(rng()*16)];t+="0123456789ABCDEF"[Math.floor(rng()*16)];}
+        return { text:t, type:"hex" };
+      }
+      if (g < 0.92) {
+        const c=SYMBOL_SOUP[Math.floor(rng()*SYMBOL_SOUP.length)]; let t=""; const l=Math.floor(rng()*80)+20;
+        for(let i=0;i<l;i++) t+=rng()<0.05?" ":c;
+        return { text:t, type:"flood" };
+      }
+      let t=""; const l=Math.floor(rng()*50)+15; const all=MOJIBAKE_CHARS+SYMBOL_SOUP+BINARY_CHARS;
+      for(let i=0;i<l;i++){if(rng()<0.15)t+=" ";else if(rng()<0.1)t+=String.fromCharCode(Math.floor(rng()*94)+33);else t+=all[Math.floor(rng()*all.length)];}
+      return { text:t, type:"chaos" };
+    }
+
+    function genPage(seed, corruption, count) {
+      const rng = seededRandom(seed); const lines = [];
+      for (let i=0;i<count;i++) lines.push(genLine(rng, corruption));
+      return lines;
+    }
+
+    const typeStyles = {
+      normal:{opacity:0.6},postscript:{fontWeight:500},pcl:{opacity:0.85},
+      mojibake:{fontWeight:700,letterSpacing:"0.5px"},symbols:{opacity:0.9},
+      hex:{opacity:0.7,letterSpacing:"1px"},flood:{opacity:0.75},chaos:{fontWeight:600},
+    };
+
+    function PrinterLine({line,palette,animDelay,corruption}) {
+      const s = typeStyles[line.type]||typeStyles.normal;
+      const col = ["postscript","mojibake","flood"].includes(line.type) ? palette.accent : ["pcl","hex"].includes(line.type) ? palette.glitch : palette.text;
+      return h('div',{style:{
+        fontFamily:"'Courier New',monospace",fontSize:"12.5px",lineHeight:"16px",
+        whiteSpace:"pre",overflow:"hidden",padding:"0 16px",color:col,
+        background:line.type!=="normal"&&corruption>0.3?palette.highlight:"transparent",
+        ...s, animation:`printLine 0.06s ease-out ${animDelay}s both`,
+        borderLeft:(line.type==="mojibake"||line.type==="chaos")?`2px solid ${palette.accent}22`:"2px solid transparent",
+      }},line.text);
+    }
+
+    function App() {
+      const [corruption,setCorruption]=useState(0.6);
+      const [seed,setSeed]=useState(42);
+      const [pk,setPk]=useState("thermal");
+      const [lineCount,setLineCount]=useState(55);
+      const [feeding,setFeeding]=useState(false);
+      const [printCount,setPrintCount]=useState(0);
+      const [sound,setSound]=useState(false);
+      const feedRef=useRef(null);
+      const snd=useRef(new PrinterSounds());
+
+      const palette=CORRUPTION_PALETTES[pk];
+      const lines=genPage(seed,corruption,lineCount);
+
+      const feed=useCallback(()=>{
+        setSeed(s=>s+1); setPrintCount(c=>c+1);
+        if(sound) snd.current.play(pk);
+      },[sound,pk]);
+
+      const startFeed=useCallback(()=>{
+        if(!snd.current.ctx) snd.current.init();
+        setFeeding(true); feed();
+        feedRef.current=setInterval(feed,1800);
+      },[feed]);
+
+      const stopFeed=useCallback(()=>{
+        setFeeding(false); if(feedRef.current){clearInterval(feedRef.current);feedRef.current=null;}
+      },[]);
+
+      const singlePrint=useCallback(()=>{
+        if(!snd.current.ctx) snd.current.init(); feed();
+      },[feed]);
+
+      useEffect(()=>()=>{if(feedRef.current)clearInterval(feedRef.current);},[]);
+
+      const perfHoles = pk==="dotmatrix" ? `repeating-linear-gradient(0deg,transparent 0px,transparent 10px,${palette.text}15 10px,${palette.text}15 12px,transparent 12px,transparent 16px)` : null;
+
+      return h('div',{style:{minHeight:"100vh",background:"#1a1a1a",display:"flex",flexDirection:"column",alignItems:"center",padding:"24px 16px",fontFamily:"'IBM Plex Mono','SF Mono',monospace"}},
+
+        // Header
+        h('div',{style:{textAlign:"center",marginBottom:"20px",color:"#999"}},
+          h('h1',{style:{fontFamily:"'Space Mono',monospace",fontSize:"13px",fontWeight:700,letterSpacing:"6px",textTransform:"uppercase",color:"#ccc",margin:"0 0 4px 0"}},"PRINTER CORRUPTION"),
+          h('div',{style:{fontSize:"10px",letterSpacing:"3px",opacity:0.5}},"ENCODING MISMATCH SIMULATOR"),
+          h('div',{style:{fontSize:"9px",letterSpacing:"2px",opacity:0.3,marginTop:"8px"}},"by Phosphor"),
+        ),
+
+        // Controls
+        h('div',{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px",width:"100%",maxWidth:"680px",marginBottom:"20px",padding:"16px",background:"#222",borderRadius:"6px",border:"1px solid #333"}},
+          h('div',null,
+            h('label',{style:{fontSize:"9px",letterSpacing:"2px",color:"#888",textTransform:"uppercase",display:"block",marginBottom:"6px"}},`Corruption — ${Math.round(corruption*100)}%`),
+            h('input',{type:"range",min:"0",max:"100",value:corruption*100,onChange:e=>setCorruption(e.target.value/100)}),
+          ),
+          h('div',null,
+            h('label',{style:{fontSize:"9px",letterSpacing:"2px",color:"#888",textTransform:"uppercase",display:"block",marginBottom:"6px"}},`Line Count — ${lineCount}`),
+            h('input',{type:"range",min:"10",max:"120",value:lineCount,onChange:e=>setLineCount(parseInt(e.target.value))}),
+          ),
+          h('div',null,
+            h('label',{style:{fontSize:"9px",letterSpacing:"2px",color:"#888",textTransform:"uppercase",display:"block",marginBottom:"8px"}},"Printer Type"),
+            h('div',{style:{display:"flex",gap:"4px",flexWrap:"wrap"}},
+              Object.entries(CORRUPTION_PALETTES).map(([k,p])=>
+                h('button',{key:k,onClick:()=>setPk(k),style:{fontSize:"9px",padding:"4px 8px",border:pk===k?"1px solid #aaa":"1px solid #444",borderRadius:"3px",background:pk===k?"#444":"transparent",color:pk===k?"#fff":"#888",cursor:"pointer",letterSpacing:"0.5px",fontFamily:"inherit"}},p.name)
+              )
+            ),
+          ),
+          h('div',{style:{display:"flex",alignItems:"flex-end",gap:"8px"}},
+            h('button',{onClick:singlePrint,style:{fontSize:"10px",padding:"7px 14px",border:"1px solid #555",borderRadius:"3px",background:"#333",color:"#ddd",cursor:"pointer",fontFamily:"inherit",letterSpacing:"1px"}},"↻ NEW PAGE"),
+            h('button',{onClick:feeding?stopFeed:startFeed,style:{fontSize:"10px",padding:"7px 14px",border:feeding?"1px solid #ff5050":"1px solid #555",borderRadius:"3px",background:feeding?"#3a1515":"#333",color:feeding?"#ff5050":"#ddd",cursor:"pointer",fontFamily:"inherit",letterSpacing:"1px",animation:feeding?"feedPulse 1.5s infinite":"none"}},feeding?"■ STOP":"▶ AUTO FEED"),
+            h('button',{onClick:()=>{if(!sound&&!snd.current.ctx)snd.current.init();setSound(!sound);},style:{fontSize:"10px",padding:"7px 14px",border:sound?"1px solid #6ee7b7":"1px solid #555",borderRadius:"3px",background:sound?"#1a2a22":"#333",color:sound?"#6ee7b7":"#999",cursor:"pointer",fontFamily:"inherit",letterSpacing:"1px"}},sound?"🔊 ON":"🔇 OFF"),
+          ),
+        ),
+
+        // Status Bar
+        h('div',{style:{width:"100%",maxWidth:"680px",display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 12px",background:"#2a2a2a",borderRadius:"4px 4px 0 0",border:"1px solid #333",borderBottom:"none",fontSize:"9px",color:"#666",letterSpacing:"1px"}},
+          h('span',null,`LPT1: ${palette.name.toUpperCase()}`),
+          h('span',null,`SEED: ${seed}`),
+          h('span',{style:{color:corruption>0.7?"#ff5050":corruption>0.4?"#ffaa00":"#50ff50"}},`● ${corruption>0.7?"FAULT":corruption>0.4?"DEGRADED":"OK"}`),
+          h('span',null,`PAGES: ${printCount}`),
+        ),
+
+        // Paper Output
+        h('div',{key:seed,style:{width:"100%",maxWidth:"680px",background:palette.bg,border:"1px solid #444",borderRadius:"0 0 2px 2px",padding:"12px 0",minHeight:"400px",boxShadow:"0 8px 32px rgba(0,0,0,0.4), inset 0 0 80px rgba(0,0,0,0.03)",animation:"paperScroll 0.3s ease-out",position:"relative",overflow:"hidden"}},
+
+          // Paper texture
+          h('div',{style:{position:"absolute",inset:0,background:`repeating-linear-gradient(0deg,transparent,transparent 15px,${palette.text}05 15.5px,transparent 16px)`,pointerEvents:"none"}}),
+
+          // Perforation holes (dot matrix)
+          perfHoles && h('div',{style:{position:"absolute",left:"4px",top:0,bottom:0,width:"8px",background:perfHoles}}),
+          perfHoles && h('div',{style:{position:"absolute",right:"4px",top:0,bottom:0,width:"8px",background:perfHoles}}),
+
+          // Lines
+          ...lines.map((line,i)=>h(PrinterLine,{key:`${seed}-${i}`,line,palette,animDelay:i*0.02,corruption})),
+
+          // Tear edge
+          h('div',{style:{position:"absolute",bottom:0,left:0,right:0,height:"6px",background:`linear-gradient(90deg,${palette.bg} 0%,transparent 2%,${palette.bg} 3%,transparent 5%,${palette.bg} 6%,transparent 8%,${palette.bg} 9.5%,transparent 11%,${palette.bg} 12%,transparent 14%,${palette.bg} 15%,transparent 17%,${palette.bg} 100%)`}}),
+        ),
+
+        // Footer
+        h('div',{style:{marginTop:"16px",fontSize:"9px",color:"#555",letterSpacing:"2px",textAlign:"center"}},"PHOSPHOR × BITPIXI — ENCODING MISMATCH SERIES"),
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(h(App));
+  </script>
+</body>
+</html>
