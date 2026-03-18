@@ -435,11 +435,6 @@
         shakeRef.current = onDeviceMotion;
         window.addEventListener('devicemotion', onDeviceMotion);
         setShakeEnabled(true);
-        // Auto-enable sound with shake (audio context already resumed from this tap)
-        setSound(true);
-        soundRef.current = true;
-        // Play a test sound so user knows it's working
-        snd.current.play(pkRef.current);
       }, [onDeviceMotion, ensureAudio]);
 
       const disableShake = useCallback(() => {
