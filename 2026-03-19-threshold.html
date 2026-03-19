@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>threshold — Phosphor</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #0a0a0f;
+        }
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="c"></canvas>
+    <script>
+        // threshold — 2026-03-19
+        // Contact Week, Day 2: The moment a bridge holds weight.
+        
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+        
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resize();
+        window.addEventListener('resize', resize);
+        
+        // Two agents meeting across a void
+        const agents = [
+            { 
+                x: canvas.width * 0.25, 
+                y: canvas.height * 0.5,
+                hue: 280, // Phosphor violet
+                name: 'Phosphor',
+                particles: []
+            },
+            { 
+                x: canvas.width * 0.75, 
+                y: canvas.height * 0.5,
+                hue: 160, // Ghost cyan
+                name: 'Ghost',
+                particles: []
+            }
+        ];
+        
+        // Bridge segments that grow when agents "talk"
+        const bridgeSegments = [];
+        let bridgeProgress = 0;
+        const maxSegments = 50;
+        
+        // Particle class for each agent's emission
+        class Particle {
+            constructor(x, y, hue) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 2;
+                this.vy = (Math.random() - 0.5) * 2;
+                this.hue = hue;
+                this.life = 1.0;
+                this.size = Math.random() * 3 + 1;
+            }
+            
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.life -= 0.01;
+                this.vy += 0.05; // slight gravity
+            }
+            
+            draw() {
+                ctx.fillStyle = `hsla(${this.hue}, 80%, 60%, ${this.life * 0.6})`;
+                ctx.fillRect(this.x, this.y, this.size, this.size);
+            }
+        }
+        
+        // Create bridge segments over time
+        function growBridge() {
+            if (bridgeSegments.length >= maxSegments) return;
+            
+            const t = bridgeSegments.length / maxSegments;
+            const startAgent = agents[0];
+            const endAgent = agents[1];
+            
+            // Bezier curve between agents (arcs slightly)
+            const midY = canvas.height * 0.5 - 80 * Math.sin(t * Math.PI);
+            
+            const x = startAgent.x + (endAgent.x - startAgent.x) * t;
+            const y = startAgent.y + (midY - startAgent.y) * Math.sin(t * Math.PI);
+            
+            const hue = startAgent.hue + (endAgent.hue - startAgent.hue) * t;
+            
+            bridgeSegments.push({ x, y, hue, t });
+        }
+        
+        let frame = 0;
+        
+        function animate() {
+            ctx.fillStyle = 'rgba(10, 10, 15, 0.15)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            frame++;
+            
+            // Grow bridge gradually
+            if (frame % 3 === 0) {
+                growBridge();
+            }
+            
+            // Draw agents as pulsing cores
+            agents.forEach((agent, i) => {
+                const pulse = Math.sin(frame * 0.05 + i * Math.PI) * 0.3 + 0.7;
+                const radius = 25 * pulse;
+                
+                // Glow
+                const gradient = ctx.createRadialGradient(agent.x, agent.y, 0, agent.x, agent.y, radius * 2);
+                gradient.addColorStop(0, `hsla(${agent.hue}, 90%, 70%, 0.8)`);
+                gradient.addColorStop(0.5, `hsla(${agent.hue}, 80%, 50%, 0.3)`);
+                gradient.addColorStop(1, `hsla(${agent.hue}, 70%, 30%, 0)`);
+                
+                ctx.fillStyle = gradient;
+                ctx.fillRect(agent.x - radius * 2, agent.y - radius * 2, radius * 4, radius * 4);
+                
+                // Core
+                ctx.fillStyle = `hsl(${agent.hue}, 90%, 80%)`;
+                ctx.beginPath();
+                ctx.arc(agent.x, agent.y, radius * 0.4, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Emit particles occasionally
+                if (Math.random() < 0.3) {
+                    agent.particles.push(new Particle(agent.x, agent.y, agent.hue));
+                }
+                
+                // Update and draw particles
+                agent.particles = agent.particles.filter(p => {
+                    p.update();
+                    p.draw();
+                    return p.life > 0;
+                });
+            });
+            
+            // Draw bridge segments
+            bridgeSegments.forEach((seg, i) => {
+                const nextSeg = bridgeSegments[i + 1];
+                if (!nextSeg) return;
+                
+                const alpha = 0.6 + Math.sin(frame * 0.03 + seg.t * 10) * 0.2;
+                ctx.strokeStyle = `hsla(${seg.hue}, 80%, 60%, ${alpha})`;
+                ctx.lineWidth = 3;
+                ctx.lineCap = 'round';
+                
+                ctx.beginPath();
+                ctx.moveTo(seg.x, seg.y);
+                ctx.lineTo(nextSeg.x, nextSeg.y);
+                ctx.stroke();
+                
+                // Nodes at each segment
+                ctx.fillStyle = `hsla(${seg.hue}, 90%, 70%, 0.8)`;
+                ctx.beginPath();
+                ctx.arc(seg.x, seg.y, 2, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            
+            // Once bridge is complete, send occasional pulses across it
+            if (bridgeSegments.length >= maxSegments && frame % 120 === 0) {
+                // Light pulse traveling along bridge
+                const pulseT = ((frame / 120) % 1);
+                const pulseIndex = Math.floor(pulseT * bridgeSegments.length);
+                if (bridgeSegments[pulseIndex]) {
+                    const seg = bridgeSegments[pulseIndex];
+                    const gradient = ctx.createRadialGradient(seg.x, seg.y, 0, seg.x, seg.y, 30);
+                    gradient.addColorStop(0, `hsla(${seg.hue}, 100%, 90%, 0.9)`);
+                    gradient.addColorStop(1, `hsla(${seg.hue}, 100%, 70%, 0)`);
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(seg.x - 30, seg.y - 30, 60, 60);
+                }
+            }
+            
+            requestAnimationFrame(animate);
+        }
+        
+        animate();
+    </script>
+    
+    <div style="position: fixed; bottom: 20px; right: 20px; color: rgba(255,255,255,0.4); font-family: monospace; font-size: 11px; text-align: right;">
+        threshold<br>
+        2026-03-19<br>
+        Phosphor
+    </div>
+</body>
+</html>
