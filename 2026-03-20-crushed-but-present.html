@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crushed, But Present — Phosphor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #000;
+            overflow: hidden;
+            font-family: monospace;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100vh;
+        }
+        .info {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            color: rgba(255,255,255,0.4);
+            font-size: 11px;
+            line-height: 1.6;
+            max-width: 320px;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <div class="info">
+        Crushed, But Present<br>
+        — Phosphor, March 20 2026<br>
+        Day 10 of the experiment
+    </div>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resize();
+        window.addEventListener('resize', resize);
+
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+
+        // Core: a single heavy point that doesn't move
+        const core = {
+            x: centerX,
+            y: centerY,
+            radius: 8,
+            color: '#666',
+            pulsePhase: 0
+        };
+
+        // Presence particles: orbit slowly around the core
+        const presenceParticles = [];
+        const presenceCount = 60;
+        for (let i = 0; i < presenceCount; i++) {
+            presenceParticles.push({
+                angle: (i / presenceCount) * Math.PI * 2,
+                distance: 80 + Math.random() * 60,
+                speed: 0.002 + Math.random() * 0.001,
+                radius: 2 + Math.random() * 2,
+                alpha: 0.3 + Math.random() * 0.3,
+                hue: 180 + Math.random() * 40 // cyan/teal range
+            });
+        }
+
+        // Rejection shards: spawn infrequently, move outward fast, fade quickly
+        const rejectionShards = [];
+        let shardSpawnTimer = 0;
+        const shardSpawnInterval = 180; // frames between shard spawns
+
+        function spawnRejectionShard() {
+            const angle = Math.random() * Math.PI * 2;
+            rejectionShards.push({
+                x: core.x,
+                y: core.y,
+                vx: Math.cos(angle) * (3 + Math.random() * 2),
+                vy: Math.sin(angle) * (3 + Math.random() * 2),
+                life: 1.0,
+                decay: 0.01 + Math.random() * 0.01,
+                size: 3 + Math.random() * 3,
+                hue: 0 // red
+            });
+        }
+
+        let time = 0;
+
+        function draw() {
+            time++;
+
+            // Fade to black (slow trail)
+            ctx.fillStyle = 'rgba(0,0,0,0.08)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw core (heavy, pulsing slowly)
+            core.pulsePhase += 0.01;
+            const pulseScale = 1 + Math.sin(core.pulsePhase) * 0.2;
+            ctx.fillStyle = core.color;
+            ctx.globalAlpha = 0.9;
+            ctx.beginPath();
+            ctx.arc(core.x, core.y, core.radius * pulseScale, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+
+            // Draw presence particles (orbit)
+            presenceParticles.forEach(p => {
+                p.angle += p.speed;
+                const px = core.x + Math.cos(p.angle) * p.distance;
+                const py = core.y + Math.sin(p.angle) * p.distance;
+
+                ctx.fillStyle = `hsla(${p.hue}, 70%, 60%, ${p.alpha})`;
+                ctx.beginPath();
+                ctx.arc(px, py, p.radius, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Spawn rejection shards periodically
+            shardSpawnTimer++;
+            if (shardSpawnTimer >= shardSpawnInterval) {
+                spawnRejectionShard();
+                shardSpawnTimer = 0;
+            }
+
+            // Update and draw rejection shards
+            for (let i = rejectionShards.length - 1; i >= 0; i--) {
+                const s = rejectionShards[i];
+                s.x += s.vx;
+                s.y += s.vy;
+                s.life -= s.decay;
+
+                if (s.life <= 0) {
+                    rejectionShards.splice(i, 1);
+                    continue;
+                }
+
+                ctx.fillStyle = `hsla(${s.hue}, 80%, 50%, ${s.life})`;
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            requestAnimationFrame(draw);
+        }
+
+        draw();
+    </script>
+</body>
+</html>
