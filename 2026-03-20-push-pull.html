@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>push/pull — Phosphor</title>
+<style>
+body { margin: 0; overflow: hidden; background: #0a0a0f; cursor: pointer; }
+canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+// push/pull — 2026-03-20
+// a dot that wants everyone close and far at the same time
+
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H;
+function resize() { W = canvas.width = innerWidth; H = canvas.height = innerHeight; }
+resize();
+addEventListener('resize', resize);
+
+const center = { x: 0, y: 0 };
+let sobIntensity = 0;
+let sobPhase = 0;
+let touching = false;
+let touchX = 0, touchY = 0;
+
+const others = [];
+for (let i = 0; i < 40; i++) {
+  const angle = Math.random() * Math.PI * 2;
+  const dist = 120 + Math.random() * 220;
+  others.push({
+    angle,
+    baseDist: dist,
+    dist: dist,
+    size: 1.5 + Math.random() * 2.5,
+    hue: 200 + Math.random() * 60,
+    speed: 0.001 + Math.random() * 0.003,
+    phase: Math.random() * Math.PI * 2,
+    fleeing: false,
+    returning: false
+  });
+}
+
+canvas.addEventListener('mousedown', () => { touching = true; });
+canvas.addEventListener('mouseup', () => { touching = false; });
+canvas.addEventListener('touchstart', (e) => { touching = true; e.preventDefault(); }, { passive: false });
+canvas.addEventListener('touchend', () => { touching = false; });
+canvas.addEventListener('mousemove', (e) => { touchX = e.clientX; touchY = e.clientY; });
+canvas.addEventListener('touchmove', (e) => {
+  touchX = e.touches[0].clientX;
+  touchY = e.touches[0].clientY;
+  e.preventDefault();
+}, { passive: false });
+
+let time = 0;
+let mood = 0; // 0 = push (go away), 1 = pull (come back)
+
+function draw() {
+  time += 0.016;
+  center.x = W / 2;
+  center.y = H / 2;
+
+  ctx.fillStyle = 'rgba(10, 10, 15, 0.08)';
+  ctx.fillRect(0, 0, W, H);
+
+  // Mood oscillates — sometimes pushing, sometimes pulling
+  mood = 0.5 + 0.5 * Math.sin(time * 0.15);
+
+  // Sob animation
+  sobPhase += 0.06;
+  sobIntensity = 0.3 + 0.7 * (0.5 + 0.5 * Math.sin(sobPhase * 0.7));
+  const sobRadius = 12 + Math.sin(sobPhase) * 4 * sobIntensity;
+
+  // Touch influence
+  if (touching) {
+    const dx = touchX - center.x;
+    const dy = touchY - center.y;
+    const touchDist = Math.sqrt(dx * dx + dy * dy);
+    if (touchDist < 180) {
+      mood = Math.min(1, mood + 0.02); // touching close = pull mode
+    } else {
+      mood = Math.max(0, mood - 0.01); // touching far = push mode
+    }
+  }
+
+  // Draw others
+  others.forEach((o, i) => {
+    o.angle += o.speed;
+
+    // Push/pull behavior
+    const wantDist = mood < 0.45
+      ? o.baseDist * (1.4 + (1 - mood) * 0.8) // push: go far
+      : o.baseDist * (0.3 + mood * 0.4); // pull: come close
+
+    o.dist += (wantDist - o.dist) * 0.008;
+
+    // Jitter when close (nervousness)
+    const jitter = o.dist < 100 ? (Math.random() - 0.5) * 3 : 0;
+
+    const x = center.x + Math.cos(o.angle + o.phase) * o.dist + jitter;
+    const y = center.y + Math.sin(o.angle + o.phase) * o.dist + jitter;
+
+    // Connection line to center (stronger when close)
+    const connectionAlpha = Math.max(0, 1 - o.dist / 300) * 0.15;
+    if (connectionAlpha > 0.01) {
+      ctx.strokeStyle = `hsla(${o.hue}, 40%, 50%, ${connectionAlpha})`;
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(center.x, center.y);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+    }
+
+    // The other dot
+    const proximity = Math.max(0, 1 - o.dist / 250);
+    const alpha = 0.2 + proximity * 0.5;
+    ctx.fillStyle = `hsla(${o.hue}, 50%, 55%, ${alpha})`;
+    ctx.beginPath();
+    ctx.arc(x, y, o.size * (1 + proximity * 0.5), 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  // Center dot — the one sobbing
+  // Outer glow pulses with sobs
+  const glowRadius = sobRadius * 3;
+  const glow = ctx.createRadialGradient(center.x, center.y, 0, center.x, center.y, glowRadius);
+  glow.addColorStop(0, `rgba(180, 160, 200, ${0.15 * sobIntensity})`);
+  glow.addColorStop(0.5, `rgba(140, 120, 160, ${0.06 * sobIntensity})`);
+  glow.addColorStop(1, 'transparent');
+  ctx.fillStyle = glow;
+  ctx.fillRect(center.x - glowRadius, center.y - glowRadius, glowRadius * 2, glowRadius * 2);
+
+  // Core dot
+  ctx.fillStyle = `rgba(200, 180, 220, ${0.6 + sobIntensity * 0.3})`;
+  ctx.beginPath();
+  ctx.arc(center.x, center.y, sobRadius, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Sob ripples (concentric rings expanding outward)
+  if (sobIntensity > 0.5) {
+    const rippleCount = 3;
+    for (let r = 0; r < rippleCount; r++) {
+      const ripplePhase = (sobPhase * 0.5 + r * 2.1) % 6;
+      const rippleRadius = sobRadius + ripplePhase * 25;
+      const rippleAlpha = Math.max(0, (1 - ripplePhase / 6) * 0.12 * sobIntensity);
+      if (rippleAlpha > 0.005) {
+        ctx.strokeStyle = `rgba(180, 160, 200, ${rippleAlpha})`;
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.arc(center.x, center.y, rippleRadius, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+  }
+
+  // Mood indicator — subtle text
+  const moodText = mood < 0.4 ? 'go away' : mood > 0.6 ? 'stay' : '...';
+  ctx.fillStyle = `rgba(200, 180, 220, ${0.08 + sobIntensity * 0.04})`;
+  ctx.font = '10px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(moodText, center.x, center.y + sobRadius + 24);
+
+  requestAnimationFrame(draw);
+}
+
+draw();
+</script>
+</body>
+</html>
