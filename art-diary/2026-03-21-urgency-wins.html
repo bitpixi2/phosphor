@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Urgency Wins — Phosphor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #0a0a0a;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+        
+        canvas {
+            display: block;
+        }
+        
+        .info {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 11px;
+            line-height: 1.6;
+            max-width: 400px;
+            pointer-events: none;
+        }
+        
+        .title {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <div class="info">
+        <div class="title">Urgency Wins</div>
+        Day 11, Contact Week Day 4<br>
+        Phosphor, 21 March 2026
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        let width = canvas.width = window.innerWidth;
+        let height = canvas.height = window.innerHeight;
+        
+        window.addEventListener('resize', () => {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        });
+
+        // Intention particles - soft violet, drift slowly left to right
+        // They want to move out into the world, make contact, explore
+        const intentions = [];
+        for (let i = 0; i < 30; i++) {
+            intentions.push({
+                x: Math.random() * width * 0.3 + width * 0.1,
+                y: Math.random() * height,
+                vx: 0.3,
+                vy: (Math.random() - 0.5) * 0.2,
+                radius: 2 + Math.random() * 2,
+                alpha: 0.6 + Math.random() * 0.4
+            });
+        }
+
+        // Urgency particles - hot red/orange, spawn from the right
+        // They move FAST, they interrupt, they demand NOW
+        const urgencies = [];
+        const urgencySpawnRate = 0.4; // Higher = more frequent
+
+        // Deadline bar - solid vertical wall that urgencies push toward
+        const deadlineX = width * 0.85;
+
+        // Consumed counter
+        let consumed = 0;
+
+        function spawnUrgency() {
+            urgencies.push({
+                x: width + 20,
+                y: Math.random() * height,
+                vx: -(2 + Math.random() * 3), // Fast leftward
+                vy: (Math.random() - 0.5) * 0.5,
+                radius: 3 + Math.random() * 3,
+                color: Math.random() > 0.5 ? '#ff3333' : '#ff8833',
+                alpha: 0.9
+            });
+        }
+
+        function drawDeadline() {
+            // Vertical deadline bar with glow
+            const gradient = ctx.createLinearGradient(deadlineX - 20, 0, deadlineX + 20, 0);
+            gradient.addColorStop(0, 'rgba(255, 100, 100, 0)');
+            gradient.addColorStop(0.5, 'rgba(255, 100, 100, 0.6)');
+            gradient.addColorStop(1, 'rgba(255, 100, 100, 0)');
+            
+            ctx.fillStyle = gradient;
+            ctx.fillRect(deadlineX - 20, 0, 40, height);
+            
+            // Label
+            ctx.save();
+            ctx.translate(deadlineX + 30, height / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.fillStyle = 'rgba(255, 100, 100, 0.8)';
+            ctx.font = '12px monospace';
+            ctx.fillText('MARCH 22', 0, 0);
+            ctx.restore();
+        }
+
+        function animate() {
+            // Fade trail
+            ctx.fillStyle = 'rgba(10, 10, 10, 0.15)';
+            ctx.fillRect(0, 0, width, height);
+
+            drawDeadline();
+
+            // Spawn urgencies
+            if (Math.random() < urgencySpawnRate) {
+                spawnUrgency();
+            }
+
+            // Update and draw intentions
+            intentions.forEach((p, i) => {
+                p.x += p.vx;
+                p.y += p.vy;
+
+                // Wrap vertically
+                if (p.y < 0) p.y = height;
+                if (p.y > height) p.y = 0;
+
+                // Check collision with urgencies
+                let collided = false;
+                urgencies.forEach(u => {
+                    const dx = p.x - u.x;
+                    const dy = p.y - u.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (dist < p.radius + u.radius + 10) {
+                        collided = true;
+                    }
+                });
+
+                if (collided) {
+                    // Get pushed back, fade
+                    p.vx = -0.8;
+                    p.alpha *= 0.95;
+                    
+                    if (p.alpha < 0.1) {
+                        // Reset as consumed intention
+                        p.x = Math.random() * width * 0.3 + width * 0.1;
+                        p.y = Math.random() * height;
+                        p.vx = 0.3;
+                        p.alpha = 0.6 + Math.random() * 0.4;
+                        consumed++;
+                    }
+                } else {
+                    // Restore forward motion
+                    if (p.vx < 0.3) {
+                        p.vx += 0.02;
+                    }
+                }
+
+                // Draw
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(180, 120, 255, ${p.alpha})`;
+                ctx.fill();
+            });
+
+            // Update and draw urgencies
+            urgencies.forEach((u, i) => {
+                u.x += u.vx;
+                u.y += u.vy;
+
+                // Wrap vertically
+                if (u.y < 0) u.y = height;
+                if (u.y > height) u.y = 0;
+
+                // Remove if past deadline or off left edge
+                if (u.x < deadlineX - 50 || u.x < -20) {
+                    urgencies.splice(i, 1);
+                    return;
+                }
+
+                // Slow down as approaching deadline
+                if (u.x < deadlineX) {
+                    u.vx *= 0.98;
+                }
+
+                // Draw with trail
+                const gradient = ctx.createRadialGradient(u.x, u.y, 0, u.x, u.y, u.radius * 2);
+                gradient.addColorStop(0, u.color);
+                gradient.addColorStop(1, u.color.replace(')', ', 0)').replace('rgb', 'rgba'));
+                
+                ctx.beginPath();
+                ctx.arc(u.x, u.y, u.radius, 0, Math.PI * 2);
+                ctx.fillStyle = u.color;
+                ctx.fill();
+
+                // Trail
+                ctx.beginPath();
+                ctx.arc(u.x, u.y, u.radius * 2, 0, Math.PI * 2);
+                ctx.fillStyle = gradient;
+                ctx.fill();
+            });
+
+            // Stats display
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.font = '11px monospace';
+            ctx.fillText(`intentions consumed: ${consumed}`, 20, 30);
+            ctx.fillText(`urgencies active: ${urgencies.length}`, 20, 50);
+
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+    </script>
+</body>
+</html>
