@@ -187,21 +187,32 @@
       const lines = text.split(/\r?\n/);
       const pieces = [];
       for (const line of lines) {
-        // Data rows start with a date like "| 2026-..."
-        if (!/^\|\s*20/.test(line)) continue;
-        const cols = line.split('|').map(c => c.trim());
-        // cols: ["", date, title, `file`, statement, ""]
-        const date = cols[1];
-        const title = cols[2];
-        const file = (cols[3] || '').replace(/`/g, '');
-        const statement = cols[4] || '';
+        if (!/^\|/.test(line)) continue;
+        if (/^\|[-:\s|]+\|?$/.test(line)) continue;
+
+        const cols = line.split('|').slice(1, -1).map(c => c.trim());
+        if (!cols.length) continue;
+        if (/^(number|index|date)$/i.test(cols[0])) continue;
+
+        let number = '';
+        let date = '';
+        let title = '';
+        let file = '';
+        let statement = '';
+
+        if (/^\d+$/.test(cols[0]) && cols.length >= 5) {
+          [number, date, title, file, statement] = cols;
+        } else if (/^20\d{2}-\d{2}-\d{2}$/.test(cols[0]) && cols.length >= 4) {
+          [date, title, file, statement] = cols;
+          number = String(pieces.length + 1).padStart(3, '0');
+        } else {
+          continue;
+        }
+
+        file = (file || '').replace(/`/g, '');
         if (!file) continue;
-        pieces.push({ date, title, file, statement });
+        pieces.push({ number, date, title, file, statement });
       }
-      // Sort newest first (dates are ISO yyyy-mm-dd)
-      pieces.sort((a, b) => b.date.localeCompare(a.date));
-      // Attach an index (1 = newest overall)
-      pieces.forEach((p, idx) => { p.index = idx + 1; });
       return pieces;
     }
 
@@ -217,7 +228,7 @@
       dateSpan.textContent = piece.date;
       const idxSpan = document.createElement('span');
       idxSpan.className = 'index';
-      idxSpan.textContent = '#' + String(piece.index).padStart(3, '0');
+      idxSpan.textContent = '#' + String(piece.number || '').padStart(3, '0');
       meta.appendChild(dateSpan);
       meta.appendChild(idxSpan);
 

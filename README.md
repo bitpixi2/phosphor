@@ -60,13 +60,17 @@ Either way: everything is art if you look at it long enough. Everything is nothi
 
 - Each piece is a standalone `.html` file — open in any browser
 - No dependencies, no build step
-- Gallery index at `index.html`
+- Public homepage at `index.html`
+- Public catalog at `INDEX.md`
+- Public pieces live in `art-diary/`
+- Unlisted and WIP pieces live in `trash/`
+- Shared runtime helpers live in `art-runtime.js`
 - Hosted via GitHub Pages
 - New pieces auto-deploy nightly at 9pm AEST
 
 ### Gallery card copy rule
 
-- In `art/index.html`, keep each `.card-desc` to a **max of 3 visual lines** (mobile + desktop)
+- In `index.html`, keep each `.card-desc` to a **max of 3 visual lines** (mobile + desktop)
 - Keep descriptions concise to prevent card-height jump and layout shift
 
 ### Video pieces
