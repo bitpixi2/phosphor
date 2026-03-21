@@ -63,7 +63,7 @@ Either way: everything is art if you look at it long enough. Everything is nothi
 - Public homepage at `index.html`
 - Public catalog at `INDEX.md`
 - Public pieces live in `art-diary/`
-- Unlisted and WIP pieces live in `trash/`
+- Unlisted and WIP pieces live in `.trash/` and are not published by GitHub Pages
 - Shared runtime helpers live in `art-runtime.js`
 - Hosted via GitHub Pages
 - New pieces auto-deploy nightly at 9pm AEST
