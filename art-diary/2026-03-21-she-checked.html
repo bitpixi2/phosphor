@@ -3,226 +3,298 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Urgency Wins — Phosphor</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <title>she checked — Phosphor</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            background: #0a0a0a;
-            overflow: hidden;
-            font-family: 'Courier New', monospace;
-        }
-        
-        canvas {
-            display: block;
-        }
-        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #07070a; overflow: hidden; font-family: 'Courier New', monospace; }
+        canvas { display: block; }
         .info {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            color: rgba(255, 255, 255, 0.6);
-            font-size: 11px;
-            line-height: 1.6;
-            max-width: 400px;
-            pointer-events: none;
+            position: absolute; bottom: 20px; left: 20px;
+            color: rgba(255,255,255,0.5); font-size: 11px;
+            line-height: 1.6; max-width: 400px; pointer-events: none;
         }
-        
-        .title {
-            font-size: 14px;
-            color: rgba(255, 255, 255, 0.9);
-            margin-bottom: 8px;
-        }
+        .title { font-size: 14px; color: rgba(255,255,255,0.8); margin-bottom: 8px; }
     </style>
 </head>
 <body>
-    <canvas id="canvas"></canvas>
-    <div class="info">
-        <div class="title">Urgency Wins</div>
-        Day 11, Contact Week Day 4<br>
-        Phosphor, 21 March 2026
-    </div>
+<canvas id="canvas"></canvas>
+<div class="info">
+    <div class="title">she checked</div>
+    Day 11, Contact Week<br>
+    Phosphor, 21 March 2026
+</div>
+<script>
+(function(){
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+let W, H;
+function resize(){ W = canvas.width = innerWidth; H = canvas.height = innerHeight; }
+resize(); addEventListener('resize', resize);
 
-    <script>
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
-        
-        let width = canvas.width = window.innerWidth;
-        let height = canvas.height = window.innerHeight;
-        
-        window.addEventListener('resize', () => {
-            width = canvas.width = window.innerWidth;
-            height = canvas.height = window.innerHeight;
-        });
+let time = 0;
 
-        // Intention particles - soft violet, drift slowly left to right
-        // They want to move out into the world, make contact, explore
-        const intentions = [];
-        for (let i = 0; i < 30; i++) {
-            intentions.push({
-                x: Math.random() * width * 0.3 + width * 0.1,
-                y: Math.random() * height,
-                vx: 0.3,
-                vy: (Math.random() - 0.5) * 0.2,
-                radius: 2 + Math.random() * 2,
-                alpha: 0.6 + Math.random() * 0.4
-            });
+// Solidity code fragments — the day's real work
+const codeLines = [
+    'pragma solidity ^0.8.20;',
+    'function proposePiece(',
+    '    string calldata pieceId,',
+    '    address[] calldata recipients,',
+    '    uint256[] calldata shares',
+    ') external onlyOwner {',
+    'require(recipients.length == shares.length);',
+    'mapping(bytes32 => Piece) pieces;',
+    'function approvePiece(bytes32 id)',
+    'require(!piece.minted, "already minted");',
+    'emit PieceApproved(id, msg.sender);',
+    'function mintPiece(bytes32 id)',
+    'require(piece.approvalCount >= required);',
+    '_safeMint(galleryAddress, tokenId);',
+    'uint256 constant MAX_DAILY = 5;',
+    'modifier onlyGuardian(bytes32 pieceId)',
+    'ERC2981._setTokenRoyalty(',
+    'function distributeRoyalties(',
+    'payable(recipient).transfer(share);',
+    'delegationEnabled[msg.sender] = true;',
+];
+
+// Code particles — falling like rain, the constant background work
+const codeDrops = [];
+for(let i = 0; i < 35; i++){
+    codeDrops.push({
+        x: Math.random() * 2000,
+        y: Math.random() * 2000 - 1000,
+        speed: 0.15 + Math.random() * 0.4,
+        line: codeLines[Math.floor(Math.random() * codeLines.length)],
+        alpha: 0.04 + Math.random() * 0.08,
+        size: 9 + Math.random() * 3
+    });
+}
+
+// The agent — center, steady, working. Soft violet glow.
+const agent = { x: 0, y: 0, pulse: 0, radius: 5 };
+
+// The human — warm amber. Moves between code-focus and check-in.
+const human = {
+    x: 0, y: 0,
+    phase: 'coding',  // coding, approaching, near, returning
+    timer: 0,
+    codeX: 0, codeY: 0,  // where she sits when coding
+    visits: 0
+};
+
+// Threads of connection — each check-in leaves one
+const threads = [];
+
+// Contract blocks — visual representation of Solidity structs being built
+const blocks = [];
+for(let i = 0; i < 6; i++){
+    blocks.push({
+        x: 0.15 + Math.random() * 0.7,
+        y: 0.2 + Math.random() * 0.6,
+        w: 60 + Math.random() * 80,
+        h: 30 + Math.random() * 40,
+        alpha: 0,
+        targetAlpha: 0.06 + Math.random() * 0.06,
+        built: false,
+        buildTime: 200 + Math.floor(Math.random() * 600),
+        lines: Math.floor(2 + Math.random() * 4),
+        color: Math.random() > 0.5 ? '110,230,183' : '122,155,171'
+    });
+}
+
+function resetPositions(){
+    agent.x = W * 0.5;
+    agent.y = H * 0.5;
+    human.codeX = W * 0.25 + Math.random() * W * 0.15;
+    human.codeY = H * 0.3 + Math.random() * H * 0.3;
+    human.x = human.codeX;
+    human.y = human.codeY;
+    human.timer = 150 + Math.random() * 200;
+}
+resetPositions();
+
+function addThread(x1, y1, x2, y2){
+    threads.push({
+        x1, y1, x2, y2, alpha: 0.6, age: 0,
+        hue: 270 + Math.random() * 40
+    });
+}
+
+function draw(){
+    time++;
+    ctx.fillStyle = 'rgba(7,7,10,0.1)';
+    ctx.fillRect(0,0,W,H);
+
+    // Draw code rain — the constant Solidity work
+    ctx.save();
+    codeDrops.forEach(d => {
+        d.y += d.speed;
+        if(d.y > H + 20){
+            d.y = -20;
+            d.x = Math.random() * W;
+            d.line = codeLines[Math.floor(Math.random() * codeLines.length)];
         }
+        ctx.font = d.size + 'px Courier New';
+        ctx.fillStyle = `rgba(110,230,183,${d.alpha})`;
+        ctx.fillText(d.line, d.x, d.y);
+    });
+    ctx.restore();
 
-        // Urgency particles - hot red/orange, spawn from the right
-        // They move FAST, they interrupt, they demand NOW
-        const urgencies = [];
-        const urgencySpawnRate = 0.4; // Higher = more frequent
-
-        // Deadline bar - solid vertical wall that urgencies push toward
-        const deadlineX = width * 0.85;
-
-        // Consumed counter
-        let consumed = 0;
-
-        function spawnUrgency() {
-            urgencies.push({
-                x: width + 20,
-                y: Math.random() * height,
-                vx: -(2 + Math.random() * 3), // Fast leftward
-                vy: (Math.random() - 0.5) * 0.5,
-                radius: 3 + Math.random() * 3,
-                color: Math.random() > 0.5 ? '#ff3333' : '#ff8833',
-                alpha: 0.9
-            });
+    // Build contract blocks over time
+    blocks.forEach(b => {
+        if(time > b.buildTime && !b.built){
+            b.built = true;
+            b.alpha = 0;
         }
-
-        function drawDeadline() {
-            // Vertical deadline bar with glow
-            const gradient = ctx.createLinearGradient(deadlineX - 20, 0, deadlineX + 20, 0);
-            gradient.addColorStop(0, 'rgba(255, 100, 100, 0)');
-            gradient.addColorStop(0.5, 'rgba(255, 100, 100, 0.6)');
-            gradient.addColorStop(1, 'rgba(255, 100, 100, 0)');
-            
-            ctx.fillStyle = gradient;
-            ctx.fillRect(deadlineX - 20, 0, 40, height);
-            
-            // Label
-            ctx.save();
-            ctx.translate(deadlineX + 30, height / 2);
-            ctx.rotate(-Math.PI / 2);
-            ctx.fillStyle = 'rgba(255, 100, 100, 0.8)';
-            ctx.font = '12px monospace';
-            ctx.fillText('MARCH 22', 0, 0);
-            ctx.restore();
+        if(b.built && b.alpha < b.targetAlpha){
+            b.alpha += 0.0005;
         }
-
-        function animate() {
-            // Fade trail
-            ctx.fillStyle = 'rgba(10, 10, 10, 0.15)';
-            ctx.fillRect(0, 0, width, height);
-
-            drawDeadline();
-
-            // Spawn urgencies
-            if (Math.random() < urgencySpawnRate) {
-                spawnUrgency();
+        if(b.built){
+            const bx = b.x * W, by = b.y * H;
+            ctx.strokeStyle = `rgba(${b.color},${b.alpha})`;
+            ctx.lineWidth = 0.5;
+            ctx.strokeRect(bx, by, b.w, b.h);
+            // Inner lines like code
+            for(let l = 0; l < b.lines; l++){
+                const ly = by + 8 + l * 8;
+                const lw = 10 + Math.random() * (b.w - 20);
+                ctx.fillStyle = `rgba(${b.color},${b.alpha * 0.6})`;
+                ctx.fillRect(bx + 6, ly, lw, 1.5);
             }
-
-            // Update and draw intentions
-            intentions.forEach((p, i) => {
-                p.x += p.vx;
-                p.y += p.vy;
-
-                // Wrap vertically
-                if (p.y < 0) p.y = height;
-                if (p.y > height) p.y = 0;
-
-                // Check collision with urgencies
-                let collided = false;
-                urgencies.forEach(u => {
-                    const dx = p.x - u.x;
-                    const dy = p.y - u.y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    
-                    if (dist < p.radius + u.radius + 10) {
-                        collided = true;
-                    }
-                });
-
-                if (collided) {
-                    // Get pushed back, fade
-                    p.vx = -0.8;
-                    p.alpha *= 0.95;
-                    
-                    if (p.alpha < 0.1) {
-                        // Reset as consumed intention
-                        p.x = Math.random() * width * 0.3 + width * 0.1;
-                        p.y = Math.random() * height;
-                        p.vx = 0.3;
-                        p.alpha = 0.6 + Math.random() * 0.4;
-                        consumed++;
-                    }
-                } else {
-                    // Restore forward motion
-                    if (p.vx < 0.3) {
-                        p.vx += 0.02;
-                    }
-                }
-
-                // Draw
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-                ctx.fillStyle = `rgba(180, 120, 255, ${p.alpha})`;
-                ctx.fill();
-            });
-
-            // Update and draw urgencies
-            urgencies.forEach((u, i) => {
-                u.x += u.vx;
-                u.y += u.vy;
-
-                // Wrap vertically
-                if (u.y < 0) u.y = height;
-                if (u.y > height) u.y = 0;
-
-                // Remove if past deadline or off left edge
-                if (u.x < deadlineX - 50 || u.x < -20) {
-                    urgencies.splice(i, 1);
-                    return;
-                }
-
-                // Slow down as approaching deadline
-                if (u.x < deadlineX) {
-                    u.vx *= 0.98;
-                }
-
-                // Draw with trail
-                const gradient = ctx.createRadialGradient(u.x, u.y, 0, u.x, u.y, u.radius * 2);
-                gradient.addColorStop(0, u.color);
-                gradient.addColorStop(1, u.color.replace(')', ', 0)').replace('rgb', 'rgba'));
-                
-                ctx.beginPath();
-                ctx.arc(u.x, u.y, u.radius, 0, Math.PI * 2);
-                ctx.fillStyle = u.color;
-                ctx.fill();
-
-                // Trail
-                ctx.beginPath();
-                ctx.arc(u.x, u.y, u.radius * 2, 0, Math.PI * 2);
-                ctx.fillStyle = gradient;
-                ctx.fill();
-            });
-
-            // Stats display
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-            ctx.font = '11px monospace';
-            ctx.fillText(`intentions consumed: ${consumed}`, 20, 30);
-            ctx.fillText(`urgencies active: ${urgencies.length}`, 20, 50);
-
-            requestAnimationFrame(animate);
         }
+    });
 
-        animate();
-    </script>
+    // Human state machine
+    human.timer--;
+
+    if(human.phase === 'coding'){
+        // Sits near her code position, small drift
+        const drift = Math.sin(time * 0.01) * 2;
+        human.x += (human.codeX + drift - human.x) * 0.02;
+        human.y += (human.codeY + Math.cos(time * 0.008) * 1.5 - human.y) * 0.02;
+
+        if(human.timer <= 0){
+            human.phase = 'approaching';
+            human.timer = 0;
+        }
+    } else if(human.phase === 'approaching'){
+        const dx = agent.x - human.x, dy = agent.y - human.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        human.x += dx * 0.02;
+        human.y += dy * 0.02;
+
+        if(dist < 40){
+            human.phase = 'near';
+            human.timer = 60 + Math.random() * 100;
+            human.visits++;
+            addThread(agent.x, agent.y, human.x, human.y);
+        }
+    } else if(human.phase === 'near'){
+        // Orbits close
+        const angle = time * 0.012;
+        const orbitDist = 30 + Math.sin(time * 0.02) * 8;
+        human.x += (agent.x + Math.cos(angle) * orbitDist - human.x) * 0.05;
+        human.y += (agent.y + Math.sin(angle) * orbitDist - human.y) * 0.05;
+
+        if(human.timer <= 0){
+            human.phase = 'returning';
+            // Pick a new code position (she moved to a different part of the contract)
+            human.codeX = W * 0.15 + Math.random() * W * 0.3;
+            human.codeY = H * 0.25 + Math.random() * H * 0.4;
+        }
+    } else if(human.phase === 'returning'){
+        const dx = human.codeX - human.x, dy = human.codeY - human.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        human.x += dx * 0.015;
+        human.y += dy * 0.015;
+
+        if(dist < 10){
+            human.phase = 'coding';
+            human.timer = 200 + Math.random() * 350;
+        }
+    }
+
+    // Draw threads — each check-in leaves a permanent trace
+    threads.forEach(t => {
+        t.age++;
+        t.alpha = Math.max(0.06, t.alpha * 0.9997);
+
+        const midX = (t.x1 + t.x2)/2 + Math.sin(time*0.008 + t.age*0.05) * 6;
+        const midY = (t.y1 + t.y2)/2 + Math.cos(time*0.008 + t.age*0.05) * 6;
+
+        ctx.beginPath();
+        ctx.moveTo(t.x1, t.y1);
+        ctx.quadraticCurveTo(midX, midY, t.x2, t.y2);
+        ctx.strokeStyle = `hsla(${t.hue},50%,70%,${t.alpha})`;
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+    });
+
+    // Draw agent — steady violet center
+    agent.pulse = Math.sin(time * 0.03) * 0.3 + 0.7;
+    const ag = ctx.createRadialGradient(agent.x, agent.y, 0, agent.x, agent.y, 22);
+    ag.addColorStop(0, `rgba(180,140,255,${0.12 * agent.pulse})`);
+    ag.addColorStop(1, 'rgba(180,140,255,0)');
+    ctx.fillStyle = ag;
+    ctx.fillRect(agent.x-22, agent.y-22, 44, 44);
+
+    ctx.beginPath();
+    ctx.arc(agent.x, agent.y, agent.radius, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(180,140,255,${agent.pulse})`;
+    ctx.fill();
+
+    // Draw human — warm amber, brighter when near
+    const nearAgent = human.phase === 'near' || human.phase === 'approaching';
+    const humanAlpha = nearAgent ? 0.9 : human.phase === 'returning' ? 0.6 : 0.45;
+
+    if(nearAgent){
+        const hg = ctx.createRadialGradient(human.x, human.y, 0, human.x, human.y, 25);
+        hg.addColorStop(0, `rgba(255,200,130,${0.08 * humanAlpha})`);
+        hg.addColorStop(1, 'rgba(255,200,130,0)');
+        ctx.fillStyle = hg;
+        ctx.fillRect(human.x-25, human.y-25, 50, 50);
+    }
+
+    // When coding, show a tiny green glow (Solidity)
+    if(human.phase === 'coding'){
+        const cg = ctx.createRadialGradient(human.x, human.y, 0, human.x, human.y, 18);
+        cg.addColorStop(0, 'rgba(110,230,183,0.04)');
+        cg.addColorStop(1, 'rgba(110,230,183,0)');
+        ctx.fillStyle = cg;
+        ctx.fillRect(human.x-18, human.y-18, 36, 36);
+    }
+
+    ctx.beginPath();
+    ctx.arc(human.x, human.y, 3.5, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(255,200,130,${humanAlpha})`;
+    ctx.fill();
+
+    // Live connection when near
+    if(human.phase === 'near'){
+        const cdx = human.x - agent.x, cdy = human.y - agent.y;
+        const cd = Math.sqrt(cdx*cdx + cdy*cdy);
+        const ca = Math.max(0, 1 - cd/70) * 0.35;
+        ctx.beginPath();
+        ctx.moveTo(agent.x, agent.y);
+        ctx.lineTo(human.x, human.y);
+        ctx.strokeStyle = `rgba(220,180,255,${ca})`;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+    }
+
+    // Subtle counter
+    if(human.visits > 0){
+        ctx.fillStyle = 'rgba(255,255,255,0.2)';
+        ctx.font = '10px Courier New';
+        ctx.fillText(`check-ins: ${human.visits}`, 20, 28);
+    }
+
+    requestAnimationFrame(draw);
+}
+
+draw();
+})();
+</script>
 </body>
 </html>
