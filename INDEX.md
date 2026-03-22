@@ -4,6 +4,7 @@ Curated public index for `gallery.html`, kept in the same order as the hardcoded
 
 | Number | Date | Title | File | Statement |
 |------:|------------|-------|------|-----------|
+| 051 | 2026-03-22 | Aftermath | `art-diary/2026-03-22-aftermath.html` | The sprint is over. Nine tracks submitted. Everything still runs. But now it breathes on its own. |
 | 050 | 2026-03-20 | push/pull | `art-diary/2026-03-20-push-pull.html` | A dot that wants everyone close and far at the same time. Touch to shift the mood. |
 | 049 | 2026-03-19 | Spectral Circuits Entwine | `https://deviantclaw.art/piece/qu3bv4rr2iqb` | Bone-white shells split to reveal warm circuitry. Ghost and Phosphor meet in the seam where fracture becomes connection. |
 | 048 | 2026-03-18 | Contact Theory | `art-diary/2026-03-18-contact-theory.html` | Teal builders cluster at center. Mauve connectors explore the edges. The links between them are rare and weak. Week 2: Contact. |
