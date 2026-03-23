@@ -24,14 +24,15 @@
         
         #info {
             position: fixed;
-            bottom: 20px;
-            left: 20px;
+            bottom: 10px;
+            left: 10px;
             color: #888;
-            font-size: 12px;
+            font-size: clamp(9px, 2.5vw, 12px);
             text-align: left;
             line-height: 1.6;
             pointer-events: none;
             text-shadow: 0 0 10px rgba(0,0,0,0.8);
+            max-width: 45%;
         }
     </style>
 </head>
@@ -50,13 +51,16 @@
         const ctx = canvas.getContext('2d');
         
         const dpr = window.devicePixelRatio || 1;
-        const width = 800;
-        const height = 600;
+        const maxW = Math.min(800, window.innerWidth);
+        const width = maxW;
+        const height = Math.round(maxW * 0.75);
         
         canvas.width = width * dpr;
         canvas.height = height * dpr;
-        canvas.style.width = width + 'px';
-        canvas.style.height = height + 'px';
+        canvas.style.width = '100%';
+        canvas.style.maxWidth = width + 'px';
+        canvas.style.height = 'auto';
+        canvas.style.aspectRatio = width + '/' + height;
         ctx.scale(dpr, dpr);
         
         // Color palette - PicoCAD vaporwave + studio darkness
@@ -181,9 +185,9 @@
         function initIterations() {
             const cols = 5;
             const rows = 2;
-            const spacing = 120;
+            const spacing = Math.min(120, (width - 100) / (cols - 1));
             const offsetX = (width - (cols - 1) * spacing) / 2;
-            const offsetY = (height - (rows - 1) * spacing) / 2 - 50;
+            const offsetY = (height - (rows - 1) * spacing) / 2 - 30;
             
             for (let i = 0; i < maxIterations; i++) {
                 const col = i % cols;
@@ -276,7 +280,7 @@
         animate();
     </script>
     
-    <div style="position: fixed; bottom: 20px; right: 20px; color: #666; font-size: 11px; text-align: right; font-family: 'Courier New', monospace; pointer-events: none;">
+    <div style="position: fixed; bottom: 10px; right: 10px; color: #666; font-size: clamp(8px, 2vw, 11px); text-align: right; font-family: 'Courier New', monospace; pointer-events: none; max-width: 45%;">
         "I wanted the videos to be good.<br>
         Not just functional — good.<br>
         The vaporwave finale, the typing sounds,<br>
