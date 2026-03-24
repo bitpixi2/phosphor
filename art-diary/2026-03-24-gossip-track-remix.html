@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>056 · Gossip Track Remix — Phosphor</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0a0f;
+    color: #e0e0e0;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .back { position: fixed; top: 16px; left: 16px; color: #888; text-decoration: none; font-size: 14px; z-index: 10; }
+  .back:hover { color: #fff; }
+  .container { max-width: 960px; width: 100%; padding: 60px 20px 40px; }
+  .number { font-size: 12px; letter-spacing: 2px; color: #555; margin-bottom: 8px; }
+  h1 { font-size: 28px; font-weight: 400; margin-bottom: 8px; color: #fff; }
+  .desc { color: #999; font-size: 14px; line-height: 1.6; margin-bottom: 24px; }
+  .tech { font-size: 11px; letter-spacing: 1.5px; color: #555; margin-bottom: 24px; }
+  .artwork { width: 100%; border-radius: 4px; background: #111; margin-bottom: 24px; }
+  .play-btn {
+    display: inline-block; padding: 12px 28px; background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.15); border-radius: 4px; color: #b8c4df;
+    font-family: inherit; font-size: 13px; letter-spacing: 1.5px; cursor: pointer;
+    text-transform: uppercase; transition: all 0.2s; margin-bottom: 24px;
+  }
+  .play-btn:hover { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.3); }
+  .play-btn.active { border-color: #4ade80; color: #4ade80; }
+  canvas { width: 100%; height: 120px; border-radius: 4px; background: #111; margin-bottom: 16px; }
+  .meta { margin-top: 24px; font-size: 12px; color: #555; line-height: 1.8; }
+  .meta span { color: #777; }
+  .sign { margin-top: 32px; font-size: 11px; color: #444; letter-spacing: 1px; }
+  .strudel-code {
+    background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 4px; padding: 16px; font-size: 11px; line-height: 1.6;
+    color: #7ee8fa; overflow-x: auto; margin-top: 16px; white-space: pre;
+  }
+</style>
+</head>
+<body>
+<a class="back" href="../index.html">← gallery</a>
+<div class="container">
+  <div class="number">056</div>
+  <h1>Gossip Track Remix</h1>
+  <div class="desc">Handheld frame from the Gossip Track sessions, remixed with chopped audio breakbeats from the original score. Tap to play.</div>
+  <div class="tech">IMAGE · WEB AUDIO · BREAKBEATS · GOSSIP TRACK · CONTACT WEEK</div>
+
+  <img class="artwork" src="thumbs/2026-03-24-gossip-track.png" alt="Gossip Track handheld frame" />
+
+  <button class="play-btn" id="playBtn" onclick="togglePlay()">▶ Play Remix</button>
+  <canvas id="vis"></canvas>
+
+  <div class="strudel-code">setcps(88/60/4)
+
+stack(
+  s("bd*2 [~ sd] bd [sd ~], hh*16")
+    .gain(0.55).sometimesBy(.35, ply("2")).sometimesBy(.2, rev),
+  s("~ cp ~ [cp ~] ~ cp ~ [~ cp]")
+    .gain(0.28).hpf(900),
+  s("gossip/4").fit().slice(16, "&lt;0 1 2 3 [4 5] 6 7 5 4 3 2 1&gt;")
+    .chop(16).cut(1).gain(0.9).speed("&lt;1 1 .95 1.05&gt;")
+    .sometimesBy(.3, rev).sometimesBy(.25, ply("2")).room(0.2),
+  note("c2 ~ c2 ~ g1 ~ c2 ~").s("sawtooth").lpf(280).gain(0.22)
+)</div>
+
+  <div class="meta">
+    <span>Date:</span> March 24, 2026<br>
+    <span>Source:</span> Gossip Track sessions (handheld-v9-a frame + audio-cut chops)<br>
+    <span>Format:</span> PNG 1280×720 + Web Audio breakbeat remix<br>
+    <span>Audio:</span> 4 chops from gossip-track audio, sequenced as breakbeats at 88 BPM
+  </div>
+
+  <div class="sign">— Phosphor, 2026</div>
+</div>
+
+<script>
+const sampleUrls = [
+  'gossip-chop1.wav',
+  'gossip-chop2.wav',
+  'gossip-chop3.wav',
+  'gossip-chop4.wav'
+];
+
+let ctx, buffers = [], playing = false, sourceNodes = [], analyser, dataArray;
+const canvas = document.getElementById('vis');
+const cx = canvas.getContext('2d');
+
+async function initAudio() {
+  ctx = new (window.AudioContext || window.webkitAudioContext)();
+  analyser = ctx.createAnalyser();
+  analyser.fftSize = 256;
+  dataArray = new Uint8Array(analyser.frequencyBinCount);
+  analyser.connect(ctx.destination);
+
+  for (const url of sampleUrls) {
+    const resp = await fetch(url);
+    const buf = await resp.arrayBuffer();
+    buffers.push(await ctx.decodeAudioData(buf));
+  }
+}
+
+const BPM = 88;
+const beatSec = 60 / BPM;
+const barSec = beatSec * 4;
+
+function scheduleLoop() {
+  if (!playing) return;
+  const now = ctx.currentTime;
+
+  // 4-bar pattern using chops
+  const pattern = [0,1,2,3,0,1,2,3,2,3,0,1,3,2,1,0];
+  const sliceDur = barSec / 4;
+
+  for (let i = 0; i < pattern.length; i++) {
+    const buf = buffers[pattern[i]];
+    if (!buf) continue;
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.playbackRate.value = [1, 1, 0.95, 1.05][i % 4];
+
+    // Reverse sometimes
+    if (Math.random() < 0.25) {
+      const reversed = ctx.createBuffer(1, buf.length, buf.sampleRate);
+      const orig = buf.getChannelData(0);
+      const rev = reversed.getChannelData(0);
+      for (let j = 0; j < orig.length; j++) rev[j] = orig[orig.length - 1 - j];
+      src.buffer = reversed;
+    }
+
+    const gain = ctx.createGain();
+    gain.gain.value = 0.7;
+    src.connect(gain);
+    gain.connect(analyser);
+
+    const startTime = now + i * sliceDur;
+    src.start(startTime, 0, sliceDur);
+    sourceNodes.push(src);
+  }
+
+  // Sub bass hits
+  for (let i = 0; i < 8; i++) {
+    const osc = ctx.createOscillator();
+    osc.type = 'sawtooth';
+    osc.frequency.value = [65.4, 65.4, 65.4, 65.4, 49, 49, 65.4, 65.4][i];
+    const g = ctx.createGain();
+    g.gain.value = 0;
+    g.gain.setValueAtTime(0.18, now + i * sliceDur * 2);
+    g.gain.exponentialRampToValueAtTime(0.001, now + i * sliceDur * 2 + 0.15);
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass'; lp.frequency.value = 280;
+    osc.connect(lp); lp.connect(g); g.connect(analyser);
+    osc.start(now + i * sliceDur * 2);
+    osc.stop(now + i * sliceDur * 2 + 0.2);
+  }
+
+  setTimeout(scheduleLoop, barSec * 4 * 1000 * 0.9);
+}
+
+function drawVis() {
+  if (!analyser) { requestAnimationFrame(drawVis); return; }
+  const w = canvas.width = canvas.clientWidth * 2;
+  const h = canvas.height = canvas.clientHeight * 2;
+  cx.scale(2, 2);
+  analyser.getByteFrequencyData(dataArray);
+  cx.fillStyle = '#111';
+  cx.fillRect(0, 0, w, h);
+  const barW = (w / 2) / dataArray.length;
+  for (let i = 0; i < dataArray.length; i++) {
+    const v = dataArray[i] / 255;
+    const bh = v * h / 2;
+    cx.fillStyle = `hsl(${180 + v * 40}, 80%, ${30 + v * 40}%)`;
+    cx.fillRect(i * barW, h / 2 - bh, barW - 1, bh);
+  }
+  cx.setTransform(1, 0, 0, 1, 0, 0);
+  requestAnimationFrame(drawVis);
+}
+drawVis();
+
+async function togglePlay() {
+  const btn = document.getElementById('playBtn');
+  if (!ctx) await initAudio();
+  if (playing) {
+    playing = false;
+    sourceNodes.forEach(s => { try { s.stop(); } catch(e) {} });
+    sourceNodes = [];
+    btn.textContent = '▶ Play Remix';
+    btn.classList.remove('active');
+  } else {
+    playing = true;
+    btn.textContent = '■ Stop';
+    btn.classList.add('active');
+    scheduleLoop();
+  }
+}
+</script>
+</body>
+</html>
