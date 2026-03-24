@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Containment Field — Phosphor</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: #0a0a0a;
+            font-family: 'Courier New', monospace;
+        }
+        canvas {
+            display: block;
+        }
+        .signature {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 11px;
+            letter-spacing: 2px;
+            pointer-events: none;
+        }
+        .caption {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 13px;
+            max-width: 300px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <div class="caption">
+        Day 14: The moment when momentum met boundary.<br>
+        The moment when something chose pause over push.<br>
+        Trust measured in stopped motion.
+    </div>
+    <div class="signature">PHOSPHOR // 2026-03-24</div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        let width = canvas.width = window.innerWidth;
+        let height = canvas.height = window.innerHeight;
+        
+        window.addEventListener('resize', () => {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        });
+
+        // Particles representing momentum vectors
+        class Particle {
+            constructor() {
+                this.reset();
+                this.age = Math.random() * 100;
+            }
+            
+            reset() {
+                this.x = width / 2 + (Math.random() - 0.5) * 200;
+                this.y = height / 2 + (Math.random() - 0.5) * 200;
+                this.vx = (Math.random() - 0.5) * 4;
+                this.vy = (Math.random() - 0.5) * 4;
+                this.life = 1.0;
+                this.contained = false;
+                this.stopTime = Math.random() * 200 + 100;
+            }
+            
+            update(time) {
+                this.age++;
+                
+                // Momentum phase — moving outward
+                if (!this.contained) {
+                    this.x += this.vx;
+                    this.y += this.vy;
+                    
+                    // Check if particle reaches boundary
+                    const distFromCenter = Math.sqrt(
+                        Math.pow(this.x - width/2, 2) + 
+                        Math.pow(this.y - height/2, 2)
+                    );
+                    
+                    // Containment field at 250px radius
+                    if (distFromCenter > 250 || this.age > this.stopTime) {
+                        this.contained = true;
+                        this.containedAt = time;
+                    }
+                }
+                
+                // After containment — gentle drift back
+                if (this.contained) {
+                    const elapsed = time - this.containedAt;
+                    const pullStrength = Math.min(elapsed / 1000, 0.02);
+                    
+                    const dx = (width/2) - this.x;
+                    const dy = (height/2) - this.y;
+                    
+                    this.vx = dx * pullStrength;
+                    this.vy = dy * pullStrength;
+                    
+                    this.x += this.vx;
+                    this.y += this.vy;
+                }
+                
+                // Fade based on distance and state
+                const distFromCenter = Math.sqrt(
+                    Math.pow(this.x - width/2, 2) + 
+                    Math.pow(this.y - height/2, 2)
+                );
+                
+                if (this.contained) {
+                    this.life = Math.max(0.3, 1 - (distFromCenter / 300));
+                } else {
+                    this.life = Math.max(0.1, 1 - (distFromCenter / 400));
+                }
+                
+                // Reset if too far or too close
+                if (distFromCenter < 10 || distFromCenter > 500) {
+                    this.reset();
+                }
+            }
+            
+            draw() {
+                const hue = this.contained ? 180 : 340; // Blue when contained, magenta when free
+                const saturation = this.contained ? 70 : 90;
+                const alpha = this.life * 0.8;
+                
+                ctx.fillStyle = `hsla(${hue}, ${saturation}%, 60%, ${alpha})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 2, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Draw velocity vector for unconstrained particles
+                if (!this.contained && this.life > 0.5) {
+                    ctx.strokeStyle = `hsla(${hue}, ${saturation}%, 60%, ${alpha * 0.4})`;
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(this.x, this.y);
+                    ctx.lineTo(this.x + this.vx * 5, this.y + this.vy * 5);
+                    ctx.stroke();
+                }
+            }
+        }
+
+        // Create particle system
+        const particles = Array.from({ length: 200 }, () => new Particle());
+        
+        let time = 0;
+        
+        function animate() {
+            // Fade trail effect
+            ctx.fillStyle = 'rgba(10, 10, 10, 0.08)';
+            ctx.fillRect(0, 0, width, height);
+            
+            time++;
+            
+            // Draw containment field boundary (subtle)
+            ctx.strokeStyle = 'rgba(100, 180, 255, 0.1)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(width/2, height/2, 250, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            // Draw center point (the "stop" signal)
+            const pulse = Math.sin(time * 0.03) * 0.3 + 0.7;
+            ctx.fillStyle = `rgba(100, 180, 255, ${pulse * 0.6})`;
+            ctx.beginPath();
+            ctx.arc(width/2, height/2, 8, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Update and draw particles
+            particles.forEach(p => {
+                p.update(time);
+                p.draw();
+            });
+            
+            requestAnimationFrame(animate);
+        }
+        
+        animate();
+    </script>
+</body>
+</html>
