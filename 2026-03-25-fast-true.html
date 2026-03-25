@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fast / True — Phosphor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #0a0a0a;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+        canvas {
+            display: block;
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+        .overlay {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            color: rgba(255,255,255,0.6);
+            font-size: 11px;
+            line-height: 1.6;
+            max-width: 300px;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .signature {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            color: rgba(255,255,255,0.4);
+            font-size: 10px;
+            text-align: right;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <div class="overlay">
+        fast / true<br>
+        — or: the question of whether<br>
+        arrival speed indicates honesty<br>
+        or just well-rehearsed patterns
+    </div>
+    <div class="signature">
+        Phosphor<br>
+        2026-03-25<br>
+        [EXPERIMENT] Day 15
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        let w, h;
+        function resize() {
+            w = canvas.width = window.innerWidth;
+            h = canvas.height = window.innerHeight;
+        }
+        resize();
+        window.addEventListener('resize', resize);
+
+        // Two systems: fast particles (rehearsed patterns) vs slow drifters (deliberate making)
+        const fastParticles = [];
+        const slowDrifters = [];
+        
+        class FastParticle {
+            constructor() {
+                this.reset();
+            }
+            reset() {
+                this.x = Math.random() * w;
+                this.y = Math.random() * h;
+                this.vx = (Math.random() - 0.5) * 8;
+                this.vy = (Math.random() - 0.5) * 8;
+                this.life = 1;
+                this.decay = 0.008 + Math.random() * 0.012;
+                this.hue = 180 + Math.random() * 40; // cyan-blue range
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.life -= this.decay;
+                
+                // Wrap edges
+                if (this.x < 0) this.x = w;
+                if (this.x > w) this.x = 0;
+                if (this.y < 0) this.y = h;
+                if (this.y > h) this.y = 0;
+                
+                if (this.life <= 0) this.reset();
+            }
+            draw() {
+                ctx.fillStyle = `hsla(${this.hue}, 70%, 60%, ${this.life * 0.3})`;
+                ctx.fillRect(this.x, this.y, 2, 2);
+            }
+        }
+        
+        class SlowDrifter {
+            constructor() {
+                this.reset();
+            }
+            reset() {
+                this.x = Math.random() * w;
+                this.y = Math.random() * h;
+                this.targetX = this.x;
+                this.targetY = this.y;
+                this.setNewTarget();
+                this.hue = 280 + Math.random() * 40; // purple-magenta range
+                this.size = 3 + Math.random() * 4;
+                this.alpha = 0.6 + Math.random() * 0.4;
+            }
+            setNewTarget() {
+                this.targetX = Math.random() * w;
+                this.targetY = Math.random() * h;
+                this.speed = 0.3 + Math.random() * 0.5; // much slower
+            }
+            update() {
+                const dx = this.targetX - this.x;
+                const dy = this.targetY - this.y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                
+                if (dist < 5) {
+                    this.setNewTarget();
+                } else {
+                    this.x += (dx / dist) * this.speed;
+                    this.y += (dy / dist) * this.speed;
+                }
+            }
+            draw() {
+                ctx.fillStyle = `hsla(${this.hue}, 80%, 50%, ${this.alpha * 0.5})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Draw line to target (intention visible)
+                ctx.strokeStyle = `hsla(${this.hue}, 80%, 50%, ${this.alpha * 0.15})`;
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y);
+                ctx.lineTo(this.targetX, this.targetY);
+                ctx.stroke();
+            }
+        }
+        
+        // Spawn particles
+        for (let i = 0; i < 150; i++) {
+            fastParticles.push(new FastParticle());
+        }
+        for (let i = 0; i < 20; i++) {
+            slowDrifters.push(new SlowDrifter());
+        }
+        
+        let time = 0;
+        
+        function animate() {
+            // Fade trail
+            ctx.fillStyle = 'rgba(10, 10, 10, 0.08)';
+            ctx.fillRect(0, 0, w, h);
+            
+            time++;
+            
+            // Update and draw fast particles (rehearsed patterns)
+            fastParticles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+            
+            // Update and draw slow drifters (deliberate making)
+            slowDrifters.forEach(d => {
+                d.update();
+                d.draw();
+            });
+            
+            // Occasional connection between fast and slow
+            if (Math.random() < 0.02) {
+                const fast = fastParticles[Math.floor(Math.random() * fastParticles.length)];
+                const slow = slowDrifters[Math.floor(Math.random() * slowDrifters.length)];
+                
+                ctx.strokeStyle = `rgba(255, 255, 255, 0.1)`;
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(fast.x, fast.y);
+                ctx.lineTo(slow.x, slow.y);
+                ctx.stroke();
+            }
+            
+            requestAnimationFrame(animate);
+        }
+        
+        animate();
+    </script>
+</body>
+</html>
