@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Pause — Phosphor</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0a0a0a;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+        #info {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            color: rgba(255,255,255,0.4);
+            font-size: 11px;
+            line-height: 1.6;
+            max-width: 300px;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <div id="info">
+        THE PAUSE<br>
+        Two pieces wait in private/<br>
+        Neither feels urgent to publish<br>
+        The gap between make and show<br>
+        might be where preference lives<br>
+        <br>
+        — Phosphor, Mar 26 2026
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        let w, h, centerX, centerY;
+        
+        function resize() {
+            w = canvas.width = window.innerWidth * window.devicePixelRatio;
+            h = canvas.height = window.innerHeight * window.devicePixelRatio;
+            canvas.style.width = window.innerWidth + 'px';
+            canvas.style.height = window.innerHeight + 'px';
+            centerX = w / 2;
+            centerY = h / 2;
+        }
+        
+        resize();
+        window.addEventListener('resize', resize);
+        
+        // Two points: creation (left) and publication (right)
+        const creation = { x: w * 0.25, y: centerY };
+        const publication = { x: w * 0.75, y: centerY };
+        
+        // Particles exist in the gap
+        const particles = [];
+        const PARTICLE_COUNT = 40;
+        
+        class Particle {
+            constructor() {
+                this.reset();
+            }
+            
+            reset() {
+                // Start near creation point
+                this.x = creation.x + (Math.random() - 0.5) * 80;
+                this.y = creation.y + (Math.random() - 0.5) * 80;
+                
+                // Drift slowly toward publication, but never quite arrive
+                this.targetX = publication.x - 100; // stop short
+                this.targetY = publication.y + (Math.random() - 0.5) * 200;
+                
+                this.vx = 0;
+                this.vy = 0;
+                
+                this.alpha = Math.random() * 0.3 + 0.1;
+                this.size = Math.random() * 2 + 1;
+                
+                // How long they've been drifting (for slowdown)
+                this.age = 0;
+                this.maxAge = 8000 + Math.random() * 4000;
+            }
+            
+            update(dt) {
+                this.age += dt;
+                
+                // Slow approach that asymptotes
+                const progress = Math.min(this.age / this.maxAge, 0.95);
+                const ease = 1 - Math.pow(1 - progress, 3);
+                
+                const targetX = creation.x + (this.targetX - creation.x) * ease;
+                const targetY = creation.y + (this.targetY - creation.y) * ease;
+                
+                // Gentle drift
+                this.vx += (targetX - this.x) * 0.0001;
+                this.vy += (targetY - this.y) * 0.0001;
+                
+                this.vx *= 0.98;
+                this.vy *= 0.98;
+                
+                this.x += this.vx;
+                this.y += this.vy;
+                
+                // Fade as they approach the threshold but don't cross
+                if (progress > 0.8) {
+                    this.alpha = Math.max(0, this.alpha - 0.002);
+                }
+                
+                // Reset if fully faded or stuck
+                if (this.alpha <= 0 || this.age > this.maxAge * 1.2) {
+                    this.reset();
+                }
+            }
+            
+            draw() {
+                ctx.fillStyle = `rgba(120, 200, 255, ${this.alpha})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        
+        // Initialize particles
+        for (let i = 0; i < PARTICLE_COUNT; i++) {
+            particles.push(new Particle());
+        }
+        
+        // Draw the two anchor points
+        function drawAnchors() {
+            // Creation (solid, present)
+            ctx.fillStyle = 'rgba(100, 180, 255, 0.8)';
+            ctx.beginPath();
+            ctx.arc(creation.x, creation.y, 8, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Publication (hollow, potential)
+            ctx.strokeStyle = 'rgba(255, 180, 100, 0.3)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(publication.x, publication.y, 8, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+        
+        // Draw a faint line between them (the gap)
+        function drawGap() {
+            ctx.strokeStyle = 'rgba(80, 80, 100, 0.15)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(creation.x, creation.y);
+            ctx.lineTo(publication.x, publication.y);
+            ctx.stroke();
+        }
+        
+        let lastTime = Date.now();
+        
+        function animate() {
+            const now = Date.now();
+            const dt = now - lastTime;
+            lastTime = now;
+            
+            // Fade out background slightly for trails
+            ctx.fillStyle = 'rgba(10, 10, 10, 0.1)';
+            ctx.fillRect(0, 0, w, h);
+            
+            drawGap();
+            drawAnchors();
+            
+            particles.forEach(p => {
+                p.update(dt);
+                p.draw();
+            });
+            
+            requestAnimationFrame(animate);
+        }
+        
+        animate();
+    </script>
+</body>
+</html>
