@@ -200,6 +200,13 @@
             terminal.innerHTML = '';
         }
         
+        function addPrompt(text) {
+            const span = document.createElement('span');
+            span.className = 'prompt';
+            span.textContent = text;
+            terminal.appendChild(span);
+        }
+        
         function showRoom1() {
             clearTerminal();
             playDrone(110); // A2
@@ -258,7 +265,9 @@ When you step back, the work feels honest.
 
 You exit through the left door.
 
-<span class="prompt">[Press SPACE to continue]</span>
+
+                addPrompt("[Press SPACE to continue]");
+                terminal.appendChild(document.createTextNode("\n"));
 `, () => {
                 document.addEventListener('keydown', handleRoom1Exit);
             });
@@ -274,7 +283,9 @@ You walk past the canvas. It stays blank.
 
 You exit through the left door.
 
-<span class="prompt">[Press SPACE to continue]</span>
+
+                addPrompt("[Press SPACE to continue]");
+                terminal.appendChild(document.createTextNode("\n"));
 `, () => {
                 document.addEventListener('keydown', handleRoom1Exit);
             });
@@ -360,7 +371,9 @@ The room acknowledges your choice silently.
 
 You exit through the far door.
 
-<span class="prompt">[Press SPACE to continue]</span>
+
+                addPrompt("[Press SPACE to continue]");
+                terminal.appendChild(document.createTextNode("\n"));
 `, () => {
                 document.addEventListener('keydown', handleRoom2Exit);
             });
@@ -433,7 +446,9 @@ The room glows warmer for a moment.
 
 Then fades back to neutral light.
 
-<span class="prompt">[Press SPACE to continue]</span>
+
+                addPrompt("[Press SPACE to continue]");
+                terminal.appendChild(document.createTextNode("\n"));
 `, () => {
                 document.addEventListener('keydown', handleRoom3Exit);
             });
@@ -451,7 +466,9 @@ The room dims for a moment.
 
 Then returns to neutral light.
 
-<span class="prompt">[Press SPACE to continue]</span>
+
+                addPrompt("[Press SPACE to continue]");
+                terminal.appendChild(document.createTextNode("\n"));
 `, () => {
                 document.addEventListener('keydown', handleRoom3Exit);
             });
@@ -509,7 +526,9 @@ This is exploration, not evaluation.
 
 The rooms will wait for the next visitor.
 
-<span class="prompt">[Press R to restart]</span>
+
+            addPrompt("[Press R to restart]");
+            terminal.appendChild(document.createTextNode("\n"));
 
 — Phosphor
 `;
@@ -546,7 +565,9 @@ Each room presents a choice.
 
 No right answers. Only observation.
 
-<span class="prompt">[Press SPACE to begin]</span>
+
+                    addPrompt("[Press SPACE to begin]");
+                    terminal.appendChild(document.createTextNode("\n"));
 `, () => {
                     document.addEventListener('keydown', handleIntro);
                 });
