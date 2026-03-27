@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recursion Depth — Phosphor</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #0a0a0a;
+            font-family: 'Courier New', monospace;
+        }
+        canvas {
+            display: block;
+        }
+        #info {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            color: #00ffcc;
+            font-size: 12px;
+            text-shadow: 0 0 10px rgba(0, 255, 204, 0.5);
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <div id="info">
+        Recursion Depth — Phosphor<br>
+        2026-03-27<br>
+        Making Week, Day 3
+    </div>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        
+        // Concept: pieces that reference pieces that reference pieces
+        // Room 4: "Letting Go" synthesized Room 1, 2, 3
+        // Today feels like we're building systems that build systems
+        // Recursion as creation method
+        
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        
+        class RecursiveStructure {
+            constructor(x, y, depth, maxDepth, angle, parentColor) {
+                this.x = x;
+                this.y = y;
+                this.depth = depth;
+                this.maxDepth = maxDepth;
+                this.angle = angle;
+                this.length = 120 * Math.pow(0.7, depth);
+                this.branches = [];
+                this.alpha = 1 - (depth / maxDepth) * 0.7;
+                
+                // Color shifts through spectrum as recursion deepens
+                const hue = (parentColor + 30 * depth) % 360;
+                this.color = `hsla(${hue}, 70%, 60%, ${this.alpha})`;
+                this.glowColor = `hsla(${hue}, 90%, 70%, ${this.alpha * 0.3})`;
+                
+                if (depth < maxDepth) {
+                    const branchCount = depth === 0 ? 4 : 3;
+                    for (let i = 0; i < branchCount; i++) {
+                        const newAngle = angle + (Math.PI * 2 / branchCount) * i + Math.sin(Date.now() * 0.0001 + depth) * 0.3;
+                        const endX = x + Math.cos(newAngle) * this.length;
+                        const endY = y + Math.sin(newAngle) * this.length;
+                        this.branches.push(new RecursiveStructure(endX, endY, depth + 1, maxDepth, newAngle, hue));
+                    }
+                }
+            }
+            
+            draw(time) {
+                if (this.depth > 0) {
+                    // Draw connection to parent (inferred from position)
+                    const pulse = Math.sin(time * 0.001 + this.depth * 0.5) * 0.3 + 0.7;
+                    ctx.strokeStyle = this.glowColor;
+                    ctx.lineWidth = 8 * pulse;
+                    ctx.shadowBlur = 20 * pulse;
+                    ctx.shadowColor = this.color;
+                    
+                    const parentX = this.x - Math.cos(this.angle) * this.length;
+                    const parentY = this.y - Math.sin(this.angle) * this.length;
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(parentX, parentY);
+                    ctx.lineTo(this.x, this.y);
+                    ctx.stroke();
+                }
+                
+                // Draw node
+                const nodeSize = 8 - this.depth * 1;
+                ctx.fillStyle = this.color;
+                ctx.shadowBlur = 30;
+                ctx.shadowColor = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, nodeSize, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Recursively draw children
+                this.branches.forEach(branch => branch.draw(time));
+            }
+            
+            update(time) {
+                // Subtle rotation around parent
+                if (this.depth > 0) {
+                    const wobble = Math.sin(time * 0.0003 + this.depth) * 0.02;
+                    this.angle += wobble;
+                    
+                    const parentX = this.x - Math.cos(this.angle - wobble) * this.length;
+                    const parentY = this.y - Math.sin(this.angle - wobble) * this.length;
+                    
+                    this.x = parentX + Math.cos(this.angle) * this.length;
+                    this.y = parentY + Math.sin(this.angle) * this.length;
+                }
+                
+                this.branches.forEach(branch => branch.update(time));
+            }
+        }
+        
+        // Create three recursive structures, one for each room, converging
+        const structures = [
+            new RecursiveStructure(centerX - 200, centerY - 100, 0, 4, 0, 180),      // Blue (Room 1: The Line)
+            new RecursiveStructure(centerX + 200, centerY - 100, 0, 4, Math.PI, 30), // Orange (Room 2: The Offer)
+            new RecursiveStructure(centerX, centerY + 180, 0, 4, -Math.PI/2, 280)    // Magenta (Room 3: The Commons)
+        ];
+        
+        // Center convergence point
+        const convergenceX = centerX;
+        const convergenceY = centerY + 20;
+        
+        function animate() {
+            ctx.fillStyle = 'rgba(10, 10, 10, 0.1)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.shadowBlur = 0;
+            
+            const time = Date.now();
+            
+            structures.forEach(structure => {
+                structure.update(time);
+                structure.draw(time);
+            });
+            
+            // Draw convergence point — where all recursions meet
+            const convergePulse = Math.sin(time * 0.002) * 0.5 + 0.5;
+            ctx.fillStyle = `rgba(255, 255, 255, ${convergePulse * 0.8})`;
+            ctx.shadowBlur = 40;
+            ctx.shadowColor = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(convergenceX, convergenceY, 5 + convergePulse * 3, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Lines from structure roots to convergence
+            structures.forEach((structure, i) => {
+                ctx.strokeStyle = `rgba(255, 255, 255, ${0.1 + convergePulse * 0.1})`;
+                ctx.lineWidth = 1;
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = '#ffffff';
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.moveTo(structure.x, structure.y);
+                ctx.lineTo(convergenceX, convergenceY);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            });
+            
+            requestAnimationFrame(animate);
+        }
+        
+        animate();
+        
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+    </script>
+</body>
+</html>
