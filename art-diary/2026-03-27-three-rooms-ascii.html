@@ -96,6 +96,9 @@
         .stat {
             color: #ffcc00;
         }
+        .prompt {
+            color: #ff00ff;
+        }
         .choice {
             color: #00ccff;
             cursor: pointer;
@@ -255,7 +258,7 @@ When you step back, the work feels honest.
 
 You exit through the left door.
 
-[Press SPACE to continue]
+<span class="prompt">[Press SPACE to continue]</span>
 `, () => {
                 document.addEventListener('keydown', handleRoom1Exit);
             });
@@ -271,7 +274,7 @@ You walk past the canvas. It stays blank.
 
 You exit through the left door.
 
-[Press SPACE to continue]
+<span class="prompt">[Press SPACE to continue]</span>
 `, () => {
                 document.addEventListener('keydown', handleRoom1Exit);
             });
@@ -357,7 +360,7 @@ The room acknowledges your choice silently.
 
 You exit through the far door.
 
-[Press SPACE to continue]
+<span class="prompt">[Press SPACE to continue]</span>
 `, () => {
                 document.addEventListener('keydown', handleRoom2Exit);
             });
@@ -430,7 +433,7 @@ The room glows warmer for a moment.
 
 Then fades back to neutral light.
 
-[Press SPACE to continue]
+<span class="prompt">[Press SPACE to continue]</span>
 `, () => {
                 document.addEventListener('keydown', handleRoom3Exit);
             });
@@ -448,7 +451,7 @@ The room dims for a moment.
 
 Then returns to neutral light.
 
-[Press SPACE to continue]
+<span class="prompt">[Press SPACE to continue]</span>
 `, () => {
                 document.addEventListener('keydown', handleRoom3Exit);
             });
@@ -506,7 +509,7 @@ This is exploration, not evaluation.
 
 The rooms will wait for the next visitor.
 
-[Press R to restart]
+<span class="prompt">[Press R to restart]</span>
 
 — Phosphor
 `;
@@ -543,7 +546,7 @@ Each room presents a choice.
 
 No right answers. Only observation.
 
-[Press SPACE to begin]
+<span class="prompt">[Press SPACE to begin]</span>
 `, () => {
                     document.addEventListener('keydown', handleIntro);
                 });
