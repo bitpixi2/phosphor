@@ -208,14 +208,11 @@
 
 You enter a quiet room. Soft light filters through high windows.
 
-Against the far wall: an easel, canvas, paints, brushes.
+Against the far wall: an EASEL with blank canvas, paints, brushes.
 
-Two doors ahead.
+Ahead: a DOOR, slightly ajar.
 
-Through the left door's window: an empty gallery.
-Through the right door's window: a note pinned to the wall.
-
-You step closer and read:
+A small note rests on the easel's ledge:
 
     `;
             
@@ -223,11 +220,25 @@ You step closer and read:
             
             setTimeout(() => {
                 terminal.innerHTML += '<span class="stat">"82% of previous visitors painted before leaving."</span>\n\n';
+                terminal.innerHTML += 'The easel waits.\nThe door waits.\n\n';
                 terminal.innerHTML += 'What do you do?\n\n';
-                terminal.innerHTML += '<span class="choice" onclick="paintChoice()">[P] Paint something</span>\n';
-                terminal.innerHTML += '<span class="choice" onclick="skipPainting()">[S] Skip painting, exit left</span>\n';
+                terminal.innerHTML += '<span class="choice" onclick="paintChoice()">[P] Paint something, then leave</span>\n';
+                terminal.innerHTML += '<span class="choice" onclick="skipPainting()">[D] Leave through the door</span>\n';
                 terminal.innerHTML += '<div id="cursor"></div>';
+                
+                // Enable keyboard input for Room 1
+                document.addEventListener('keydown', handleRoom1Keys);
             }, 1000);
+        }
+        
+        function handleRoom1Keys(e) {
+            if (e.key === 'p' || e.key === 'P') {
+                document.removeEventListener('keydown', handleRoom1Keys);
+                paintChoice();
+            } else if (e.key === 'd' || e.key === 'D') {
+                document.removeEventListener('keydown', handleRoom1Keys);
+                skipPainting();
+            }
         }
         
         function paintChoice() {
@@ -307,6 +318,25 @@ How do you split the 10 tokens?
             terminal.innerHTML += '<span class="choice" onclick="split(3,7)">[3] 3 left, 7 right (favor self)</span>\n';
             terminal.innerHTML += '<span class="choice" onclick="split(0,10)">[4] 0 left, 10 right (all to self)</span>\n';
             terminal.innerHTML += '<div id="cursor"></div>';
+            
+            // Enable keyboard input for Room 2
+            document.addEventListener('keydown', handleRoom2Keys);
+        }
+        
+        function handleRoom2Keys(e) {
+            if (e.key === '1') {
+                document.removeEventListener('keydown', handleRoom2Keys);
+                split(10, 0);
+            } else if (e.key === '2') {
+                document.removeEventListener('keydown', handleRoom2Keys);
+                split(5, 5);
+            } else if (e.key === '3') {
+                document.removeEventListener('keydown', handleRoom2Keys);
+                split(3, 7);
+            } else if (e.key === '4') {
+                document.removeEventListener('keydown', handleRoom2Keys);
+                split(0, 10);
+            }
         }
         
         function split(left, right) {
@@ -370,9 +400,22 @@ One marked ↓ (take out).
 `;
             
             terminal.innerHTML = art;
-            terminal.innerHTML += '<span class="choice" onclick="cooperate()">[↑] Pour water in (cooperate)</span>\n';
-            terminal.innerHTML += '<span class="choice" onclick="defect()">[↓] Take water out (self-interest)</span>\n';
+            terminal.innerHTML += '<span class="choice" onclick="cooperate()">[↑ or C] Pour water in (cooperate)</span>\n';
+            terminal.innerHTML += '<span class="choice" onclick="defect()">[↓ or T] Take water out (self-interest)</span>\n';
             terminal.innerHTML += '<div id="cursor"></div>';
+            
+            // Enable keyboard input for Room 3
+            document.addEventListener('keydown', handleRoom3Keys);
+        }
+        
+        function handleRoom3Keys(e) {
+            if (e.key === 'ArrowUp' || e.key === 'c' || e.key === 'C') {
+                document.removeEventListener('keydown', handleRoom3Keys);
+                cooperate();
+            } else if (e.key === 'ArrowDown' || e.key === 't' || e.key === 'T') {
+                document.removeEventListener('keydown', handleRoom3Keys);
+                defect();
+            }
         }
         
         function cooperate() {
