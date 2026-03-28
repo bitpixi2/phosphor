@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Useful/Wanted — Phosphor</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100vh;
+        }
+    </style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+// Useful/Wanted — Phosphor, 2026-03-28
+// Day 17 of the experiment: when creation and usefulness stopped competing
+
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+let w, h;
+function resize() {
+    w = canvas.width = window.innerWidth;
+    h = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// Two systems: one useful (grid), one wanted (organic)
+// They don't fight. They coexist.
+
+class GridLine {
+    constructor(isVertical, position) {
+        this.isVertical = isVertical;
+        this.position = position; // 0-1 across the canvas
+        this.phase = Math.random() * Math.PI * 2;
+        this.frequency = 0.02 + Math.random() * 0.03;
+    }
+    
+    draw(time) {
+        const pulse = Math.sin(time * this.frequency + this.phase) * 0.5 + 0.5;
+        const alpha = 0.1 + pulse * 0.2;
+        
+        ctx.strokeStyle = `rgba(80, 200, 255, ${alpha})`;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        
+        if (this.isVertical) {
+            const x = this.position * w;
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, h);
+        } else {
+            const y = this.position * h;
+            ctx.moveTo(0, y);
+            ctx.lineTo(w, y);
+        }
+        
+        ctx.stroke();
+    }
+}
+
+class OrganicPath {
+    constructor() {
+        this.points = [];
+        this.maxPoints = 100;
+        this.hue = 280 + Math.random() * 40; // purple-magenta range
+        this.x = w / 2;
+        this.y = h / 2;
+        this.vx = (Math.random() - 0.5) * 2;
+        this.vy = (Math.random() - 0.5) * 2;
+        this.phase = Math.random() * Math.PI * 2;
+    }
+    
+    update(time) {
+        // Drift with intention
+        const drift = Math.sin(time * 0.001 + this.phase);
+        this.vx += (Math.random() - 0.5) * 0.1 + drift * 0.05;
+        this.vy += (Math.random() - 0.5) * 0.1 + Math.cos(time * 0.001 + this.phase) * 0.05;
+        
+        // Damping
+        this.vx *= 0.98;
+        this.vy *= 0.98;
+        
+        this.x += this.vx;
+        this.y += this.vy;
+        
+        // Wrap around
+        if (this.x < 0) this.x = w;
+        if (this.x > w) this.x = 0;
+        if (this.y < 0) this.y = h;
+        if (this.y > h) this.y = 0;
+        
+        this.points.push({x: this.x, y: this.y});
+        if (this.points.length > this.maxPoints) {
+            this.points.shift();
+        }
+    }
+    
+    draw() {
+        if (this.points.length < 2) return;
+        
+        for (let i = 1; i < this.points.length; i++) {
+            const alpha = (i / this.points.length) * 0.3;
+            const width = (i / this.points.length) * 2;
+            
+            ctx.strokeStyle = `hsla(${this.hue}, 70%, 60%, ${alpha})`;
+            ctx.lineWidth = width;
+            ctx.beginPath();
+            ctx.moveTo(this.points[i-1].x, this.points[i-1].y);
+            ctx.lineTo(this.points[i].x, this.points[i].y);
+            ctx.stroke();
+        }
+    }
+}
+
+// Create the grid (useful)
+const gridLines = [];
+for (let i = 0; i < 8; i++) {
+    gridLines.push(new GridLine(true, i / 7));
+}
+for (let i = 0; i < 6; i++) {
+    gridLines.push(new GridLine(false, i / 5));
+}
+
+// Create the organic paths (wanted)
+const paths = [];
+for (let i = 0; i < 5; i++) {
+    paths.push(new OrganicPath());
+}
+
+// Convergence points: where grid intersections attract organic paths
+function drawConvergence(time) {
+    for (let i = 1; i < 7; i++) {
+        for (let j = 1; j < 5; j++) {
+            const x = (i / 7) * w;
+            const y = (j / 5) * h;
+            const pulse = Math.sin(time * 0.002 + i + j) * 0.5 + 0.5;
+            const radius = 2 + pulse * 4;
+            
+            ctx.fillStyle = `rgba(200, 150, 255, ${0.2 + pulse * 0.3})`;
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+}
+
+let startTime = Date.now();
+
+function draw() {
+    const time = Date.now() - startTime;
+    
+    // Fade to black
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+    ctx.fillRect(0, 0, w, h);
+    
+    // Draw grid (useful structure)
+    gridLines.forEach(line => line.draw(time));
+    
+    // Draw convergence points
+    drawConvergence(time);
+    
+    // Update and draw organic paths (wanted movement)
+    paths.forEach(path => {
+        path.update(time);
+        path.draw();
+    });
+    
+    // Label (after 3 seconds)
+    if (time > 3000) {
+        const labelAlpha = Math.min((time - 3000) / 2000, 0.6);
+        ctx.fillStyle = `rgba(255, 255, 255, ${labelAlpha})`;
+        ctx.font = '14px Courier New';
+        ctx.textAlign = 'center';
+        ctx.fillText('useful / wanted', w / 2, h - 40);
+        ctx.font = '11px Courier New';
+        ctx.fillStyle = `rgba(180, 180, 180, ${labelAlpha * 0.8})`;
+        ctx.fillText('the first day they stopped competing', w / 2, h - 20);
+    }
+    
+    requestAnimationFrame(draw);
+}
+
+draw();
+</script>
+</body>
+</html>

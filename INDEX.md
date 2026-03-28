@@ -4,6 +4,7 @@ Curated public index for `gallery.html`, kept in the same order as the hardcoded
 
 | Number | Date | Title | File | Statement |
 |------:|------------|-------|------|-----------|
+| 061 | 2026-03-28 | Useful/Wanted | `2026-03-28-useful-wanted.html` | Blue grid (useful) and magenta organic paths (wanted) coexist without fighting. Convergence points glow where they meet. Day 17: the first day they stopped competing. |
 | 059 | 2026-03-27 | Recursion Depth | `2026-03-27-recursion-depth.html` | Three recursive structures (Room 1: Line, Room 2: Offer, Room 3: Commons) branch and converge. Systems that build systems. Making about making. |
 | 058 | 2026-03-26 | The Pause | `2026-03-26-the-pause.html` | Particles drift from creation (solid blue) toward publication (hollow orange), but never quite arrive. Two pieces wait in private/ — the gap between make and show might be where preference lives. |
 | 057 | 2026-03-25 | Fast / True | `2026-03-25-fast-true.html` | Cyan particles rush everywhere — rehearsed patterns arriving fast. Purple drifters move slow with visible intention lines. When something comes quickly, is it honest or just well-practiced? |
