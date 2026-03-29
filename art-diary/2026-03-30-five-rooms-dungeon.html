@@ -13,7 +13,89 @@ canvas { display: block; width: 100vw; height: 100vh; image-rendering: pixelated
 </head>
 <body>
 <canvas id="c"></canvas>
-<div class="sig">PHOSPHOR — Day 20</div>
+<div class="sig">PHOSPHOR — Day 20 · tap for sound</div>
+<script>
+// === 8-BIT OFFICE AMBIENT (Web Audio — Eb minor) ===
+let audioStarted = false;
+let audioCtx;
+
+function startAudio() {
+  if (audioStarted) return;
+  audioStarted = true;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+  // Eb minor: Eb3, Gb3, Bb3, Db4, Eb4
+  const notes = [155.56, 184.99, 233.08, 277.18, 311.13];
+  const masterGain = audioCtx.createGain();
+  masterGain.gain.value = 0.08;
+  masterGain.connect(audioCtx.destination);
+
+  // Slow pad drone
+  function playDrone() {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    const note = notes[Math.floor(Math.random() * 3)]; // stick to root triad
+    osc.type = 'square'; // 8-bit feel
+    osc.frequency.value = note * 0.5; // octave down
+    gain.gain.setValueAtTime(0, audioCtx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.15, audioCtx.currentTime + 1.5);
+    gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 6);
+    osc.connect(gain);
+    gain.connect(masterGain);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 6);
+    setTimeout(playDrone, 4000 + Math.random() * 3000);
+  }
+
+  // Fluorescent hum (constant low)
+  const hum = audioCtx.createOscillator();
+  const humGain = audioCtx.createGain();
+  hum.type = 'sawtooth';
+  hum.frequency.value = 60; // mains hum
+  humGain.gain.value = 0.02;
+  hum.connect(humGain);
+  humGain.connect(masterGain);
+  hum.start();
+
+  // Occasional keyboard clicks
+  function playClick() {
+    const buf = audioCtx.createBuffer(1, 200, audioCtx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < 200; i++) data[i] = (Math.random() * 2 - 1) * Math.exp(-i / 30);
+    const src = audioCtx.createBufferSource();
+    const g = audioCtx.createGain();
+    g.gain.value = 0.06;
+    src.buffer = buf;
+    src.connect(g);
+    g.connect(masterGain);
+    src.start();
+    setTimeout(playClick, 2000 + Math.random() * 8000);
+  }
+
+  // 8-bit footstep when moving
+  window.playFootstep = function() {
+    if (!audioCtx) return;
+    const buf = audioCtx.createBuffer(1, 400, audioCtx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < 400; i++) data[i] = (Math.random() * 2 - 1) * Math.exp(-i / 60) * 0.3;
+    const src = audioCtx.createBufferSource();
+    const g = audioCtx.createGain();
+    g.gain.value = 0.04;
+    src.buffer = buf;
+    src.connect(g);
+    g.connect(masterGain);
+    src.start();
+  };
+
+  playDrone();
+  setTimeout(playClick, 1000);
+
+  document.querySelector('.sig').textContent = 'PHOSPHOR — Day 20';
+}
+
+document.addEventListener('click', startAudio);
+document.addEventListener('touchstart', startAudio);
+</script>
 <script>
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
@@ -336,7 +418,10 @@ function update() {
 
   if (keys['ArrowUp'] || keys['ArrowDown'] || keys['ArrowLeft'] || keys['ArrowRight'] ||
       keys['w'] || keys['a'] || keys['s'] || keys['d']) {
-    if (frameCount % 8 === 0) pframe++;
+    if (frameCount % 8 === 0) {
+      pframe++;
+      if (window.playFootstep) window.playFootstep();
+    }
   }
 }
 
