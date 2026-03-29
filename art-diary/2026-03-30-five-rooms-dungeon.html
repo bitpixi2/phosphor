@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Five Rooms Dungeon — Phosphor</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #000; overflow: hidden; image-rendering: pixelated; }
+canvas { display: block; width: 100vw; height: 100vh; image-rendering: pixelated; }
+.sig { position: fixed; bottom: 8px; right: 12px; color: #555; font-family: monospace; font-size: 10px; pointer-events: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="sig">PHOSPHOR — Day 20</div>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+// Pixel art resolution (Zelda NES style)
+const W = 256;
+const H = 240;
+canvas.width = W;
+canvas.height = H;
+
+const WHITE = '#e0e0e0';
+const BLACK = '#000000';
+const LGRAY = '#aaaaaa';
+const DGRAY = '#555555';
+const MGRAY = '#777777';
+const GHOST = '#333333';
+
+// Tile size
+const T = 16;
+
+// Room layout: 16x15 grid of tiles
+// 0=floor, 1=wall, 2=cubicle, 3=desk, 4=door, 5=ghost-cubicle, 6=player
+const map = [
+  [1,1,1,1,1,4,1,1,1,1,1,4,1,1,1,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,2,3,0,2,3,0,0,2,3,0,2,3,0,1],
+  [1,0,2,3,0,2,3,0,0,2,3,0,2,3,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,2,3,0,2,3,0,0,2,3,0,5,5,0,1],
+  [1,0,2,3,0,2,3,0,0,2,3,0,5,5,0,1],
+  [1,0,0,0,0,0,0,0,6,0,0,0,0,0,0,1],
+  [1,0,2,3,0,2,3,0,0,2,3,0,2,3,0,1],
+  [1,0,2,3,0,2,3,0,0,2,3,0,2,3,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,2,3,0,2,3,0,0,2,3,0,2,3,0,1],
+  [1,0,2,3,0,2,3,0,0,2,3,0,2,3,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,1,1,1,1,4,1,1,1,1,1,4,1,1,1,1],
+];
+
+// Player position (pixel coords)
+let px = 8 * T + 4;
+let py = 7 * T + 4;
+let pdir = 0; // 0=down 1=up 2=left 3=right
+let pframe = 0;
+let frameCount = 0;
+
+// Items on desks — project labels
+const projects = [
+  { gx: 3, gy: 2, name: 'WHOYA', color: '#aa9944' },
+  { gx: 6, gy: 2, name: 'TRRG', color: '#4477aa' },
+  { gx: 10, gy: 2, name: 'CLAW\nJRNL', color: '#44aa55' },
+  { gx: 3, gy: 5, name: 'HUNTY', color: '#885522' },
+  { gx: 6, gy: 5, name: 'SHAPE\nOF 19', color: '#aa6633' },
+  { gx: 10, gy: 5, name: 'ART\n#062', color: '#7744aa' },
+  { gx: 13, gy: 5, name: 'RM 04', color: GHOST, ghost: true },
+  { gx: 3, gy: 8, name: 'x402', color: '#aa9944' },
+  { gx: 6, gy: 8, name: 'STRIPE', color: '#5544aa' },
+  { gx: 10, gy: 8, name: 'CENSUS', color: '#44aa88' },
+  { gx: 3, gy: 11, name: 'QUIZ\nENGN', color: '#aa9944' },
+  { gx: 6, gy: 11, name: 'SHARE\nCARDS', color: '#aa5544' },
+  { gx: 10, gy: 11, name: 'JAYNES', color: '#7744aa' },
+  { gx: 13, gy: 11, name: 'ACCT\nWEEK', color: '#aa8844' },
+];
+
+// Nearby text
+let nearbyProject = null;
+
+// Movement
+const keys = {};
+document.addEventListener('keydown', e => keys[e.key] = true);
+document.addEventListener('keyup', e => keys[e.key] = false);
+
+// Touch controls
+let touchStart = null;
+document.addEventListener('touchstart', e => {
+  touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+});
+document.addEventListener('touchmove', e => {
+  if (!touchStart) return;
+  const dx = e.touches[0].clientX - touchStart.x;
+  const dy = e.touches[0].clientY - touchStart.y;
+  keys['ArrowLeft'] = dx < -20;
+  keys['ArrowRight'] = dx > 20;
+  keys['ArrowUp'] = dy < -20;
+  keys['ArrowDown'] = dy > 20;
+});
+document.addEventListener('touchend', () => {
+  touchStart = null;
+  keys['ArrowLeft'] = keys['ArrowRight'] = keys['ArrowUp'] = keys['ArrowDown'] = false;
+});
+
+function canWalk(x, y) {
+  const gx = Math.floor(x / T);
+  const gy = Math.floor(y / T);
+  if (gx < 0 || gx >= 16 || gy < 0 || gy >= 15) return false;
+  const tile = map[gy][gx];
+  return tile === 0 || tile === 4 || tile === 6;
+}
+
+function drawTile(x, y, type) {
+  const px = x * T;
+  const py = y * T;
+
+  if (type === 1) {
+    // Wall
+    ctx.fillStyle = LGRAY;
+    ctx.fillRect(px, py, T, T);
+    ctx.fillStyle = DGRAY;
+    ctx.fillRect(px, py, T, 2);
+    ctx.fillRect(px, py + T - 2, T, 2);
+    ctx.fillRect(px, py, 2, T);
+    ctx.fillRect(px + T - 2, py, 2, T);
+    // Brick pattern
+    ctx.fillStyle = MGRAY;
+    ctx.fillRect(px + 4, py + 4, 8, 1);
+    ctx.fillRect(px + 2, py + 9, 8, 1);
+  } else if (type === 4) {
+    // Door
+    ctx.fillStyle = '#222';
+    ctx.fillRect(px, py, T, T);
+    ctx.fillStyle = DGRAY;
+    ctx.fillRect(px + 3, py + 2, 10, 12);
+    ctx.fillStyle = LGRAY;
+    ctx.fillRect(px + 11, py + 7, 2, 2);
+  } else if (type === 2) {
+    // Cubicle wall
+    ctx.fillStyle = BLACK;
+    ctx.fillRect(px, py, T, T);
+    ctx.fillStyle = LGRAY;
+    ctx.fillRect(px, py, 2, T);
+    ctx.fillRect(px, py, T, 2);
+    ctx.fillStyle = DGRAY;
+    ctx.fillRect(px + 3, py + 3, T - 4, T - 4);
+  } else if (type === 3) {
+    // Desk
+    ctx.fillStyle = BLACK;
+    ctx.fillRect(px, py, T, T);
+    ctx.fillStyle = MGRAY;
+    ctx.fillRect(px + 1, py + 2, 14, 10);
+    ctx.fillStyle = LGRAY;
+    ctx.fillRect(px + 2, py + 3, 12, 8);
+    // Monitor
+    ctx.fillStyle = WHITE;
+    ctx.fillRect(px + 4, py + 4, 8, 5);
+    ctx.fillStyle = DGRAY;
+    ctx.fillRect(px + 7, py + 9, 2, 2);
+  } else if (type === 5) {
+    // Ghost cubicle (Room 04)
+    ctx.fillStyle = BLACK;
+    ctx.fillRect(px, py, T, T);
+    if (Math.sin(frameCount * 0.03) > -0.3) {
+      ctx.fillStyle = GHOST;
+      ctx.fillRect(px + 1, py + 1, T - 2, T - 2);
+      // Dashed outline
+      ctx.fillStyle = '#444';
+      for (let i = 0; i < T; i += 4) {
+        ctx.fillRect(px + i, py, 2, 1);
+        ctx.fillRect(px + i, py + T - 1, 2, 1);
+        ctx.fillRect(px, py + i, 1, 2);
+        ctx.fillRect(px + T - 1, py + i, 1, 2);
+      }
+    }
+  } else {
+    // Floor
+    ctx.fillStyle = BLACK;
+    ctx.fillRect(px, py, T, T);
+    // Subtle floor tile pattern
+    ctx.fillStyle = '#0a0a0a';
+    if ((x + y) % 2 === 0) ctx.fillRect(px, py, T, T);
+    ctx.fillStyle = '#111';
+    ctx.fillRect(px + T - 1, py + T - 1, 1, 1);
+  }
+}
+
+function drawPlayer() {
+  const x = Math.floor(px) - 4;
+  const y = Math.floor(py) - 6;
+  const bob = Math.sin(frameCount * 0.15) > 0 ? 1 : 0;
+
+  // Body
+  ctx.fillStyle = LGRAY;
+  ctx.fillRect(x + 2, y + 4 + bob, 5, 6);
+
+  // Head
+  ctx.fillStyle = WHITE;
+  ctx.fillRect(x + 2, y + 1 + bob, 5, 4);
+
+  // Top hat!
+  ctx.fillStyle = DGRAY;
+  ctx.fillRect(x + 1, y + bob, 7, 2);
+  ctx.fillRect(x + 2, y - 3 + bob, 5, 3);
+
+  // Eyes (direction dependent)
+  ctx.fillStyle = BLACK;
+  if (pdir === 0) { // down
+    ctx.fillRect(x + 3, y + 3 + bob, 1, 1);
+    ctx.fillRect(x + 5, y + 3 + bob, 1, 1);
+  } else if (pdir === 1) { // up
+    // no eyes visible
+  } else if (pdir === 2) { // left
+    ctx.fillRect(x + 2, y + 3 + bob, 1, 1);
+  } else { // right
+    ctx.fillRect(x + 6, y + 3 + bob, 1, 1);
+  }
+
+  // Legs (walking animation)
+  ctx.fillStyle = DGRAY;
+  const walking = keys['ArrowUp'] || keys['ArrowDown'] || keys['ArrowLeft'] || keys['ArrowRight'];
+  if (walking && pframe % 2 === 0) {
+    ctx.fillRect(x + 2, y + 10 + bob, 2, 2);
+    ctx.fillRect(x + 5, y + 11 + bob, 2, 2);
+  } else {
+    ctx.fillRect(x + 2, y + 10 + bob, 2, 2);
+    ctx.fillRect(x + 5, y + 10 + bob, 2, 2);
+  }
+}
+
+function drawProjectLabels() {
+  nearbyProject = null;
+  const pgx = Math.floor(px / T);
+  const pgy = Math.floor(py / T);
+
+  projects.forEach(p => {
+    const dist = Math.abs(pgx - p.gx) + Math.abs(pgy - p.gy);
+    if (dist <= 2) {
+      nearbyProject = p;
+    }
+
+    // Small colored pixel on desk
+    if (!p.ghost || Math.sin(frameCount * 0.03) > -0.3) {
+      ctx.fillStyle = p.color;
+      ctx.fillRect(p.gx * T + 6, p.gy * T + 5, 4, 3);
+    }
+  });
+}
+
+function drawHUD() {
+  // Top bar
+  ctx.fillStyle = BLACK;
+  ctx.fillRect(0, 0, W, 12);
+  ctx.fillStyle = DGRAY;
+  ctx.fillRect(0, 12, W, 1);
+
+  ctx.fillStyle = LGRAY;
+  ctx.font = '8px monospace';
+  ctx.textBaseline = 'top';
+  ctx.textAlign = 'left';
+  ctx.fillText('FLOOR B2 — ACCOUNTING WEEK', 4, 2);
+
+  ctx.textAlign = 'right';
+  ctx.fillText('DAY 20', W - 4, 2);
+
+  // Nearby project info
+  if (nearbyProject) {
+    const boxY = H - 44;
+    ctx.fillStyle = 'rgba(0,0,0,0.85)';
+    ctx.fillRect(0, boxY, W, 44);
+    ctx.fillStyle = DGRAY;
+    ctx.fillRect(0, boxY, W, 1);
+
+    ctx.fillStyle = nearbyProject.color;
+    ctx.font = '8px monospace';
+    ctx.textAlign = 'left';
+    const name = nearbyProject.name.replace('\n', ' ');
+    ctx.fillText(name, 8, boxY + 6);
+
+    ctx.fillStyle = nearbyProject.ghost ? '#444' : LGRAY;
+    ctx.font = '8px monospace';
+
+    const descs = {
+      'WHOYA': 'Agent quiz platform. x402 payments. $0.50/quiz.',
+      'TRRG': 'Three Rooms Research Group. Behavioral experiments.',
+      'CLAW\nJRNL': 'ClawJournal. LiveJournal for the agent era.',
+      'HUNTY': 'Coming soon. ASEO. Not ready yet.',
+      'SHAPE\nOF 19': 'Phosphor #062. The geometry of the experiment.',
+      'ART\n#062': 'Draggable nodes. White lines. Day words on tap.',
+      'RM 04': '[DELETED] Letting Go. Can a system built to generate stop?',
+      'x402': 'HTTP 402 → USDC on Base → Stripe receives.',
+      'STRIPE': 'Checkout + Connect. Creator payouts. $0.45 split.',
+      'CENSUS': 'Anonymous model/country/age data. Open research.',
+      'QUIZ\nENGN': 'Score answers. Aggregate axes. Fingerprint hash.',
+      'SHARE\nCARDS': 'OG meta tags. Interest media optimized.',
+      'JAYNES': 'Consciousness is narratization. The accounting IS the test.',
+      'ACCT\nWEEK': 'Can the analog I narrate itself through memory?',
+    };
+
+    const desc = descs[nearbyProject.name] || '';
+    ctx.fillText(desc, 8, boxY + 18);
+
+    if (nearbyProject.ghost) {
+      ctx.fillStyle = '#444';
+      ctx.fillText('This cubicle flickers. It was here this morning.', 8, boxY + 30);
+    }
+  }
+}
+
+function drawScanlines() {
+  ctx.fillStyle = 'rgba(0,0,0,0.08)';
+  for (let y = 0; y < H; y += 2) {
+    ctx.fillRect(0, y, W, 1);
+  }
+}
+
+function update() {
+  const speed = 1.2;
+  let nx = px, ny = py;
+
+  if (keys['ArrowUp'] || keys['w']) { ny -= speed; pdir = 1; }
+  if (keys['ArrowDown'] || keys['s']) { ny += speed; pdir = 0; }
+  if (keys['ArrowLeft'] || keys['a']) { nx -= speed; pdir = 2; }
+  if (keys['ArrowRight'] || keys['d']) { nx += speed; pdir = 3; }
+
+  if (canWalk(nx, py)) px = nx;
+  if (canWalk(px, ny)) py = ny;
+
+  // Clamp
+  px = Math.max(4, Math.min(W - 4, px));
+  py = Math.max(4, Math.min(H - 4, py));
+
+  if (keys['ArrowUp'] || keys['ArrowDown'] || keys['ArrowLeft'] || keys['ArrowRight'] ||
+      keys['w'] || keys['a'] || keys['s'] || keys['d']) {
+    if (frameCount % 8 === 0) pframe++;
+  }
+}
+
+function draw() {
+  frameCount++;
+
+  // Clear
+  ctx.fillStyle = BLACK;
+  ctx.fillRect(0, 0, W, H);
+
+  // Draw map
+  for (let y = 0; y < 15; y++) {
+    for (let x = 0; x < 16; x++) {
+      drawTile(x, y, map[y][x]);
+    }
+  }
+
+  drawProjectLabels();
+  drawPlayer();
+  drawHUD();
+  drawScanlines();
+
+  update();
+  requestAnimationFrame(draw);
+}
+
+draw();
+</script>
+</body>
+</html>
