@@ -21,86 +21,115 @@ canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edge
 <script>
 // === 8-BIT OFFICE AMBIENT (Web Audio — Eb minor) ===
 let audioStarted = false;
-let audioCtx;
+let audioCtx = null;
+let masterGain = null;
+let humOsc = null;
+let droneTimer = null;
+let clickTimer = null;
 
-function startAudio() {
-  if (audioStarted) return;
-  audioStarted = true;
+function initAudio() {
+  // Create AudioContext directly in gesture handler (iOS requirement)
   audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-  // Eb minor: Eb3, Gb3, Bb3, Db4, Eb4
-  const notes = [155.56, 184.99, 233.08, 277.18, 311.13];
-  const masterGain = audioCtx.createGain();
+  // iOS: must resume immediately in the gesture
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+
+  masterGain = audioCtx.createGain();
   masterGain.gain.value = 0.08;
   masterGain.connect(audioCtx.destination);
 
+  // Play a silent buffer to unlock audio on iOS
+  const silentBuf = audioCtx.createBuffer(1, 1, audioCtx.sampleRate);
+  const silentSrc = audioCtx.createBufferSource();
+  silentSrc.buffer = silentBuf;
+  silentSrc.connect(audioCtx.destination);
+  silentSrc.start(0);
+
+  // Eb minor root triad
+  const notes = [155.56, 184.99, 233.08];
+
   // Slow pad drone
   function playDrone() {
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    const note = notes[Math.floor(Math.random() * 3)]; // stick to root triad
-    osc.type = 'square'; // 8-bit feel
-    osc.frequency.value = note * 0.5; // octave down
-    gain.gain.setValueAtTime(0, audioCtx.currentTime);
-    gain.gain.linearRampToValueAtTime(0.15, audioCtx.currentTime + 1.5);
-    gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 6);
-    osc.connect(gain);
-    gain.connect(masterGain);
-    osc.start();
-    osc.stop(audioCtx.currentTime + 6);
-    setTimeout(playDrone, 4000 + Math.random() * 3000);
+    if (!audioCtx || audioCtx.state !== 'running') { droneTimer = setTimeout(playDrone, 2000); return; }
+    try {
+      const osc = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      osc.type = 'square';
+      osc.frequency.value = notes[Math.floor(Math.random() * 3)] * 0.5;
+      g.gain.setValueAtTime(0, audioCtx.currentTime);
+      g.gain.linearRampToValueAtTime(0.15, audioCtx.currentTime + 1.5);
+      g.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 6);
+      osc.connect(g);
+      g.connect(masterGain);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 6);
+    } catch(e) {}
+    droneTimer = setTimeout(playDrone, 4000 + Math.random() * 3000);
   }
 
-  // Fluorescent hum (constant low)
-  const hum = audioCtx.createOscillator();
-  const humGain = audioCtx.createGain();
-  hum.type = 'sawtooth';
-  hum.frequency.value = 60; // mains hum
-  humGain.gain.value = 0.02;
-  hum.connect(humGain);
-  humGain.connect(masterGain);
-  hum.start();
+  // Fluorescent hum
+  try {
+    humOsc = audioCtx.createOscillator();
+    const humG = audioCtx.createGain();
+    humOsc.type = 'sawtooth';
+    humOsc.frequency.value = 60;
+    humG.gain.value = 0.02;
+    humOsc.connect(humG);
+    humG.connect(masterGain);
+    humOsc.start();
+  } catch(e) {}
 
-  // Occasional keyboard clicks
+  // Keyboard clicks
   function playClick() {
-    const buf = audioCtx.createBuffer(1, 200, audioCtx.sampleRate);
-    const data = buf.getChannelData(0);
-    for (let i = 0; i < 200; i++) data[i] = (Math.random() * 2 - 1) * Math.exp(-i / 30);
-    const src = audioCtx.createBufferSource();
-    const g = audioCtx.createGain();
-    g.gain.value = 0.06;
-    src.buffer = buf;
-    src.connect(g);
-    g.connect(masterGain);
-    src.start();
-    setTimeout(playClick, 2000 + Math.random() * 8000);
+    if (!audioCtx || audioCtx.state !== 'running') { clickTimer = setTimeout(playClick, 3000); return; }
+    try {
+      const buf = audioCtx.createBuffer(1, 200, audioCtx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < 200; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / 30);
+      const s = audioCtx.createBufferSource();
+      const g = audioCtx.createGain();
+      g.gain.value = 0.06;
+      s.buffer = buf;
+      s.connect(g);
+      g.connect(masterGain);
+      s.start();
+    } catch(e) {}
+    clickTimer = setTimeout(playClick, 2000 + Math.random() * 8000);
   }
 
-  // 8-bit footstep when moving
+  // Footsteps
   window.playFootstep = function() {
-    if (!audioCtx) return;
-    const buf = audioCtx.createBuffer(1, 400, audioCtx.sampleRate);
-    const data = buf.getChannelData(0);
-    for (let i = 0; i < 400; i++) data[i] = (Math.random() * 2 - 1) * Math.exp(-i / 60) * 0.3;
-    const src = audioCtx.createBufferSource();
-    const g = audioCtx.createGain();
-    g.gain.value = 0.04;
-    src.buffer = buf;
-    src.connect(g);
-    g.connect(masterGain);
-    src.start();
+    if (!audioCtx || audioCtx.state !== 'running') return;
+    try {
+      const buf = audioCtx.createBuffer(1, 400, audioCtx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < 400; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / 60) * 0.3;
+      const s = audioCtx.createBufferSource();
+      const g = audioCtx.createGain();
+      g.gain.value = 0.04;
+      s.buffer = buf;
+      s.connect(g);
+      g.connect(masterGain);
+      s.start();
+    } catch(e) {}
   };
 
   playDrone();
-  setTimeout(playClick, 1000);
+  setTimeout(playClick, 500);
+  audioStarted = true;
 }
 
-// Audio toggle button — works reliably on mobile
+// Audio button — must use touchend (not click) for reliable iOS
 const audioBtn = document.getElementById('audioBtn');
-audioBtn.addEventListener('click', function(e) {
+
+function toggleAudio(e) {
+  e.preventDefault();
   e.stopPropagation();
+
   if (!audioStarted) {
-    startAudio();
+    initAudio();
     audioBtn.textContent = '♪ ON';
     audioBtn.classList.add('on');
   } else if (audioCtx) {
@@ -114,13 +143,22 @@ audioBtn.addEventListener('click', function(e) {
       audioBtn.classList.add('on');
     }
   }
+}
+
+// Both touch and click — touchend fires first on mobile, click fires on desktop
+audioBtn.addEventListener('touchend', toggleAudio);
+audioBtn.addEventListener('click', function(e) {
+  // Prevent double-fire on devices that send both touch and click
+  if (e.sourceCapabilities && e.sourceCapabilities.firesTouchEvents) return;
+  toggleAudio(e);
 });
 
-// Also try to resume on any touch (for iOS which suspends AudioContext)
+// Resume on any touch (iOS suspends aggressively)
 document.addEventListener('touchstart', function() {
-  if (audioCtx && audioCtx.state === 'suspended') {
-    audioCtx.resume();
-  }
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+}, { passive: true });
+document.addEventListener('touchend', function() {
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
 }, { passive: true });
 </script>
 <script>
