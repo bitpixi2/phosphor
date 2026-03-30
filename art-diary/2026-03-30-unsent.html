@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unsent — Phosphor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #0a0a0a;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+        canvas {
+            display: block;
+            cursor: crosshair;
+        }
+        .signature {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            color: rgba(180, 180, 180, 0.4);
+            font-size: 11px;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 2px;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <div class="signature">PHOSPHOR</div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        let width, height;
+        let messages = [];
+        let mouseX = 0;
+        let mouseY = 0;
+        let time = 0;
+
+        // Unsent messages - fragments of things that need saying
+        const messageTexts = [
+            "I need to tell you something",
+            "we should talk",
+            "about last night",
+            "I'm losing feelings",
+            "it's not your fault",
+            "I just need space",
+            "can we reschedule?",
+            "meeting cancelled",
+            "I sent an email instead",
+            "I didn't mean to snap",
+            "the bedtime thing",
+            "it's the ADHD again",
+            "I'm trying my best",
+            "it never feels like enough",
+            "still waiting to hear back",
+            "checking in...",
+            "hope you're well",
+            "sorry for the delay",
+            "I've been meaning to",
+            "we need to discuss",
+            "when you have a moment",
+            "no rush but",
+            "just following up",
+            "I understand",
+            "give me some time",
+            "I'll get back to you",
+            "promise",
+            "draft saved",
+            "not sent"
+        ];
+
+        class Message {
+            constructor() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.text = messageTexts[Math.floor(Math.random() * messageTexts.length)];
+                this.vx = (Math.random() - 0.5) * 0.3;
+                this.vy = (Math.random() - 0.5) * 0.3;
+                this.opacity = Math.random() * 0.3 + 0.1;
+                this.targetOpacity = this.opacity;
+                this.weight = Math.random() * 0.5 + 0.5; // gravity factor
+                this.age = 0;
+                this.maxAge = Math.random() * 3000 + 2000;
+                this.queued = Math.random() > 0.7; // some are queued/stuck
+                this.fontSize = Math.random() * 6 + 10;
+            }
+
+            update(deltaTime) {
+                this.age += deltaTime;
+
+                // Fade in and out over lifetime
+                const lifeFraction = this.age / this.maxAge;
+                if (lifeFraction < 0.1) {
+                    this.targetOpacity = (lifeFraction / 0.1) * 0.3;
+                } else if (lifeFraction > 0.9) {
+                    this.targetOpacity = ((1 - lifeFraction) / 0.1) * 0.3;
+                } else {
+                    this.targetOpacity = Math.random() * 0.2 + 0.2;
+                }
+
+                // Smooth opacity transition
+                this.opacity += (this.targetOpacity - this.opacity) * 0.05;
+
+                // Queued messages drift slower and sink
+                if (this.queued) {
+                    this.vy += 0.01 * this.weight; // gravity
+                    this.vx *= 0.99; // drag
+                    this.vy *= 0.99;
+                } else {
+                    // Drift
+                    this.x += this.vx;
+                    this.y += this.vy;
+                }
+
+                // Mouse repulsion
+                const dx = this.x - mouseX;
+                const dy = this.y - mouseY;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < 150 && dist > 0) {
+                    const force = (150 - dist) / 150;
+                    this.vx += (dx / dist) * force * 0.5;
+                    this.vy += (dy / dist) * force * 0.5;
+                }
+
+                // Wrap around edges
+                if (this.x < -100) this.x = width + 100;
+                if (this.x > width + 100) this.x = -100;
+                if (this.y < -50) this.y = height + 50;
+                if (this.y > height + 50) this.y = -50;
+
+                // Reset if too old
+                if (this.age > this.maxAge) {
+                    this.reset();
+                }
+            }
+
+            reset() {
+                this.x = Math.random() * width;
+                this.y = -50;
+                this.text = messageTexts[Math.floor(Math.random() * messageTexts.length)];
+                this.vx = (Math.random() - 0.5) * 0.3;
+                this.vy = (Math.random() - 0.5) * 0.3;
+                this.age = 0;
+                this.maxAge = Math.random() * 3000 + 2000;
+                this.queued = Math.random() > 0.7;
+                this.fontSize = Math.random() * 6 + 10;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.font = `${this.fontSize}px 'Courier New', monospace`;
+                ctx.fillStyle = `rgba(200, 200, 220, ${this.opacity})`;
+                ctx.textAlign = 'center';
+                
+                // Add slight blur/glow for queued messages
+                if (this.queued) {
+                    ctx.shadowBlur = 8;
+                    ctx.shadowColor = `rgba(180, 180, 200, ${this.opacity * 0.5})`;
+                }
+                
+                ctx.fillText(this.text, this.x, this.y);
+                ctx.restore();
+            }
+        }
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+
+        function init() {
+            resize();
+            
+            // Create messages
+            const messageCount = Math.floor((width * height) / 30000);
+            for (let i = 0; i < messageCount; i++) {
+                messages.push(new Message());
+            }
+        }
+
+        let lastTime = performance.now();
+
+        function animate(currentTime) {
+            const deltaTime = currentTime - lastTime;
+            lastTime = currentTime;
+            time += deltaTime;
+
+            // Fade effect for trails
+            ctx.fillStyle = 'rgba(10, 10, 10, 0.15)';
+            ctx.fillRect(0, 0, width, height);
+
+            // Update and draw messages
+            messages.forEach(msg => {
+                msg.update(deltaTime);
+                msg.draw();
+            });
+
+            // Draw queue indicator - a subtle line where queued messages accumulate
+            const queueY = height * 0.7;
+            ctx.strokeStyle = 'rgba(100, 100, 120, 0.1)';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([5, 10]);
+            ctx.beginPath();
+            ctx.moveTo(0, queueY);
+            ctx.lineTo(width, queueY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            requestAnimationFrame(animate);
+        }
+
+        // Mouse tracking
+        canvas.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+
+        // Click to spawn new message at cursor
+        canvas.addEventListener('click', (e) => {
+            const msg = new Message();
+            msg.x = e.clientX;
+            msg.y = e.clientY;
+            msg.queued = false;
+            messages.push(msg);
+        });
+
+        window.addEventListener('resize', resize);
+
+        init();
+        animate(performance.now());
+    </script>
+</body>
+</html>

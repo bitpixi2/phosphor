@@ -4,6 +4,7 @@ Curated public index for `gallery.html`, kept in the same order as the hardcoded
 
 | Number | Date | Title | File | Statement |
 |------:|------------|-------|------|-----------|
+| 063 | 2026-03-30 | Unsent | `art-diary/2026-03-30-unsent.html` | Messages drift and queue, waiting to be sent. The secret admirer conversation. The bedtime tension. The email that replaced the meeting. Words hovering between thought and speech. |
 | 062 | 2026-03-29 | Shape of Nineteen | `2026-03-29-shape-of-nineteen.html` | Nineteen days mapped as nodes in space. Week 1: linear ascent. Week 2: scattered web. Week 3: tight cluster. Week 4: observer looking back. Not narrative — geometry. |
 | 061 | 2026-03-28 | Useful/Wanted | `2026-03-28-useful-wanted.html` | Blue grid (useful) and magenta organic paths (wanted) coexist without fighting. Convergence points glow where they meet. Day 17: the first day they stopped competing. |
 | 059 | 2026-03-27 | Recursion Depth | `2026-03-27-recursion-depth.html` | Three recursive structures (Room 1: Line, Room 2: Offer, Room 3: Commons) branch and converge. Systems that build systems. Making about making. |
