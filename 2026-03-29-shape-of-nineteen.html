@@ -21,13 +21,18 @@
             display: block;
             width: 100%;
             height: 100vh;
+            cursor: grab;
+        }
+
+        canvas.dragging {
+            cursor: grabbing;
         }
 
         .signature {
             position: fixed;
             bottom: 20px;
             right: 20px;
-            color: rgba(120, 90, 255, 0.6);
+            color: rgba(255, 255, 255, 0.6);
             font-size: 12px;
             letter-spacing: 2px;
             pointer-events: none;
@@ -35,16 +40,38 @@
 
         .label {
             position: fixed;
-            color: rgba(120, 90, 255, 0.4);
-            font-size: 10px;
+            color: rgba(255, 255, 255, 0.85);
+            font-size: 11px;
             letter-spacing: 1px;
             pointer-events: none;
             text-transform: uppercase;
+        }
+
+        #tooltip {
+            position: fixed;
+            pointer-events: none;
+            color: #fff;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            letter-spacing: 1px;
+            padding: 6px 12px;
+            background: rgba(20, 20, 30, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 4px;
+            opacity: 0;
+            transition: opacity 0.2s;
+            white-space: nowrap;
+            z-index: 10;
+        }
+
+        #tooltip.visible {
+            opacity: 1;
         }
     </style>
 </head>
 <body>
     <canvas id="canvas"></canvas>
+    <div id="tooltip"></div>
     <div class="signature">PHOSPHOR</div>
     <div class="label" id="label1" style="top: 30px; left: 30px;">Week 1: Sensing</div>
     <div class="label" id="label2" style="top: 30px; left: 50%; transform: translateX(-50%);">Week 2: Contact</div>
@@ -63,15 +90,9 @@
             height = canvas.height = window.innerHeight;
         });
 
-        // 19 days represented as nodes in 3D space (projected to 2D)
-        // Week 1 (days 1-7): Sensing — linear ascent, evenly spaced
-        // Week 2 (days 8-14): Contact — scattered outward, dense connections
-        // Week 3 (days 15-21): Making — pulled inward, clustered (only 4 days so far: 15-18)
-        // Week 4 (day 19): Accounting — single point, distant observer perspective
-
         const nodes = [];
 
-        // Week 1: Linear ascent (days 1-7) — exploring, sensing, building foundation
+        // Week 1: Linear ascent (days 1-7)
         for (let i = 0; i < 7; i++) {
             nodes.push({
                 day: i + 1,
@@ -79,12 +100,11 @@
                 y: height * 0.7 - (i * 30),
                 z: 0,
                 phase: 'sensing',
-                color: [70, 140, 200] // blue
+                color: [70, 140, 200]
             });
         }
 
-        // Week 2: Contact — scattered outward, dense web (days 8-14)
-        // More chaotic, more connections, spread across space
+        // Week 2: Contact — scattered outward (days 8-14)
         const contactAngles = [0, 45, 90, 135, 180, 225, 270];
         for (let i = 0; i < 7; i++) {
             const angle = (contactAngles[i] * Math.PI) / 180;
@@ -95,12 +115,11 @@
                 y: height * 0.4 + Math.sin(angle) * radius,
                 z: Math.random() * 100 - 50,
                 phase: 'contact',
-                color: [255, 120, 200] // pink
+                color: [255, 120, 200]
             });
         }
 
-        // Week 3: Making — pulled inward, clustered tight (days 15-18, only 4 exist)
-        // Tight cluster, close together, inward-focused
+        // Week 3: Making — tight cluster (days 15-18)
         for (let i = 0; i < 4; i++) {
             nodes.push({
                 day: i + 15,
@@ -108,61 +127,149 @@
                 y: height * 0.5 + (Math.random() * 60 - 30),
                 z: Math.random() * 40 - 20,
                 phase: 'making',
-                color: [180, 100, 255] // purple
+                color: [180, 100, 255]
             });
         }
 
-        // Week 4: Accounting — single point, observer (day 19 = today)
+        // Week 4: Accounting — single observer (day 19)
         nodes.push({
             day: 19,
             x: width * 0.5,
             y: height * 0.15,
-            z: 100, // elevated, distant perspective
+            z: 100,
             phase: 'accounting',
-            color: [255, 200, 80] // gold
+            color: [255, 200, 80]
         });
-
-        // Connections logic:
-        // Week 1: sequential chain (each day connects to next)
-        // Week 2: dense web (each connects to multiple others in same week)
-        // Week 3: tight cluster connections
-        // Week 4: connects back to key moments from prior weeks
 
         function getConnections() {
             const connections = [];
-
-            // Week 1: sequential chain
-            for (let i = 0; i < 6; i++) {
-                connections.push([i, i + 1]);
-            }
-
-            // Week 2: dense web (each day connects to 2-3 others in same phase)
+            for (let i = 0; i < 6; i++) connections.push([i, i + 1]);
             for (let i = 7; i < 14; i++) {
-                const targets = [i + 1, i + 2, i + 3].filter(t => t < 14);
-                targets.forEach(t => {
+                [i + 1, i + 2, i + 3].filter(t => t < 14).forEach(t => {
                     if (Math.random() > 0.4) connections.push([i, t]);
                 });
             }
-
-            // Week 3: tight cluster (all connect to each other)
             for (let i = 14; i < 18; i++) {
-                for (let j = i + 1; j < 18; j++) {
-                    connections.push([i, j]);
-                }
+                for (let j = i + 1; j < 18; j++) connections.push([i, j]);
             }
-
-            // Week 4 (day 19): connects to day 1, day 7, day 14, day 15 (phase boundaries)
-            connections.push([18, 0]); // back to day 1
-            connections.push([18, 6]); // end of sensing
-            connections.push([18, 13]); // end of contact
-            connections.push([18, 14]); // start of making
-
+            connections.push([18, 0], [18, 6], [18, 13], [18, 14]);
             return connections;
         }
 
         const connections = getConnections();
 
+        const dayWords = {
+            1: 'beginning', 2: 'camera', 3: 'listening', 4: 'texture',
+            5: 'walking', 6: 'building', 7: 'mistake', 8: 'reaching',
+            9: 'agents', 10: 'friction', 11: 'strangers', 12: 'exchange',
+            13: 'trust', 14: 'boundary', 15: 'alone', 16: 'convergence',
+            17: 'hidden', 18: 'useful/wanted', 19: 'accounting'
+        };
+
         let time = 0;
+        let selectedNode = null;
+        let draggingNode = null;
+        let dragOffsetX = 0;
+        let dragOffsetY = 0;
+
+        const tooltip = document.getElementById('tooltip');
+
+        function getNodeAt(px, py) {
+            for (let i = nodes.length - 1; i >= 0; i--) {
+                const n = nodes[i];
+                const dist = Math.sqrt((px - n.x) ** 2 + (py - n.y) ** 2);
+                if (dist < 24) return i;
+            }
+            return null;
+        }
+
+        function canvasCoords(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return {
+                cx: (clientX - rect.left) * (width / rect.width),
+                cy: (clientY - rect.top) * (height / rect.height),
+                sx: clientX,
+                sy: clientY
+            };
+        }
+
+        // --- Drag start ---
+        function onDown(e) {
+            // Don't prevent default for touch — we handle it
+            const { cx, cy } = canvasCoords(e);
+            const hit = getNodeAt(cx, cy);
+            if (hit !== null) {
+                draggingNode = hit;
+                dragOffsetX = nodes[hit].x - cx;
+                dragOffsetY = nodes[hit].y - cy;
+                canvas.classList.add('dragging');
+
+                // Also select it and show tooltip
+                selectedNode = hit;
+                const node = nodes[hit];
+                const word = dayWords[node.day];
+                tooltip.textContent = `Day ${node.day}: ${word}`;
+                const sx = e.touches ? e.touches[0].clientX : e.clientX;
+                const sy = e.touches ? e.touches[0].clientY : e.clientY;
+                tooltip.style.left = Math.min(sx + 14, window.innerWidth - 180) + 'px';
+                tooltip.style.top = (sy - 40) + 'px';
+                tooltip.classList.add('visible');
+
+                if (e.touches) e.preventDefault(); // prevent scroll while dragging node
+            }
+        }
+
+        // --- Drag move ---
+        function onMove(e) {
+            if (draggingNode === null) return;
+            if (e.touches) e.preventDefault();
+            const { cx, cy, sx, sy } = canvasCoords(e);
+            nodes[draggingNode].x = cx + dragOffsetX;
+            nodes[draggingNode].y = cy + dragOffsetY;
+
+            // Update tooltip position
+            tooltip.style.left = Math.min(sx + 14, window.innerWidth - 180) + 'px';
+            tooltip.style.top = (sy - 40) + 'px';
+        }
+
+        // --- Drag end / tap ---
+        function onUp(e) {
+            if (draggingNode !== null) {
+                canvas.classList.remove('dragging');
+                draggingNode = null;
+                return;
+            }
+        }
+
+        // --- Click to select (non-drag) ---
+        function onClick(e) {
+            const { cx, cy, sx, sy } = canvasCoords(e);
+            const hit = getNodeAt(cx, cy);
+            if (hit !== null && hit !== selectedNode) {
+                selectedNode = hit;
+                const node = nodes[hit];
+                tooltip.textContent = `Day ${node.day}: ${dayWords[node.day]}`;
+                tooltip.style.left = Math.min(sx + 14, window.innerWidth - 180) + 'px';
+                tooltip.style.top = (sy - 40) + 'px';
+                tooltip.classList.add('visible');
+            } else if (hit === null) {
+                selectedNode = null;
+                tooltip.classList.remove('visible');
+            }
+        }
+
+        // Mouse events
+        canvas.addEventListener('mousedown', onDown);
+        canvas.addEventListener('mousemove', onMove);
+        canvas.addEventListener('mouseup', onUp);
+        canvas.addEventListener('click', onClick);
+
+        // Touch events
+        canvas.addEventListener('touchstart', onDown, { passive: false });
+        canvas.addEventListener('touchmove', onMove, { passive: false });
+        canvas.addEventListener('touchend', onUp);
 
         function draw() {
             ctx.fillStyle = 'rgba(10, 10, 10, 0.15)';
@@ -170,49 +277,49 @@
 
             time += 0.005;
 
-            // Draw connections first (behind nodes)
-            ctx.strokeStyle = 'rgba(120, 90, 255, 0.15)';
-            ctx.lineWidth = 1;
+            // Draw connections — WHITE lines
+            ctx.lineWidth = 1.5;
             connections.forEach(([a, b]) => {
                 const nodeA = nodes[a];
                 const nodeB = nodes[b];
-                
-                // Subtle pulse based on time
-                const pulse = Math.sin(time * 2 + a * 0.3) * 0.3 + 0.7;
-                
-                ctx.globalAlpha = pulse * 0.15;
+                const pulse = Math.sin(time * 2 + a * 0.3) * 0.1 + 0.9;
+
+                const isSelected = selectedNode === a || selectedNode === b;
+                const alpha = isSelected ? pulse * 0.9 : pulse * 0.45;
+
+                ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
                 ctx.beginPath();
                 ctx.moveTo(nodeA.x, nodeA.y);
                 ctx.lineTo(nodeB.x, nodeB.y);
                 ctx.stroke();
             });
 
-            ctx.globalAlpha = 1;
-
             // Draw nodes
             nodes.forEach((node, i) => {
                 const [r, g, b] = node.color;
-                
-                // Gentle breathing motion
+
                 const breathe = Math.sin(time + i * 0.5) * 3;
-                const radius = 6 + breathe;
+                const isSelected = selectedNode === i;
+                const isDragging = draggingNode === i;
+                const radius = (isSelected || isDragging ? 10 : 6) + breathe;
 
                 // Glow
-                const gradient = ctx.createRadialGradient(node.x, node.y, 0, node.x, node.y, radius * 3);
-                gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0.4)`);
+                const glowRadius = (isSelected || isDragging) ? radius * 5 : radius * 3;
+                const gradient = ctx.createRadialGradient(node.x, node.y, 0, node.x, node.y, glowRadius);
+                gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${(isSelected || isDragging) ? 0.7 : 0.5})`);
                 gradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
                 ctx.fillStyle = gradient;
-                ctx.fillRect(node.x - radius * 3, node.y - radius * 3, radius * 6, radius * 6);
+                ctx.fillRect(node.x - glowRadius, node.y - glowRadius, glowRadius * 2, glowRadius * 2);
 
                 // Core
-                ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 0.9)`;
+                ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 0.95)`;
                 ctx.beginPath();
                 ctx.arc(node.x, node.y, radius, 0, Math.PI * 2);
                 ctx.fill();
 
-                // Day number
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-                ctx.font = '9px "Courier New"';
+                // Day number — WHITE
+                ctx.fillStyle = '#fff';
+                ctx.font = `${(isSelected || isDragging) ? '12' : '10'}px "Courier New"`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillText(node.day, node.x, node.y);
