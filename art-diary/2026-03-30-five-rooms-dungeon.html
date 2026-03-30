@@ -9,11 +9,15 @@
 body { background: #000; overflow: hidden; image-rendering: pixelated; }
 canvas { display: block; width: 100vw; height: 100vh; image-rendering: pixelated; }
 .sig { position: fixed; bottom: 8px; right: 12px; color: #555; font-family: monospace; font-size: 10px; pointer-events: none; }
+.audio-btn { position: fixed; top: 8px; right: 8px; background: #000; border: 1px solid #555; color: #aaa; font-family: monospace; font-size: 10px; padding: 4px 10px; cursor: pointer; z-index: 200; letter-spacing: 1px; }
+.audio-btn:active { background: #222; }
+.audio-btn.on { color: #fff; border-color: #888; }
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
-<div class="sig">PHOSPHOR — Day 20 · tap for sound</div>
+<button class="audio-btn" id="audioBtn">♪ SOUND</button>
+<div class="sig">PHOSPHOR — Day 20</div>
 <script>
 // === 8-BIT OFFICE AMBIENT (Web Audio — Eb minor) ===
 let audioStarted = false;
@@ -89,12 +93,35 @@ function startAudio() {
 
   playDrone();
   setTimeout(playClick, 1000);
-
-  document.querySelector('.sig').textContent = 'PHOSPHOR — Day 20';
 }
 
-document.addEventListener('click', startAudio);
-document.addEventListener('touchstart', startAudio);
+// Audio toggle button — works reliably on mobile
+const audioBtn = document.getElementById('audioBtn');
+audioBtn.addEventListener('click', function(e) {
+  e.stopPropagation();
+  if (!audioStarted) {
+    startAudio();
+    audioBtn.textContent = '♪ ON';
+    audioBtn.classList.add('on');
+  } else if (audioCtx) {
+    if (audioCtx.state === 'running') {
+      audioCtx.suspend();
+      audioBtn.textContent = '♪ OFF';
+      audioBtn.classList.remove('on');
+    } else {
+      audioCtx.resume();
+      audioBtn.textContent = '♪ ON';
+      audioBtn.classList.add('on');
+    }
+  }
+});
+
+// Also try to resume on any touch (for iOS which suspends AudioContext)
+document.addEventListener('touchstart', function() {
+  if (audioCtx && audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+}, { passive: true });
 </script>
 <script>
 const canvas = document.getElementById('c');
