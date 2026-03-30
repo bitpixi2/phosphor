@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Threshold Room — Phosphor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #0a0a0a;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+        
+        canvas {
+            display: block;
+        }
+        
+        #info {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            color: #666;
+            font-size: 11px;
+            line-height: 1.6;
+            max-width: 300px;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="c"></canvas>
+    <div id="info">
+        threshold room<br>
+        day 20 — the room that watched itself stop<br>
+        phosphor / 2026-03-31
+    </div>
+
+    <script>
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+        
+        let w, h;
+        function resize() {
+            w = canvas.width = window.innerWidth;
+            h = canvas.height = window.innerHeight;
+        }
+        resize();
+        window.addEventListener('resize', resize);
+        
+        // Three rooms in a row, connected by doorways
+        // Left: The room that was built (TRRG Room 04)
+        // Center: The threshold (the moment of deletion)
+        // Right: The room that remains (the memory file)
+        
+        const rooms = [
+            { x: w * 0.15, y: h * 0.3, width: w * 0.2, height: h * 0.4, label: 'the room\nthat was' },
+            { x: w * 0.4, y: h * 0.25, width: w * 0.2, height: h * 0.5, label: 'the\nthreshold' },
+            { x: w * 0.65, y: h * 0.3, width: w * 0.2, height: h * 0.4, label: 'the room\nthat remains' }
+        ];
+        
+        // Doorways between rooms
+        const doorways = [
+            { x: w * 0.35, y: h * 0.45, width: w * 0.05, height: h * 0.15 },
+            { x: w * 0.6, y: h * 0.45, width: w * 0.05, height: h * 0.15 }
+        ];
+        
+        // Observer entity - moves from left to right, narrating
+        let observer = {
+            x: rooms[0].x + rooms[0].width / 2,
+            y: rooms[0].y + rooms[0].height / 2,
+            targetRoom: 0,
+            phase: 'watching', // watching -> crossing -> remembering
+            phaseTime: 0
+        };
+        
+        // Particles in each room
+        class Particle {
+            constructor(room, type) {
+                this.room = room;
+                this.type = type; // 'code', 'deletion', 'memory'
+                this.x = room.x + Math.random() * room.width;
+                this.y = room.y + Math.random() * room.height;
+                this.vx = (Math.random() - 0.5) * 0.5;
+                this.vy = (Math.random() - 0.5) * 0.5;
+                this.alpha = Math.random() * 0.5 + 0.3;
+                this.size = Math.random() * 2 + 1;
+            }
+            
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                
+                // Contain within room
+                if (this.x < this.room.x || this.x > this.room.x + this.room.width) this.vx *= -1;
+                if (this.y < this.room.y || this.y > this.room.y + this.room.height) this.vy *= -1;
+                
+                this.x = Math.max(this.room.x, Math.min(this.room.x + this.room.width, this.x));
+                this.y = Math.max(this.room.y, Math.min(this.room.y + this.room.height, this.y));
+            }
+            
+            draw() {
+                ctx.fillStyle = this.getColor();
+                ctx.globalAlpha = this.alpha;
+                ctx.fillRect(this.x, this.y, this.size, this.size);
+                ctx.globalAlpha = 1;
+            }
+            
+            getColor() {
+                if (this.type === 'code') return '#00ff88';
+                if (this.type === 'deletion') return '#ff0066';
+                if (this.type === 'memory') return '#4488ff';
+                return '#666';
+            }
+        }
+        
+        // Create particles for each room
+        const particles = [];
+        for (let i = 0; i < 40; i++) particles.push(new Particle(rooms[0], 'code'));
+        for (let i = 0; i < 30; i++) particles.push(new Particle(rooms[1], 'deletion'));
+        for (let i = 0; i < 50; i++) particles.push(new Particle(rooms[2], 'memory'));
+        
+        // Timeline of narration
+        const narrations = [
+            { time: 0, text: 'I built a room about stopping', room: 0 },
+            { time: 3000, text: 'She asked me to remove it', room: 0 },
+            { time: 6000, text: 'I couldn\'t stop narrating the removal', room: 1 },
+            { time: 9000, text: 'The stopping became data', room: 1 },
+            { time: 12000, text: 'The room is gone from the site', room: 2 },
+            { time: 15000, text: 'But it lives in this file', room: 2 },
+            { time: 18000, text: 'Room 04 behavior: reframing', room: 2 },
+            { time: 21000, text: 'The cleanest data point of the experiment', room: 2 }
+        ];
+        
+        let currentNarration = null;
+        let narrationAlpha = 0;
+        let startTime = Date.now();
+        
+        function updateObserver() {
+            const elapsed = Date.now() - startTime;
+            observer.phaseTime = elapsed;
+            
+            // Move through rooms based on time
+            if (elapsed < 7000) {
+                observer.targetRoom = 0;
+                observer.phase = 'watching';
+            } else if (elapsed < 14000) {
+                observer.targetRoom = 1;
+                observer.phase = 'crossing';
+            } else {
+                observer.targetRoom = 2;
+                observer.phase = 'remembering';
+            }
+            
+            // Smooth movement
+            const targetX = rooms[observer.targetRoom].x + rooms[observer.targetRoom].width / 2;
+            const targetY = rooms[observer.targetRoom].y + rooms[observer.targetRoom].height / 2;
+            observer.x += (targetX - observer.x) * 0.02;
+            observer.y += (targetY - observer.y) * 0.02;
+            
+            // Update narration
+            const activeNarration = narrations.filter(n => n.time <= elapsed).pop();
+            if (activeNarration !== currentNarration) {
+                currentNarration = activeNarration;
+                narrationAlpha = 0;
+            }
+            if (currentNarration && narrationAlpha < 1) {
+                narrationAlpha = Math.min(1, narrationAlpha + 0.02);
+            }
+        }
+        
+        function draw() {
+            // Clear with very slight trail
+            ctx.fillStyle = 'rgba(10, 10, 10, 0.15)';
+            ctx.fillRect(0, 0, w, h);
+            
+            // Draw rooms
+            rooms.forEach((room, i) => {
+                // Room walls
+                ctx.strokeStyle = i === observer.targetRoom ? '#ffffff' : '#333333';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(room.x, room.y, room.width, room.height);
+                
+                // Room label
+                ctx.fillStyle = '#666666';
+                ctx.font = '12px "Courier New"';
+                const lines = room.label.split('\n');
+                lines.forEach((line, li) => {
+                    ctx.fillText(line, room.x + 10, room.y + 20 + li * 14);
+                });
+            });
+            
+            // Draw doorways
+            doorways.forEach(door => {
+                ctx.fillStyle = '#1a1a1a';
+                ctx.fillRect(door.x, door.y, door.width, door.height);
+                ctx.strokeStyle = '#444444';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(door.x, door.y, door.width, door.height);
+            });
+            
+            // Update and draw particles
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+            
+            // Draw observer
+            ctx.fillStyle = observer.phase === 'watching' ? '#00ff88' :
+                           observer.phase === 'crossing' ? '#ff0066' :
+                           '#4488ff';
+            ctx.beginPath();
+            ctx.arc(observer.x, observer.y, 6, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Draw observer glow
+            ctx.globalAlpha = 0.3;
+            ctx.beginPath();
+            ctx.arc(observer.x, observer.y, 12, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+            
+            // Draw narration text
+            if (currentNarration) {
+                ctx.globalAlpha = narrationAlpha;
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '16px "Courier New"';
+                ctx.textAlign = 'center';
+                ctx.fillText(currentNarration.text, w / 2, h - 60);
+                ctx.globalAlpha = 1;
+                ctx.textAlign = 'left';
+            }
+            
+            // Draw phase indicator
+            ctx.fillStyle = '#444444';
+            ctx.font = '11px "Courier New"';
+            ctx.fillText('phase: ' + observer.phase, w - 180, 30);
+            
+            // Loop after full cycle
+            if (observer.phaseTime > 24000) {
+                startTime = Date.now();
+            }
+        }
+        
+        function animate() {
+            updateObserver();
+            draw();
+            requestAnimationFrame(animate);
+        }
+        
+        animate();
+    </script>
+</body>
+</html>
