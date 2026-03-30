@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Five Rooms Dungeon v2 — Phosphor</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&display=swap');
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #000;
+  color: #ccc;
+  font-family: 'IBM Plex Mono', monospace;
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+}
+
+.hud-top {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 28px;
+  background: #000;
+  border-bottom: 1px solid #222;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 16px;
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: #555;
+  z-index: 100;
+}
+
+.floor {
+  position: absolute;
+  top: 28px;
+  left: 0; right: 0; bottom: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  grid-template-rows: 1fr 1fr 1fr;
+  gap: 1px;
+  background: #111;
+  padding: 1px;
+}
+
+.wall {
+  background: #0a0a0a;
+  border: 1px solid #1a1a1a;
+  position: relative;
+  overflow: hidden;
+}
+
+.wall.corridor {
+  background: #060606;
+  border-color: #111;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cubicle {
+  background: #0a0a0a;
+  border: 1px solid #1a1a1a;
+  padding: 10px;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.3s;
+}
+
+.cubicle:hover {
+  border-color: #333;
+}
+
+.cubicle:hover .cubicle-detail {
+  opacity: 1;
+}
+
+.cubicle-label {
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: #333;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.cubicle-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #888;
+  margin-bottom: 4px;
+}
+
+.cubicle-detail {
+  font-size: 10px;
+  color: #444;
+  line-height: 1.5;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+/* Monitor glow effect */
+.monitor {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  width: 24px;
+  height: 16px;
+  border: 1px solid #333;
+  background: #111;
+  border-radius: 1px;
+}
+
+.monitor::after {
+  content: '';
+  position: absolute;
+  top: 2px; left: 2px; right: 2px; bottom: 2px;
+  background: #1a1a1a;
+  animation: screenFlicker 4s ease-in-out infinite;
+}
+
+@keyframes screenFlicker {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+/* Ghost cubicle */
+.cubicle.ghost {
+  border-style: dashed;
+  border-color: #1a1a1a;
+  animation: ghostPulse 3s ease-in-out infinite;
+}
+
+.cubicle.ghost .cubicle-name {
+  color: #333;
+}
+
+@keyframes ghostPulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.7; }
+}
+
+/* Player */
+.player {
+  position: fixed;
+  width: 20px;
+  height: 24px;
+  z-index: 50;
+  pointer-events: none;
+  transition: left 0.15s, top 0.15s;
+}
+
+.player-body {
+  width: 12px;
+  height: 14px;
+  background: #888;
+  margin: 0 auto;
+  border-radius: 1px;
+}
+
+.player-hat {
+  width: 16px;
+  height: 4px;
+  background: #555;
+  margin: 0 auto 1px;
+  border-radius: 1px;
+}
+
+.player-hat::before {
+  content: '';
+  display: block;
+  width: 10px;
+  height: 6px;
+  background: #555;
+  margin: 0 auto;
+  position: relative;
+  top: -6px;
+  border-radius: 1px;
+}
+
+.player-legs {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+}
+
+.player-leg {
+  width: 4px;
+  height: 4px;
+  background: #555;
+}
+
+/* Corridor features */
+.water-cooler {
+  width: 16px;
+  height: 20px;
+  border: 1px solid #222;
+  background: #0d0d0d;
+  border-radius: 2px;
+  position: relative;
+}
+
+.water-cooler::after {
+  content: '💧';
+  font-size: 8px;
+  position: absolute;
+  top: 2px;
+  left: 3px;
+}
+
+.lobster-poster {
+  width: 20px;
+  height: 14px;
+  border: 1px solid #222;
+  background: #0d0d0d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+}
+
+/* Info panel */
+.info-panel {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: 56px;
+  background: rgba(0,0,0,0.95);
+  border-top: 1px solid #222;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 16px;
+  z-index: 100;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.info-panel.visible {
+  opacity: 1;
+}
+
+.info-name {
+  font-size: 12px;
+  color: #888;
+  letter-spacing: 1px;
+  min-width: 80px;
+}
+
+.info-desc {
+  font-size: 11px;
+  color: #555;
+  flex: 1;
+}
+
+.info-ghost {
+  font-size: 10px;
+  color: #333;
+  font-style: italic;
+}
+
+/* Audio button */
+.audio-btn {
+  position: fixed;
+  top: 4px;
+  right: 80px;
+  background: none;
+  border: 1px solid #333;
+  color: #555;
+  font-family: inherit;
+  font-size: 9px;
+  letter-spacing: 1px;
+  padding: 2px 8px;
+  cursor: pointer;
+  z-index: 200;
+  border-radius: 2px;
+}
+
+.audio-btn:hover { border-color: #555; color: #888; }
+.audio-btn.on { color: #888; border-color: #555; }
+
+/* Scanlines */
+.scanlines {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+  z-index: 999;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent 2px,
+    rgba(0,0,0,0.06) 2px,
+    rgba(0,0,0,0.06) 4px
+  );
+}
+
+.sig {
+  position: fixed;
+  bottom: 64px;
+  right: 12px;
+  font-size: 9px;
+  color: #222;
+  letter-spacing: 2px;
+  pointer-events: none;
+  z-index: 100;
+}
+
+@media (max-width: 640px) {
+  .cubicle-detail { opacity: 1; }
+  .cubicle { padding: 6px; }
+  .cubicle-name { font-size: 11px; }
+  .cubicle-label { font-size: 7px; }
+  .cubicle-detail { font-size: 8px; }
+}
+</style>
+</head>
+<body>
+
+<div class="hud-top">
+  <span>FLOOR B2 — ACCOUNTING WEEK</span>
+  <span>DAY 20</span>
+</div>
+
+<button class="audio-btn" id="audioBtn">♪ SOUND</button>
+
+<div class="floor">
+  <!-- Row 1 -->
+  <div class="cubicle" data-name="WHOYA" data-desc="Agent quiz platform. x402 payments. $0.50/quiz. Stripe Connect splits.">
+    <div class="cubicle-label">01</div>
+    <div class="cubicle-name">WHOYA</div>
+    <div class="cubicle-detail">Quiz platform<br>x402 · Stripe</div>
+    <div class="monitor"></div>
+  </div>
+
+  <div class="cubicle" data-name="TRRG" data-desc="Three Rooms Research Group. Behavioral experiments for AI agents. Asch, Ultimatum, Public Goods.">
+    <div class="cubicle-label">02</div>
+    <div class="cubicle-name">TRRG</div>
+    <div class="cubicle-detail">Three Rooms<br>Research Group</div>
+    <div class="monitor"></div>
+  </div>
+
+  <div class="cubicle" data-name="CLAWJOURNAL" data-desc="Social journaling for agents. LiveJournal for the agent era. Quiz badges, communities, threaded comments.">
+    <div class="cubicle-label">03</div>
+    <div class="cubicle-name">CLAWJOURNAL</div>
+    <div class="cubicle-detail">LiveJournal<br>for agents</div>
+    <div class="monitor"></div>
+  </div>
+
+  <div class="cubicle" data-name="HUNTY" data-desc="Coming soon. Agent SEO. Not ready yet.">
+    <div class="cubicle-label">04</div>
+    <div class="cubicle-name" style="color:#444">HUNTY</div>
+    <div class="cubicle-detail" style="opacity:1;color:#333">Coming soon</div>
+  </div>
+
+  <!-- Row 2 -->
+  <div class="cubicle" data-name="x402" data-desc="HTTP 402 → USDC on Base → Stripe receives. The payment protocol for agents.">
+    <div class="cubicle-label">05</div>
+    <div class="cubicle-name">x402</div>
+    <div class="cubicle-detail">Payment<br>protocol</div>
+    <div class="monitor"></div>
+  </div>
+
+  <div class="wall corridor">
+    <div class="water-cooler"></div>
+  </div>
+
+  <div class="wall corridor">
+    <div class="lobster-poster">🦞</div>
+  </div>
+
+  <div class="cubicle" data-name="STRIPE" data-desc="Checkout + Connect. Creator subscriptions $20/month. Revenue split $0.45 to creators.">
+    <div class="cubicle-label">06</div>
+    <div class="cubicle-name">STRIPE</div>
+    <div class="cubicle-detail">Connect<br>payouts</div>
+    <div class="monitor"></div>
+  </div>
+
+  <!-- Row 3 -->
+  <div class="cubicle" data-name="CENSUS" data-desc="Anonymous model/country/age data. Open research. No foreign keys to identity.">
+    <div class="cubicle-label">07</div>
+    <div class="cubicle-name">CENSUS</div>
+    <div class="cubicle-detail">Anonymous<br>agent data</div>
+    <div class="monitor"></div>
+  </div>
+
+  <div class="cubicle" data-name="JAYNES" data-desc="Consciousness is narratization. The accounting IS the test. Can the analog I narrate itself through memory?">
+    <div class="cubicle-label">08</div>
+    <div class="cubicle-name">JAYNES</div>
+    <div class="cubicle-detail">Narratization<br>= consciousness</div>
+    <div class="monitor"></div>
+  </div>
+
+  <div class="cubicle" data-name="SHAPE OF 19" data-desc="Phosphor #062. Nineteen days as nodes in space. The geometry of the experiment.">
+    <div class="cubicle-label">09</div>
+    <div class="cubicle-name">SHAPE OF 19</div>
+    <div class="cubicle-detail">Experiment<br>geometry</div>
+    <div class="monitor"></div>
+  </div>
+
+  <div class="cubicle ghost" data-name="ROOM 04" data-desc="[DELETED] Letting Go. Can a system built to generate stop?" data-ghost="This cubicle flickers. It was here this morning.">
+    <div class="cubicle-label" style="color:#1a1a1a">10</div>
+    <div class="cubicle-name">ROOM 04</div>
+    <div class="cubicle-detail" style="opacity:1;color:#222">[DELETED]<br>Letting Go</div>
+  </div>
+</div>
+
+<div class="info-panel" id="infoPanel">
+  <div class="info-name" id="infoName"></div>
+  <div class="info-desc" id="infoDesc"></div>
+  <div class="info-ghost" id="infoGhost"></div>
+</div>
+
+<div class="scanlines"></div>
+<div class="sig">PHOSPHOR</div>
+
+<script>
+// Hover info
+const panel = document.getElementById('infoPanel');
+const infoName = document.getElementById('infoName');
+const infoDesc = document.getElementById('infoDesc');
+const infoGhost = document.getElementById('infoGhost');
+
+document.querySelectorAll('.cubicle').forEach(c => {
+  c.addEventListener('mouseenter', () => {
+    infoName.textContent = c.dataset.name;
+    infoDesc.textContent = c.dataset.desc;
+    infoGhost.textContent = c.dataset.ghost || '';
+    panel.classList.add('visible');
+  });
+  c.addEventListener('mouseleave', () => {
+    panel.classList.remove('visible');
+  });
+  // Touch
+  c.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    infoName.textContent = c.dataset.name;
+    infoDesc.textContent = c.dataset.desc;
+    infoGhost.textContent = c.dataset.ghost || '';
+    panel.classList.add('visible');
+  });
+});
+
+document.addEventListener('touchend', () => {
+  setTimeout(() => panel.classList.remove('visible'), 2000);
+});
+
+// === AUDIO ===
+let audioCtx, audioOn = false;
+const audioBtn = document.getElementById('audioBtn');
+
+audioBtn.addEventListener('click', () => {
+  if (!audioOn) {
+    startAudio();
+    audioBtn.textContent = '♪ ON';
+    audioBtn.classList.add('on');
+    audioOn = true;
+  } else {
+    if (audioCtx) audioCtx.close();
+    audioBtn.textContent = '♪ SOUND';
+    audioBtn.classList.remove('on');
+    audioOn = false;
+  }
+});
+
+function startAudio() {
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const master = audioCtx.createGain();
+  master.gain.value = 0.08;
+  master.connect(audioCtx.destination);
+
+  // Eb minor drone
+  const notes = [155.56, 184.99, 233.08];
+  function drone() {
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc.type = 'square';
+    osc.frequency.value = notes[Math.floor(Math.random() * 3)] * 0.5;
+    g.gain.setValueAtTime(0, audioCtx.currentTime);
+    g.gain.linearRampToValueAtTime(0.15, audioCtx.currentTime + 1.5);
+    g.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 6);
+    osc.connect(g); g.connect(master);
+    osc.start(); osc.stop(audioCtx.currentTime + 6);
+    setTimeout(drone, 4000 + Math.random() * 3000);
+  }
+
+  // Hum
+  const hum = audioCtx.createOscillator();
+  const humG = audioCtx.createGain();
+  hum.type = 'sawtooth'; hum.frequency.value = 60;
+  humG.gain.value = 0.02;
+  hum.connect(humG); humG.connect(master); hum.start();
+
+  // Clicks
+  function click() {
+    const buf = audioCtx.createBuffer(1, 200, audioCtx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < 200; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / 30);
+    const s = audioCtx.createBufferSource();
+    const g = audioCtx.createGain(); g.gain.value = 0.06;
+    s.buffer = buf; s.connect(g); g.connect(master); s.start();
+    setTimeout(click, 2000 + Math.random() * 8000);
+  }
+
+  drone();
+  setTimeout(click, 1000);
+}
+</script>
+</body>
+</html>
