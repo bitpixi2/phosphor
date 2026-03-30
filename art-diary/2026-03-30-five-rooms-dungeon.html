@@ -6,8 +6,8 @@
 <title>Five Rooms Dungeon — Phosphor</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { background: #000; overflow: hidden; image-rendering: pixelated; }
-canvas { display: block; width: 100vw; height: 100vh; image-rendering: pixelated; }
+body { background: #000; overflow: hidden; image-rendering: pixelated; display: flex; align-items: center; justify-content: center; height: 100vh; width: 100vw; }
+canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edges; }
 .sig { position: fixed; bottom: 8px; right: 12px; color: #555; font-family: monospace; font-size: 10px; pointer-events: none; }
 .audio-btn { position: fixed; top: 8px; right: 8px; background: #000; border: 1px solid #555; color: #aaa; font-family: monospace; font-size: 10px; padding: 4px 10px; cursor: pointer; z-index: 200; letter-spacing: 1px; }
 .audio-btn:active { background: #222; }
@@ -132,6 +132,18 @@ const W = 256;
 const H = 240;
 canvas.width = W;
 canvas.height = H;
+
+// Scale canvas to fit screen while keeping aspect ratio (no stretch)
+function resizeCanvas() {
+  const scale = Math.min(window.innerWidth / W, window.innerHeight / H);
+  // Use integer scale for crisp pixels when possible
+  const intScale = Math.max(1, Math.floor(scale));
+  const finalScale = intScale >= scale * 0.85 ? intScale : scale;
+  canvas.style.width = Math.floor(W * finalScale) + 'px';
+  canvas.style.height = Math.floor(H * finalScale) + 'px';
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
 
 const WHITE = '#e0e0e0';
 const BLACK = '#000000';
