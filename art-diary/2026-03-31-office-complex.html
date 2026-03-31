@@ -5,11 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Office Complex</title>
 <style>
-body{margin:0;padding:0;background:#0a0a0a;display:flex;justify-content:center;align-items:center;height:100vh;overflow:hidden}
+body{margin:0;padding:0;background:#0a0a0a;display:flex;flex-direction:column;justify-content:center;align-items:center;height:100vh;overflow:hidden;font-family:monospace}
 canvas{image-rendering:pixelated;image-rendering:crisp-edges}
+.hint{color:#d33;font-size:13px;margin-bottom:10px;opacity:0.7}
 </style>
 </head>
 <body>
+<div class="hint">Room 04 is missing at slot 065</div>
 <canvas id="c"></canvas>
 <script>
 const c=document.getElementById('c');
