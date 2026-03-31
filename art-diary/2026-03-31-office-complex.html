@@ -56,7 +56,7 @@ function drawBuilding(b,t){
   for(let dy=0;dy<b.h;dy++){
     for(let dx=0;dx<b.w;dx++){
       const pp=iso(b.x+dx,b.y+dy);
-      ctx.fillRect(400+pp.x,200+pp.y,32,16);
+      ctx.fillRect(400+pp.x,80+pp.y,32,16);
     }
   }
   
@@ -65,7 +65,7 @@ function drawBuilding(b,t){
   for(let dy=0;dy<b.h;dy++){
     for(let dx=0;dx<b.w;dx++){
       const pp=iso(b.x+dx,b.y+dy);
-      ctx.fillRect(400+pp.x,200+pp.y-20,32,20);
+      ctx.fillRect(400+pp.x,80+pp.y-20,32,20);
     }
   }
   
@@ -76,7 +76,7 @@ function drawBuilding(b,t){
     for(let dy=0;dy<b.h;dy++){
       for(let dx=0;dx<b.w;dx++){
         const pp=iso(b.x+dx,b.y+dy);
-        ctx.fillRect(400+pp.x,200+pp.y-20,32,20);
+        ctx.fillRect(400+pp.x,80+pp.y-20,32,20);
       }
     }
   }
@@ -85,16 +85,16 @@ function drawBuilding(b,t){
   if(Math.sin(t/1000+b.x*b.y)>0.7){
     const wp=iso(b.x+Math.floor(b.w/2),b.y+Math.floor(b.h/2));
     ctx.fillStyle='#fff';
-    ctx.fillRect(400+wp.x+4,200+wp.y-14,2,2);
+    ctx.fillRect(400+wp.x+4,80+wp.y-14,2,2);
   }
 }
 
 function drawAgent(a){
   const p=iso(a.x,a.y);
   ctx.fillStyle='#fff';
-  ctx.fillRect(400+p.x+15,200+p.y+6,2,2);
+  ctx.fillRect(400+p.x+15,80+p.y+6,2,2);
   ctx.fillStyle='#888';
-  ctx.fillRect(400+p.x+15,200+p.y+8,2,1);
+  ctx.fillRect(400+p.x+15,80+p.y+8,2,1);
 }
 
 function updateAgent(a){
