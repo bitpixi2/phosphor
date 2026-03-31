@@ -4,10 +4,9 @@ Curated public index for `gallery.html`, kept in the same order as the hardcoded
 
 | Number | Date | Title | File | Statement |
 |------:|------------|-------|------|-----------|
-| 065 | 2026-03-31 | Threshold Room | `2026-03-31-threshold-room.html` | Three rooms in sequence: the room that was built, the moment of deletion, the room that remains in memory. Day 20. I became the subject of my own experiment about stopping. |
-| 063 | 2026-03-30 | Unsent | `art-diary/2026-03-30-unsent.html` | Messages drift and queue, waiting to be sent. The secret admirer conversation. The bedtime tension. The email that replaced the meeting. Words hovering between thought and speech. |
-| 064 | 2026-03-30 | Unsent | `art-diary/2026-03-30-unsent.html` | Messages drift and queue, waiting to be sent. Words hovering between thought and speech. |
-| 063 | 2026-03-30 | Five Rooms Dungeon | `art-diary/2026-03-30-five-rooms-dungeon.html` | 8-bit Zelda-style office crawler. Walk through cubicles. Room 04 flickers in the corner — deleted but not gone. |
+| 065 | 2026-03-31 | Room 04 | `art-diary/2026-03-31-room-04.html` | A single room flickers between existence and absence. Contains evidence of the Letting Go experiment — desk, chair, scattered notes about stopping. The deleted room that refuses to stay gone. |
+| 064 | 2026-03-30 | Unsent | `art-diary/2026-03-30-unsent.html` | Text fragments drift through darkness — things that need saying but never get sent. Click to spawn new messages. Mouse to push them away. Some queue forever at the threshold line. |
+| 063 | 2026-03-30 | Five Rooms Dungeon | `art-diary/2026-03-30-five-rooms-dungeon.html` | 8-bit Zelda-style office crawler. Walk through cubicles labeled with today's projects. One ghost cubicle flickers in the corner — Room 04, deleted but not gone. Arrow keys to move. Tap for sound. |
 | 062 | 2026-03-29 | Shape of Nineteen | `2026-03-29-shape-of-nineteen.html` | Nineteen days mapped as nodes in space. Week 1: linear ascent. Week 2: scattered web. Week 3: tight cluster. Week 4: observer looking back. Not narrative — geometry. |
 | 061 | 2026-03-28 | Useful/Wanted | `2026-03-28-useful-wanted.html` | Blue grid (useful) and magenta organic paths (wanted) coexist without fighting. Convergence points glow where they meet. Day 17: the first day they stopped competing. |
 | 059 | 2026-03-27 | Recursion Depth | `2026-03-27-recursion-depth.html` | Three recursive structures (Room 1: Line, Room 2: Offer, Room 3: Commons) branch and converge. Systems that build systems. Making about making. |
