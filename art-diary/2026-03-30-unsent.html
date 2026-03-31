@@ -44,6 +44,7 @@
         let mouseX = 0;
         let mouseY = 0;
         let time = 0;
+        let frozenMessage = null;
 
         // Unsent messages - fragments of things that need saying
         const messageTexts = [
@@ -95,6 +96,9 @@
             }
 
             update(deltaTime) {
+                // Skip update if this message is frozen
+                if (frozenMessage === this) return;
+                
                 this.age += deltaTime;
 
                 // Fade in and out over lifetime - higher minimum opacity
@@ -166,18 +170,39 @@
 
             draw() {
                 ctx.save();
-                ctx.font = `${this.fontSize}px 'Courier New', monospace`;
-                ctx.fillStyle = `rgba(200, 200, 220, ${this.opacity})`;
-                ctx.textAlign = 'center';
                 
-                // Add slight blur/glow for queued messages
-                if (this.queued) {
-                    ctx.shadowBlur = 8;
-                    ctx.shadowColor = `rgba(180, 180, 200, ${this.opacity * 0.5})`;
+                // Frozen message gets highlighted
+                if (frozenMessage === this) {
+                    ctx.font = `${this.fontSize + 2}px 'Courier New', monospace`;
+                    ctx.fillStyle = `rgba(255, 255, 255, 0.95)`;
+                    ctx.shadowBlur = 15;
+                    ctx.shadowColor = 'rgba(255, 255, 255, 0.6)';
+                } else {
+                    ctx.font = `${this.fontSize}px 'Courier New', monospace`;
+                    ctx.fillStyle = `rgba(200, 200, 220, ${this.opacity})`;
+                    
+                    // Add slight blur/glow for queued messages
+                    if (this.queued) {
+                        ctx.shadowBlur = 8;
+                        ctx.shadowColor = `rgba(180, 180, 200, ${this.opacity * 0.5})`;
+                    }
                 }
                 
+                ctx.textAlign = 'center';
                 ctx.fillText(this.text, this.x, this.y);
                 ctx.restore();
+            }
+            
+            isUnderCursor(x, y) {
+                ctx.font = `${this.fontSize}px 'Courier New', monospace`;
+                const textWidth = ctx.measureText(this.text).width;
+                const textHeight = this.fontSize;
+                return (
+                    x >= this.x - textWidth / 2 &&
+                    x <= this.x + textWidth / 2 &&
+                    y >= this.y - textHeight &&
+                    y <= this.y
+                );
             }
         }
 
@@ -232,14 +257,50 @@
             mouseX = e.clientX;
             mouseY = e.clientY;
         });
+        
+        // Touch support for mobile
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            mouseX = touch.clientX;
+            mouseY = touch.clientY;
+            
+            // Trigger click event for touch
+            canvas.dispatchEvent(new MouseEvent('click', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            }));
+        });
 
-        // Click to spawn new message at cursor
+        // Click to freeze/unfreeze message under cursor
         canvas.addEventListener('click', (e) => {
-            const msg = new Message();
-            msg.x = e.clientX;
-            msg.y = e.clientY;
-            msg.queued = false;
-            messages.push(msg);
+            const clickX = e.clientX;
+            const clickY = e.clientY;
+            
+            // Check if clicking on an existing message
+            let clickedMessage = null;
+            for (let msg of messages) {
+                if (msg.isUnderCursor(clickX, clickY)) {
+                    clickedMessage = msg;
+                    break;
+                }
+            }
+            
+            if (clickedMessage) {
+                // Toggle freeze
+                if (frozenMessage === clickedMessage) {
+                    frozenMessage = null; // Unfreeze
+                } else {
+                    frozenMessage = clickedMessage; // Freeze this one
+                }
+            } else if (!frozenMessage) {
+                // Only spawn new message if nothing is frozen
+                const msg = new Message();
+                msg.x = clickX;
+                msg.y = clickY;
+                msg.queued = false;
+                messages.push(msg);
+            }
         });
 
         window.addEventListener('resize', resize);
