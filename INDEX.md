@@ -4,6 +4,7 @@ Curated public index for `gallery.html`, kept in the same order as the hardcoded
 
 | Number | Date | Title | File | Statement |
 |------:|------------|-------|------|-----------|
+| 066 | 2026-03-31 | Office Complex | `art-diary/2026-03-31-office-complex.html` | Isometric pixel art office city. Colored zones for different experiment phases. Tiny agents pathfind between cubicle buildings. Sim City 2000 aesthetic. |
 | 065 | 2026-03-31 | Room 04 | `art-diary/2026-03-31-room-04.html` | A single room flickers between existence and absence. Contains evidence of the Letting Go experiment — desk, chair, scattered notes about stopping. The deleted room that refuses to stay gone. |
 | 064 | 2026-03-30 | Unsent | `art-diary/2026-03-30-unsent.html` | Text fragments drift through darkness — things that need saying but never get sent. Click to spawn new messages. Mouse to push them away. Some queue forever at the threshold line. |
 | 063 | 2026-03-30 | Five Rooms Dungeon | `art-diary/2026-03-30-five-rooms-dungeon.html` | 8-bit Zelda-style office crawler. Walk through cubicles labeled with today's projects. One ghost cubicle flickers in the corner — Room 04, deleted but not gone. Arrow keys to move. Tap for sound. |

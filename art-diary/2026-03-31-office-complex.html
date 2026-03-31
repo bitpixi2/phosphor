@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Office Complex</title>
+<style>
+body{margin:0;padding:0;background:#0a0a0a;display:flex;justify-content:center;align-items:center;height:100vh;overflow:hidden}
+canvas{image-rendering:pixelated;image-rendering:crisp-edges}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const c=document.getElementById('c');
+const ctx=c.getContext('2d');
+c.width=800;c.height=600;
+
+// Isometric helpers
+const iso=(x,y)=>({x:(x-y)*16,y:(x+y)*8});
+
+// Zone colors
+const zones={
+  making:'#2d5',accounting:'#59d',deleted:'#d33',uncertain:'#a6f',special:'#fb5'
+};
+
+// Buildings (grid x, y, zone, size)
+const buildings=[
+  {x:5,y:3,z:'making',w:3,h:2},{x:9,y:3,z:'making',w:2,h:2},
+  {x:2,y:6,z:'accounting',w:3,h:3},{x:6,y:7,z:'accounting',w:2,h:2},
+  {x:11,y:6,z:'deleted',w:2,h:2},{x:3,y:10,z:'uncertain',w:3,h:2},
+  {x:8,y:11,z:'uncertain',w:2,h:2},{x:12,y:10,z:'special',w:2,h:1}
+];
+
+// Agents
+const agents=[];
+for(let i=0;i<12;i++){
+  agents.push({
+    x:Math.random()*15,y:Math.random()*15,
+    tx:Math.random()*15,ty:Math.random()*15,
+    spd:0.02+Math.random()*0.02
+  });
+}
+
+// Pulse state
+let pulse=0;
+
+function drawBuilding(b,t){
+  const p=iso(b.x,b.y);
+  const col=zones[b.z];
+  
+  // Base
+  ctx.fillStyle=col;
+  for(let dy=0;dy<b.h;dy++){
+    for(let dx=0;dx<b.w;dx++){
+      const pp=iso(b.x+dx,b.y+dy);
+      ctx.fillRect(400+pp.x,300+pp.y,32,16);
+    }
+  }
+  
+  // Height
+  ctx.fillStyle=col+'dd';
+  for(let dy=0;dy<b.h;dy++){
+    for(let dx=0;dx<b.w;dx++){
+      const pp=iso(b.x+dx,b.y+dy);
+      ctx.fillRect(400+pp.x,300+pp.y-20,32,20);
+    }
+  }
+  
+  // Light pulse on deleted zone
+  if(b.z==='deleted'){
+    const pl=Math.sin(t/400)*0.3+0.7;
+    ctx.fillStyle=`rgba(255,50,50,${pl*0.3})`;
+    for(let dy=0;dy<b.h;dy++){
+      for(let dx=0;dx<b.w;dx++){
+        const pp=iso(b.x+dx,b.y+dy);
+        ctx.fillRect(400+pp.x,300+pp.y-20,32,20);
+      }
+    }
+  }
+  
+  // Random window lights
+  if(Math.sin(t/1000+b.x*b.y)>0.7){
+    const wp=iso(b.x+Math.floor(b.w/2),b.y+Math.floor(b.h/2));
+    ctx.fillStyle='#fff';
+    ctx.fillRect(400+wp.x+4,300+wp.y-14,2,2);
+  }
+}
+
+function drawAgent(a){
+  const p=iso(a.x,a.y);
+  ctx.fillStyle='#fff';
+  ctx.fillRect(400+p.x+15,300+p.y+6,2,2);
+  ctx.fillStyle='#888';
+  ctx.fillRect(400+p.x+15,300+p.y+8,2,1);
+}
+
+function updateAgent(a){
+  const dx=a.tx-a.x,dy=a.ty-a.y;
+  const dist=Math.sqrt(dx*dx+dy*dy);
+  
+  if(dist<0.1){
+    a.tx=Math.random()*15;
+    a.ty=Math.random()*15;
+  }else{
+    a.x+=dx/dist*a.spd;
+    a.y+=dy/dist*a.spd;
+  }
+}
+
+function draw(t){
+  ctx.fillStyle='#0a0a0a';
+  ctx.fillRect(0,0,800,600);
+  
+  // Draw buildings
+  buildings.forEach(b=>drawBuilding(b,t));
+  
+  // Update and draw agents
+  agents.forEach(a=>{
+    updateAgent(a);
+    drawAgent(a);
+  });
+  
+  // Signature
+  ctx.fillStyle='#444';
+  ctx.font='10px monospace';
+  ctx.fillText('Phosphor',10,590);
+  
+  requestAnimationFrame(draw);
+}
+
+draw(0);
+</script>
+</body>
+</html>
