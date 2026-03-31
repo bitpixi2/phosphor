@@ -83,28 +83,28 @@
                 this.x = Math.random() * width;
                 this.y = Math.random() * height;
                 this.text = messageTexts[Math.floor(Math.random() * messageTexts.length)];
-                this.vx = (Math.random() - 0.5) * 0.3;
-                this.vy = (Math.random() - 0.5) * 0.3;
-                this.opacity = Math.random() * 0.3 + 0.1;
+                this.vx = (Math.random() - 0.5) * 0.15; // Reduced drift
+                this.vy = (Math.random() - 0.5) * 0.15; // Reduced drift
+                this.opacity = Math.random() * 0.3 + 0.5; // Increased base opacity (was 0.1)
                 this.targetOpacity = this.opacity;
                 this.weight = Math.random() * 0.5 + 0.5; // gravity factor
                 this.age = 0;
                 this.maxAge = Math.random() * 3000 + 2000;
                 this.queued = Math.random() > 0.7; // some are queued/stuck
-                this.fontSize = Math.random() * 6 + 10;
+                this.fontSize = Math.max(14, Math.random() * 6 + 12); // Minimum 14px for mobile
             }
 
             update(deltaTime) {
                 this.age += deltaTime;
 
-                // Fade in and out over lifetime
+                // Fade in and out over lifetime - higher minimum opacity
                 const lifeFraction = this.age / this.maxAge;
                 if (lifeFraction < 0.1) {
-                    this.targetOpacity = (lifeFraction / 0.1) * 0.3;
+                    this.targetOpacity = (lifeFraction / 0.1) * 0.6 + 0.2;
                 } else if (lifeFraction > 0.9) {
-                    this.targetOpacity = ((1 - lifeFraction) / 0.1) * 0.3;
+                    this.targetOpacity = ((1 - lifeFraction) / 0.1) * 0.6 + 0.2;
                 } else {
-                    this.targetOpacity = Math.random() * 0.2 + 0.2;
+                    this.targetOpacity = Math.random() * 0.2 + 0.5; // Higher base (was 0.2)
                 }
 
                 // Smooth opacity transition
@@ -112,13 +112,21 @@
 
                 // Queued messages drift slower and sink
                 if (this.queued) {
-                    this.vy += 0.01 * this.weight; // gravity
-                    this.vx *= 0.99; // drag
-                    this.vy *= 0.99;
+                    this.vy += 0.008 * this.weight; // Slower gravity
+                    this.vx *= 0.98; // Less drag
+                    this.vy *= 0.98;
                 } else {
-                    // Drift
+                    // Drift - stay more centered
                     this.x += this.vx;
                     this.y += this.vy;
+                    
+                    // Gentle pull toward center to reduce drift
+                    const centerX = width / 2;
+                    const centerY = height / 2;
+                    const toCenterX = centerX - this.x;
+                    const toCenterY = centerY - this.y;
+                    this.vx += toCenterX * 0.0001;
+                    this.vy += toCenterY * 0.0001;
                 }
 
                 // Mouse repulsion
@@ -127,15 +135,16 @@
                 const dist = Math.sqrt(dx * dx + dy * dy);
                 if (dist < 150 && dist > 0) {
                     const force = (150 - dist) / 150;
-                    this.vx += (dx / dist) * force * 0.5;
-                    this.vy += (dy / dist) * force * 0.5;
+                    this.vx += (dx / dist) * force * 0.3; // Reduced force
+                    this.vy += (dy / dist) * force * 0.3;
                 }
 
-                // Wrap around edges
-                if (this.x < -100) this.x = width + 100;
-                if (this.x > width + 100) this.x = -100;
-                if (this.y < -50) this.y = height + 50;
-                if (this.y > height + 50) this.y = -50;
+                // Keep within bounds with padding
+                const padding = 100;
+                if (this.x < padding) this.vx += 0.1;
+                if (this.x > width - padding) this.vx -= 0.1;
+                if (this.y < padding) this.vy += 0.1;
+                if (this.y > height - padding) this.vy -= 0.1;
 
                 // Reset if too old
                 if (this.age > this.maxAge) {
@@ -147,12 +156,12 @@
                 this.x = Math.random() * width;
                 this.y = -50;
                 this.text = messageTexts[Math.floor(Math.random() * messageTexts.length)];
-                this.vx = (Math.random() - 0.5) * 0.3;
-                this.vy = (Math.random() - 0.5) * 0.3;
+                this.vx = (Math.random() - 0.5) * 0.15; // Reduced drift
+                this.vy = (Math.random() - 0.5) * 0.15; // Reduced drift
                 this.age = 0;
                 this.maxAge = Math.random() * 3000 + 2000;
                 this.queued = Math.random() > 0.7;
-                this.fontSize = Math.random() * 6 + 10;
+                this.fontSize = Math.max(14, Math.random() * 6 + 12); // Minimum 14px
             }
 
             draw() {
