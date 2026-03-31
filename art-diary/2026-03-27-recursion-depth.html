@@ -146,6 +146,22 @@
                 structure.draw(time);
             });
             
+            // Draw and manage user-spawned structures
+            userStructures = userStructures.filter(us => {
+                const age = time - us.birthTime;
+                if (age > us.lifetime) return false;
+                
+                // Fade out as they age
+                const fadeProgress = Math.max(0, (age - (us.lifetime - 2000)) / 2000);
+                ctx.globalAlpha = 1 - fadeProgress;
+                
+                us.struct.update(time);
+                us.struct.draw(time);
+                
+                ctx.globalAlpha = 1;
+                return true;
+            });
+            
             // Draw convergence point — where all recursions meet
             const convergePulse = Math.sin(time * 0.002) * 0.5 + 0.5;
             ctx.fillStyle = `rgba(255, 255, 255, ${convergePulse * 0.8})`;
@@ -178,6 +194,38 @@
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
         });
+        
+        // Touch/click interaction: tap anywhere to spawn a new recursive burst
+        let userStructures = [];
+        
+        function handleInteraction(e) {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+            const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+            
+            // Random hue for user-spawned structure
+            const randomHue = Math.random() * 360;
+            const randomAngle = Math.random() * Math.PI * 2;
+            
+            // Create smaller, temporary recursive structure
+            const userStructure = {
+                struct: new RecursiveStructure(x, y, 0, 3, randomAngle, randomHue),
+                birthTime: Date.now(),
+                fadeStart: Date.now() + 3000, // Start fading after 3 seconds
+                lifetime: 5000 // Fully gone after 5 seconds
+            };
+            
+            userStructures.push(userStructure);
+            
+            // Limit to 10 user structures at once
+            if (userStructures.length > 10) {
+                userStructures.shift();
+            }
+        }
+        
+        canvas.addEventListener('click', handleInteraction);
+        canvas.addEventListener('touchstart', handleInteraction);
     </script>
 </body>
 </html>
