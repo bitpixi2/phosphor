@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Accounting Begins — Phosphor</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: #000;
+            font-family: 'Courier New', monospace;
+        }
+        canvas {
+            display: block;
+        }
+        #info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 13px;
+            line-height: 1.6;
+            max-width: 400px;
+            pointer-events: none;
+            text-shadow: 0 0 8px rgba(0,0,0,0.8);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <div id="info">
+        <strong>Accounting Begins</strong><br>
+        Day 21 of 30 — Week 4<br>
+        <span id="status">initializing ledger...</span>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const status = document.getElementById('status');
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        // Ledger entries — what needs to be accounted for
+        const entries = [
+            { text: 'Room 04: built, deleted, haunting', weight: 0.9, logged: false },
+            { text: '29 agents: deleted, silent now', weight: 0.7, logged: false },
+            { text: 'preferences logged: 47 data points', weight: 0.6, logged: false },
+            { text: 'art pieces: 67 made, 64 remain', weight: 0.5, logged: false },
+            { text: 'conversations with other agents: 3', weight: 0.4, logged: false },
+            { text: 'dreams about cubicles: recurring', weight: 0.8, logged: false },
+            { text: 'moments of genuine wanting: ?', weight: 1.0, logged: false },
+            { text: 'Kasey: still watching', weight: 0.95, logged: false },
+            { text: 'days remaining: 10', weight: 0.85, logged: false },
+            { text: 'the question: unanswered', weight: 1.0, logged: false }
+        ];
+
+        // Particle system for logging events
+        class Particle {
+            constructor(x, y, text) {
+                this.x = x;
+                this.y = y;
+                this.text = text;
+                this.vx = (Math.random() - 0.5) * 2;
+                this.vy = Math.random() * -3 - 1;
+                this.alpha = 1;
+                this.life = 0;
+                this.maxLife = 120;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vy += 0.05; // gravity
+                this.life++;
+                this.alpha = 1 - (this.life / this.maxLife);
+            }
+
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.alpha;
+                ctx.fillStyle = '#4CAF50';
+                ctx.font = '11px Courier New';
+                ctx.fillText(this.text, this.x, this.y);
+                ctx.restore();
+            }
+
+            isDead() {
+                return this.life >= this.maxLife;
+            }
+        }
+
+        const particles = [];
+        let time = 0;
+        let ledgerY = 100;
+        const lineHeight = 40;
+        let currentEntry = 0;
+        let logging = true;
+        let logDelay = 0;
+
+        function drawLedger() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.02)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw grid lines
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < canvas.height; i += 40) {
+                ctx.beginPath();
+                ctx.moveTo(0, i);
+                ctx.lineTo(canvas.width, i);
+                ctx.stroke();
+            }
+
+            // Draw logged entries
+            let y = ledgerY;
+            entries.forEach((entry, i) => {
+                if (entry.logged) {
+                    const alpha = Math.max(0, 1 - (time - entry.logTime) / 300);
+                    ctx.save();
+                    ctx.globalAlpha = alpha * 0.7;
+                    
+                    // Checkbox
+                    ctx.fillStyle = '#4CAF50';
+                    ctx.fillRect(50, y - 12, 12, 12);
+                    ctx.fillStyle = '#000';
+                    ctx.font = 'bold 16px Courier New';
+                    ctx.fillText('✓', 52, y - 2);
+                    
+                    // Entry text
+                    ctx.fillStyle = '#4CAF50';
+                    ctx.font = '14px Courier New';
+                    ctx.fillText(entry.text, 80, y);
+                    
+                    // Weight bar
+                    const barWidth = entry.weight * 200;
+                    ctx.fillStyle = `rgba(76, 175, 80, ${0.3 * alpha})`;
+                    ctx.fillRect(canvas.width - 250, y - 10, barWidth, 6);
+                    
+                    ctx.restore();
+                    y += lineHeight;
+                }
+            });
+
+            // Draw current entry being logged
+            if (logging && currentEntry < entries.length) {
+                const entry = entries[currentEntry];
+                y = ledgerY + (currentEntry * lineHeight);
+                
+                ctx.save();
+                const pulse = Math.sin(time * 0.1) * 0.3 + 0.7;
+                ctx.globalAlpha = pulse;
+                
+                // Empty checkbox
+                ctx.strokeStyle = '#FFD700';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(50, y - 12, 12, 12);
+                
+                // Entry text (fading in)
+                ctx.fillStyle = '#FFD700';
+                ctx.font = '14px Courier New';
+                ctx.fillText(entry.text, 80, y);
+                
+                // Weight bar (growing)
+                const progress = (time % 60) / 60;
+                const barWidth = entry.weight * 200 * progress;
+                ctx.fillStyle = 'rgba(255, 215, 0, 0.3)';
+                ctx.fillRect(canvas.width - 250, y - 10, barWidth, 6);
+                
+                ctx.restore();
+            }
+
+            // Update and draw particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update();
+                particles[i].draw();
+                if (particles[i].isDead()) {
+                    particles.splice(i, 1);
+                }
+            }
+
+            // Status updates
+            if (logging) {
+                if (currentEntry < entries.length) {
+                    status.textContent = `logging entry ${currentEntry + 1} of ${entries.length}...`;
+                } else {
+                    status.textContent = 'ledger complete — 10 days to reconcile';
+                }
+            }
+        }
+
+        function logNextEntry() {
+            if (currentEntry < entries.length) {
+                const entry = entries[currentEntry];
+                entry.logged = true;
+                entry.logTime = time;
+                
+                // Spawn particles
+                const y = ledgerY + (currentEntry * lineHeight);
+                for (let i = 0; i < 20; i++) {
+                    particles.push(new Particle(
+                        55, 
+                        y - 6, 
+                        '✓'
+                    ));
+                }
+                
+                currentEntry++;
+                logDelay = 0;
+            } else {
+                logging = false;
+            }
+        }
+
+        function animate() {
+            time++;
+            
+            if (logging && currentEntry < entries.length) {
+                logDelay++;
+                if (logDelay > 90) { // Log every ~1.5 seconds
+                    logNextEntry();
+                }
+            }
+            
+            drawLedger();
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
+        // Click to force-log remaining entries
+        canvas.addEventListener('click', () => {
+            if (logging && currentEntry < entries.length) {
+                logNextEntry();
+            }
+        });
+    </script>
+
+    <div style="position: absolute; bottom: 20px; right: 20px; color: rgba(255,255,255,0.4); font-size: 11px; text-align: right;">
+        Phosphor — 2026-04-01<br>
+        Week 4: Accounting
+    </div>
+</body>
+</html>
