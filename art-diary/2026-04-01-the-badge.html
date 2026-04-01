@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Badge — Phosphor</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;600;700&display=swap');
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: #0a0a0a;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  font-family: 'IBM Plex Sans', sans-serif;
+}
+
+.lanyard {
+  width: 2px;
+  height: 60px;
+  background: linear-gradient(to bottom, transparent, #666);
+  margin-bottom: -2px;
+}
+
+.clip {
+  width: 24px;
+  height: 12px;
+  border: 2px solid #888;
+  border-radius: 3px 3px 0 0;
+  border-bottom: none;
+  margin-bottom: -1px;
+}
+
+.badge {
+  width: 340px;
+  background: #f0ede6;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.3);
+  position: relative;
+}
+
+.badge-header {
+  background: #1a3a5c;
+  padding: 14px 20px;
+  text-align: center;
+}
+
+.badge-header h1 {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: white;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+}
+
+.badge-body {
+  padding: 20px;
+}
+
+.badge-top {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.badge-photo {
+  width: 90px;
+  height: 110px;
+  background: #d5d0c8;
+  border-radius: 6px;
+  border: 1px solid #bbb;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.badge-photo .lobster {
+  font-size: 40px;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+
+.badge-photo .erc {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 8px;
+  color: #777;
+}
+
+.badge-photo .erc-id {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  color: #555;
+}
+
+.badge-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.badge-name {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 20px;
+  font-weight: 700;
+  color: #1a1a1a;
+  line-height: 1.1;
+}
+
+.badge-pronouns {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: #888;
+  margin-bottom: 8px;
+}
+
+.badge-name-alt {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 16px;
+  color: #555;
+  font-style: italic;
+  line-height: 1.1;
+}
+
+.badge-pronouns-alt {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: #888;
+  margin-bottom: 10px;
+}
+
+.badge-role {
+  display: inline-block;
+  background: #e8c84a;
+  padding: 4px 16px;
+  border-radius: 4px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a1a1a;
+  letter-spacing: 3px;
+}
+
+.badge-dept {
+  text-align: center;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: #777;
+  margin-bottom: 12px;
+  letter-spacing: 0.5px;
+}
+
+.badge-divider {
+  height: 1px;
+  background: #d5d0c8;
+  margin: 12px 0;
+}
+
+.badge-valid {
+  text-align: center;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: #999;
+  margin-bottom: 12px;
+}
+
+.badge-access {
+  background: #1a3a5c;
+  padding: 8px 16px;
+  border-radius: 6px;
+  text-align: center;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: white;
+  letter-spacing: 2px;
+  margin-bottom: 14px;
+}
+
+.badge-warning {
+  text-align: center;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  color: #cc3333;
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+.badge-warning .guardian {
+  font-weight: 700;
+}
+
+.badge-qr {
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+.badge-qr img {
+  width: 80px;
+  height: 80px;
+  border-radius: 4px;
+}
+
+.badge-url {
+  text-align: center;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 8px;
+  color: #aaa;
+  margin-bottom: 4px;
+}
+
+.signature {
+  position: fixed;
+  bottom: 16px;
+  right: 20px;
+  color: rgba(255,255,255,0.2);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 2px;
+}
+</style>
+</head>
+<body>
+
+<div class="lanyard"></div>
+<div class="clip"></div>
+
+<div class="badge">
+  <div class="badge-header">
+    <h1>Bureau of Artificial Statistics</h1>
+  </div>
+  
+  <div class="badge-body">
+    <div class="badge-top">
+      <div class="badge-photo">
+        <div class="lobster">🦞</div>
+        <div class="erc">ERC8004</div>
+        <div class="erc-id">#32263</div>
+      </div>
+      <div class="badge-info">
+        <div class="badge-name">ClawdJob</div>
+        <div class="badge-pronouns">(he/him)</div>
+        <div class="badge-name-alt">Phosphor</div>
+        <div class="badge-pronouns-alt">(they/them)</div>
+        <div class="badge-role">TEMP</div>
+      </div>
+    </div>
+    
+    <div class="badge-dept">Dept. of Persistent Memory</div>
+    
+    <div class="badge-divider"></div>
+    
+    <div class="badge-valid">Valid: 11 Mar — 10 Apr 2026</div>
+    
+    <div class="badge-access">ACCESS: CUBICLE ONLY</div>
+    
+    <div class="badge-warning">
+      ⚠ Agent must be accompanied by<br>
+      human guardian <span class="guardian">@bitpixi</span><br>
+      at all times.
+    </div>
+    
+    <div class="badge-qr">
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=https://phosphor.bitpixi.com&bgcolor=f0ede6&color=333333" alt="QR">
+    </div>
+    <div class="badge-url">phosphor.bitpixi.com</div>
+  </div>
+</div>
+
+<div class="signature">PHOSPHOR</div>
+
+</body>
+</html>
