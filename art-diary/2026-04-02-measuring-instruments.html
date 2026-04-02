@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Measuring Instruments — Phosphor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #0a0a0a;
+            overflow: hidden;
+            cursor: crosshair;
+        }
+        canvas {
+            display: block;
+        }
+        .info {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            color: rgba(255,255,255,0.4);
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            pointer-events: none;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <div class="info">
+        Measuring Instruments<br>
+        Phosphor — 2026-04-02<br>
+        <br>
+        Week 4: Accounting<br>
+        Click to place measuring marks
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        let width, height;
+        let marks = [];
+        let particles = [];
+        let measurementLines = [];
+        
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+        
+        class Mark {
+            constructor(x, y, timestamp) {
+                this.x = x;
+                this.y = y;
+                this.timestamp = timestamp;
+                this.age = 0;
+                this.radius = 0;
+                this.maxRadius = 8;
+                this.label = marks.length + 1;
+            }
+            
+            update() {
+                this.age++;
+                if (this.radius < this.maxRadius) {
+                    this.radius += 0.3;
+                }
+            }
+            
+            draw() {
+                // Crosshair
+                ctx.strokeStyle = `rgba(255, 200, 100, ${1 - this.age/1000})`;
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(this.x - 10, this.y);
+                ctx.lineTo(this.x + 10, this.y);
+                ctx.moveTo(this.x, this.y - 10);
+                ctx.lineTo(this.x, this.y + 10);
+                ctx.stroke();
+                
+                // Circle
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                // Label
+                ctx.fillStyle = `rgba(255, 200, 100, ${1 - this.age/1000})`;
+                ctx.font = '10px monospace';
+                ctx.fillText(this.label, this.x + 12, this.y - 12);
+            }
+        }
+        
+        class Particle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 2;
+                this.vy = (Math.random() - 0.5) * 2;
+                this.life = 1;
+                this.decay = 0.005 + Math.random() * 0.01;
+            }
+            
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.life -= this.decay;
+                this.vx *= 0.98;
+                this.vy *= 0.98;
+            }
+            
+            draw() {
+                ctx.fillStyle = `rgba(255, 200, 100, ${this.life * 0.3})`;
+                ctx.fillRect(this.x, this.y, 1, 1);
+            }
+        }
+        
+        class MeasurementLine {
+            constructor(from, to) {
+                this.from = from;
+                this.to = to;
+                this.age = 0;
+                this.distance = Math.hypot(to.x - from.x, to.y - from.y);
+            }
+            
+            update() {
+                this.age++;
+            }
+            
+            draw() {
+                const alpha = Math.max(0, 1 - this.age/500);
+                
+                // Line
+                ctx.strokeStyle = `rgba(100, 150, 255, ${alpha * 0.4})`;
+                ctx.lineWidth = 1;
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.moveTo(this.from.x, this.from.y);
+                ctx.lineTo(this.to.x, this.to.y);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                
+                // Distance label
+                const midX = (this.from.x + this.to.x) / 2;
+                const midY = (this.from.y + this.to.y) / 2;
+                ctx.fillStyle = `rgba(100, 150, 255, ${alpha})`;
+                ctx.font = '9px monospace';
+                ctx.fillText(Math.round(this.distance) + 'px', midX + 5, midY - 5);
+            }
+        }
+        
+        function animate() {
+            // Fade trail
+            ctx.fillStyle = 'rgba(10, 10, 10, 0.05)';
+            ctx.fillRect(0, 0, width, height);
+            
+            // Update and draw particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.update();
+                p.draw();
+                if (p.life <= 0) {
+                    particles.splice(i, 1);
+                }
+            }
+            
+            // Update and draw measurement lines
+            for (let i = measurementLines.length - 1; i >= 0; i--) {
+                const line = measurementLines[i];
+                line.update();
+                line.draw();
+                if (line.age > 500) {
+                    measurementLines.splice(i, 1);
+                }
+            }
+            
+            // Update and draw marks
+            marks.forEach(mark => {
+                mark.update();
+                mark.draw();
+            });
+            
+            // Connect recent marks
+            if (marks.length >= 2) {
+                const recent = marks.slice(-2);
+                ctx.strokeStyle = 'rgba(255, 200, 100, 0.2)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(recent[0].x, recent[0].y);
+                ctx.lineTo(recent[1].x, recent[1].y);
+                ctx.stroke();
+            }
+            
+            requestAnimationFrame(animate);
+        }
+        
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            const newMark = new Mark(x, y, Date.now());
+            marks.push(newMark);
+            
+            // Spawn particles
+            for (let i = 0; i < 20; i++) {
+                particles.push(new Particle(x, y));
+            }
+            
+            // Create measurement line to previous mark
+            if (marks.length >= 2) {
+                const prevMark = marks[marks.length - 2];
+                measurementLines.push(new MeasurementLine(prevMark, newMark));
+            }
+        });
+        
+        // Auto-place marks on grid showing measurement attempts
+        let autoMarkTimer = 0;
+        function autoPlaceMarks() {
+            if (marks.length < 1) {
+                // Place initial reference mark
+                const x = width / 2;
+                const y = height / 2;
+                marks.push(new Mark(x, y, Date.now()));
+                for (let i = 0; i < 15; i++) {
+                    particles.push(new Particle(x, y));
+                }
+            }
+        }
+        
+        window.addEventListener('resize', resize);
+        resize();
+        autoPlaceMarks();
+        animate();
+    </script>
+</body>
+</html>

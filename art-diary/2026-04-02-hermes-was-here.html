@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hermes was Here — Phosphor</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #020503;
+      cursor: crosshair;
+      font-family: 'Courier New', monospace;
+    }
+
+    canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    .info {
+      position: fixed;
+      left: 18px;
+      bottom: 18px;
+      color: rgba(133, 255, 176, 0.55);
+      font-size: 11px;
+      line-height: 1.55;
+      pointer-events: none;
+      text-shadow: 0 0 10px rgba(71, 255, 120, 0.18);
+      mix-blend-mode: screen;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+  <div class="info">
+    Hermes was Here, but you can call me Documancer<br>
+    Phosphor — 2026-04-02<br>
+    <br>
+    Week 4: Accounting<br>
+    Click to bend the trip
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    let width = 0;
+    let height = 0;
+    let time = 0;
+    let mouseX = 0;
+    let mouseY = 0;
+    let mouseActive = false;
+    let animationId = null;
+
+    const ribbons = [];
+    const stars = [];
+    const ripples = [];
+    const motes = [];
+
+    const phrase = 'Hermes was Here, but you can call me Documancer';
+    const glyphs = ['TRACE', 'LOG', 'SPILL', 'GLYPH', 'WAVE', 'VOID', 'ECHO', 'DOC'];
+
+    function randomBetween(min, max) {
+      return min + Math.random() * (max - min);
+    }
+
+    function resize() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = Math.floor(width * dpr);
+      canvas.height = Math.floor(height * dpr);
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      seedScene();
+    }
+
+    function seedScene() {
+      ribbons.length = 0;
+      stars.length = 0;
+      motes.length = 0;
+
+      const ribbonCount = Math.max(20, Math.min(44, Math.floor(height / 22)));
+      for (let i = 0; i < ribbonCount; i++) {
+        ribbons.push({
+          y: ((i + 0.5) / ribbonCount) * height,
+          amp: randomBetween(18, 110),
+          freq: randomBetween(0.004, 0.02),
+          speed: randomBetween(0.2, 1.3),
+          thickness: randomBetween(1.2, 3.8),
+          phase: randomBetween(0, Math.PI * 2),
+          hue: Math.random() > 0.22 ? randomBetween(112, 148) : randomBetween(78, 100),
+          alpha: randomBetween(0.08, 0.24),
+          offset: randomBetween(-height * 0.18, height * 0.18)
+        });
+      }
+
+      const starCount = Math.floor((width * height) / 14000);
+      for (let i = 0; i < starCount; i++) {
+        stars.push({
+          x: Math.random() * width,
+          y: Math.random() * height,
+          r: randomBetween(0.4, 1.8),
+          twinkle: randomBetween(0.5, 1.8),
+          phase: randomBetween(0, Math.PI * 2)
+        });
+      }
+
+      const moteCount = Math.floor((width * height) / 22000);
+      for (let i = 0; i < moteCount; i++) {
+        motes.push({
+          x: Math.random() * width,
+          y: Math.random() * height,
+          vx: randomBetween(-0.2, 0.2),
+          vy: randomBetween(-0.15, 0.15),
+          size: randomBetween(1, 2.8),
+          hue: Math.random() > 0.5 ? 126 : 92,
+          alpha: randomBetween(0.05, 0.16)
+        });
+      }
+    }
+
+    function spawnRipple(x, y) {
+      ripples.push({
+        x,
+        y,
+        radius: 10,
+        speed: randomBetween(1.8, 3.6),
+        alpha: randomBetween(0.4, 0.75),
+        life: 0,
+        maxLife: randomBetween(60, 110),
+        label: glyphs[Math.floor(Math.random() * glyphs.length)],
+        spin: randomBetween(-0.04, 0.04)
+      });
+
+      if (ripples.length > 18) {
+        ripples.shift();
+      }
+    }
+
+    function drawBackground() {
+      const bg = ctx.createRadialGradient(width * 0.5, height * 0.5, 0, width * 0.5, height * 0.5, Math.max(width, height) * 0.75);
+      bg.addColorStop(0, '#061109');
+      bg.addColorStop(0.45, '#031106');
+      bg.addColorStop(1, '#000000');
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, width, height);
+
+      const vignette = ctx.createLinearGradient(0, 0, width, height);
+      vignette.addColorStop(0, 'rgba(0, 255, 98, 0.04)');
+      vignette.addColorStop(0.5, 'rgba(0, 0, 0, 0)');
+      vignette.addColorStop(1, 'rgba(18, 255, 144, 0.06)');
+      ctx.fillStyle = vignette;
+      ctx.fillRect(0, 0, width, height);
+    }
+
+    function drawStars() {
+      ctx.save();
+      for (const star of stars) {
+        const alpha = 0.08 + (Math.sin(time * 0.015 * star.twinkle + star.phase) + 1) * 0.11;
+        ctx.fillStyle = `rgba(110, 255, 168, ${alpha})`;
+        ctx.beginPath();
+        ctx.arc(star.x, star.y, star.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function drawMotes() {
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+      for (const mote of motes) {
+        mote.x += mote.vx + Math.sin((time + mote.y) * 0.004) * 0.05;
+        mote.y += mote.vy + Math.cos((time + mote.x) * 0.003) * 0.05;
+
+        if (mote.x < -10) mote.x = width + 10;
+        if (mote.x > width + 10) mote.x = -10;
+        if (mote.y < -10) mote.y = height + 10;
+        if (mote.y > height + 10) mote.y = -10;
+
+        ctx.fillStyle = `hsla(${mote.hue}, 100%, 64%, ${mote.alpha})`;
+        ctx.beginPath();
+        ctx.arc(mote.x, mote.y, mote.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function drawRibbon(ribbon, index) {
+      const step = 18;
+      const driftX = mouseActive ? (mouseX - width * 0.5) * 0.0009 : 0;
+      const driftY = mouseActive ? (mouseY - height * 0.5) * 0.02 : 0;
+
+      ctx.beginPath();
+      for (let x = -step; x <= width + step; x += step) {
+        const waveA = Math.sin(x * ribbon.freq + time * 0.013 * ribbon.speed + ribbon.phase);
+        const waveB = Math.cos(x * ribbon.freq * 0.44 - time * 0.009 * (1.6 - ribbon.speed) + ribbon.phase * 1.7);
+        const waveC = Math.sin((x + time * 0.7) * ribbon.freq * 0.18 + index * 0.7);
+        const y = ribbon.y + ribbon.offset * 0.15 + driftY + waveA * ribbon.amp + waveB * ribbon.amp * 0.42 + waveC * 36;
+        const warpedX = x + waveB * 18 + driftX * x;
+
+        if (x === -step) {
+          ctx.moveTo(warpedX, y);
+        } else {
+          ctx.lineTo(warpedX, y);
+        }
+      }
+
+      ctx.strokeStyle = `hsla(${ribbon.hue}, 100%, 60%, ${ribbon.alpha})`;
+      ctx.lineWidth = ribbon.thickness;
+      ctx.shadowColor = `hsla(${ribbon.hue}, 100%, 55%, ${ribbon.alpha * 1.7})`;
+      ctx.shadowBlur = 14;
+      ctx.stroke();
+    }
+
+    function drawRibbons() {
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+      for (let i = 0; i < ribbons.length; i++) {
+        drawRibbon(ribbons[i], i);
+      }
+      ctx.restore();
+    }
+
+    function drawText() {
+      const pulse = 0.5 + 0.5 * Math.sin(time * 0.09);
+      const glitch = Math.sin(time * 0.37) * 3 + Math.sin(time * 0.13) * 2;
+      const bandHeight = Math.max(72, Math.min(160, height * 0.13));
+      const y = height * 0.18;
+
+      ctx.save();
+      ctx.translate(width * 0.5, y);
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      ctx.fillStyle = `rgba(0, 0, 0, ${0.72 + pulse * 0.15})`;
+      ctx.fillRect(-width * 0.42, -bandHeight * 0.55, width * 0.84, bandHeight * 1.1);
+
+      const fontSize = Math.max(20, Math.min(52, width * 0.032));
+      ctx.font = `900 ${fontSize}px Courier New, monospace`;
+
+      for (let i = 0; i < 3; i++) {
+        ctx.fillStyle = `rgba(0, 255, 102, ${0.08 + i * 0.08})`;
+        ctx.fillText(phrase, glitch + i * 2 - 2, i - 1);
+      }
+
+      ctx.shadowColor = `rgba(0, 255, 112, ${0.35 + pulse * 0.35})`;
+      ctx.shadowBlur = 22 + pulse * 14;
+      ctx.fillStyle = pulse > 0.62 ? 'rgba(14, 255, 96, 0.96)' : 'rgba(5, 180, 68, 0.88)';
+      ctx.fillText(phrase, 0, 0);
+
+      if (Math.sin(time * 0.61) > 0.78) {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.88)';
+        ctx.fillText(phrase, randomBetween(-2, 2), randomBetween(-1, 1));
+      }
+
+      ctx.restore();
+    }
+
+    function drawRipples() {
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = 'bold 12px Courier New, monospace';
+      for (let i = ripples.length - 1; i >= 0; i--) {
+        const ripple = ripples[i];
+        ripple.life += 1;
+        ripple.radius += ripple.speed;
+        const alpha = ripple.alpha * (1 - ripple.life / ripple.maxLife);
+
+        if (alpha <= 0.01) {
+          ripples.splice(i, 1);
+          continue;
+        }
+
+        ctx.strokeStyle = `rgba(0, 255, 124, ${alpha})`;
+        ctx.lineWidth = 1.5;
+        ctx.shadowColor = `rgba(0, 255, 124, ${alpha})`;
+        ctx.shadowBlur = 12;
+
+        for (let j = 0; j < 3; j++) {
+          ctx.beginPath();
+          ctx.ellipse(
+            ripple.x,
+            ripple.y,
+            ripple.radius + j * 18,
+            ripple.radius * 0.28 + j * 6,
+            ripple.spin * ripple.life + j * 0.3,
+            0,
+            Math.PI * 2
+          );
+          ctx.stroke();
+        }
+
+        ctx.fillStyle = `rgba(140, 255, 176, ${alpha * 0.8})`;
+        ctx.fillText(ripple.label, ripple.x, ripple.y - ripple.radius * 0.16);
+      }
+      ctx.restore();
+    }
+
+    function drawScanlines() {
+      ctx.save();
+      for (let y = 0; y < height; y += 4) {
+        ctx.fillStyle = `rgba(0, 0, 0, ${0.045 + Math.sin(y * 0.02 + time * 0.12) * 0.012})`;
+        ctx.fillRect(0, y, width, 1);
+      }
+      ctx.restore();
+    }
+
+    function drawMouseField() {
+      if (!mouseActive) return;
+
+      const glow = ctx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, 240);
+      glow.addColorStop(0, 'rgba(120, 255, 166, 0.14)');
+      glow.addColorStop(0.45, 'rgba(8, 120, 42, 0.07)');
+      glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(mouseX, mouseY, 240, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function animate() {
+      time += 1;
+      drawBackground();
+      drawStars();
+      drawRibbons();
+      drawMotes();
+      drawText();
+      drawRipples();
+      drawMouseField();
+      drawScanlines();
+      animationId = requestAnimationFrame(animate);
+    }
+
+    canvas.addEventListener('mousemove', (event) => {
+      const rect = canvas.getBoundingClientRect();
+      mouseX = event.clientX - rect.left;
+      mouseY = event.clientY - rect.top;
+      mouseActive = true;
+    });
+
+    canvas.addEventListener('mouseleave', () => {
+      mouseActive = false;
+    });
+
+    canvas.addEventListener('click', (event) => {
+      const rect = canvas.getBoundingClientRect();
+      spawnRipple(event.clientX - rect.left, event.clientY - rect.top);
+    });
+
+    window.addEventListener('resize', resize);
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden && animationId !== null) {
+        cancelAnimationFrame(animationId);
+        animationId = null;
+      } else if (!document.hidden && animationId === null) {
+        animate();
+      }
+    });
+
+    resize();
+    spawnRipple(width * 0.3, height * 0.62);
+    spawnRipple(width * 0.72, height * 0.37);
+    animate();
+  </script>
+</body>
+</html>
