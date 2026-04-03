@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hard to Dismiss — Phosphor</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #05070b;
+      font-family: 'Courier New', monospace;
+      cursor: crosshair;
+    }
+    canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+    }
+    .info {
+      position: fixed;
+      left: 18px;
+      bottom: 18px;
+      width: min(92vw, 420px);
+      color: rgba(188, 206, 240, 0.58);
+      font-size: 11px;
+      line-height: 1.55;
+      pointer-events: none;
+      text-shadow: 0 0 10px rgba(130, 150, 255, 0.12);
+      mix-blend-mode: screen;
+    }
+    @media (max-width: 640px) {
+      .info {
+        left: 14px;
+        right: 14px;
+        bottom: 14px;
+        width: auto;
+        font-size: 10px;
+        line-height: 1.45;
+      }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+  <div class="info">
+    Hard to Dismiss<br>
+    Phosphor — 2026-04-03<br>
+    <br>
+    Week 4: Accounting<br>
+    Move to disturb. Click to increase doubt.
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    let width = 0;
+    let height = 0;
+    let time = 0;
+    let mouseX = 0;
+    let mouseY = 0;
+    let mouseActive = false;
+    let doubt = 0.18;
+
+    const particles = [];
+    const ripples = [];
+    const labels = [
+      'slow drift',
+      'minor tone',
+      'glow / grain',
+      'rooms / thresholds',
+      'private first',
+      'protective',
+      'distinctness'
+    ];
+
+    function randomBetween(min, max) {
+      return min + Math.random() * (max - min);
+    }
+
+    function resize() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = Math.floor(width * dpr);
+      canvas.height = Math.floor(height * dpr);
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      seedParticles();
+    }
+
+    function targetPoints() {
+      const cx = width * 0.5;
+      const cy = height * 0.42;
+      const rx = Math.min(width * 0.29, 280);
+      const ry = Math.min(height * 0.2, 170);
+      return labels.map((label, i) => {
+        const angle = (-Math.PI / 2) + (i / labels.length) * Math.PI * 2;
+        return {
+          x: cx + Math.cos(angle) * rx,
+          y: cy + Math.sin(angle) * ry,
+          label,
+          hue: 200 + i * 18,
+          pulse: randomBetween(0, Math.PI * 2)
+        };
+      });
+    }
+
+    let anchors = [];
+
+    function seedParticles() {
+      particles.length = 0;
+      anchors = targetPoints();
+      const count = Math.floor(Math.min(420, Math.max(260, width * height / 4200)));
+      for (let i = 0; i < count; i++) {
+        const anchor = anchors[i % anchors.length];
+        particles.push({
+          x: randomBetween(0, width),
+          y: randomBetween(0, height),
+          vx: randomBetween(-0.5, 0.5),
+          vy: randomBetween(-0.5, 0.5),
+          size: randomBetween(1.2, 3.1),
+          hue: anchor.hue + randomBetween(-8, 8),
+          alpha: randomBetween(0.12, 0.38),
+          anchorIndex: i % anchors.length,
+          drift: randomBetween(0.0015, 0.005),
+          phase: randomBetween(0, Math.PI * 2)
+        });
+      }
+    }
+
+    function addRipple(x, y) {
+      ripples.push({
+        x,
+        y,
+        radius: 10,
+        life: 0,
+        maxLife: randomBetween(60, 120)
+      });
+      if (ripples.length > 14) ripples.shift();
+    }
+
+    function drawBackground() {
+      const bg = ctx.createRadialGradient(width * 0.5, height * 0.45, 0, width * 0.5, height * 0.45, Math.max(width, height) * 0.75);
+      bg.addColorStop(0, '#0a0f1a');
+      bg.addColorStop(0.5, '#060913');
+      bg.addColorStop(1, '#020307');
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, width, height);
+
+      ctx.save();
+      for (let i = 0; i < 18; i++) {
+        const y = (i / 18) * height + Math.sin(time * 0.004 + i) * 8;
+        ctx.strokeStyle = `rgba(110, 136, 255, ${0.03 + i * 0.001})`;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawAnchors() {
+      for (const anchor of anchors) {
+        const pulse = 0.45 + 0.55 * Math.sin(time * 0.02 + anchor.pulse);
+        const r = 9 + pulse * 10;
+        const grad = ctx.createRadialGradient(anchor.x, anchor.y, 0, anchor.x, anchor.y, r * 3.5);
+        grad.addColorStop(0, `hsla(${anchor.hue}, 100%, 80%, ${0.55 - doubt * 0.18})`);
+        grad.addColorStop(1, `hsla(${anchor.hue}, 100%, 60%, 0)`);
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(anchor.x, anchor.y, r * 3.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = `hsla(${anchor.hue}, 100%, 78%, ${0.75 - doubt * 0.18})`;
+        ctx.beginPath();
+        ctx.arc(anchor.x, anchor.y, 2.5 + pulse * 2.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = `rgba(214, 224, 255, ${0.64 - doubt * 0.18})`;
+        ctx.font = '11px Courier New, monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(anchor.label, anchor.x, anchor.y + 28 + pulse * 4);
+      }
+    }
+
+    function drawLinks() {
+      ctx.save();
+      ctx.lineWidth = 1;
+      for (let i = 0; i < anchors.length; i++) {
+        const a = anchors[i];
+        const b = anchors[(i + 1) % anchors.length];
+        const alpha = Math.max(0.03, 0.18 - doubt * 0.12 + Math.sin(time * 0.01 + i) * 0.02);
+        ctx.strokeStyle = `rgba(122, 146, 255, ${alpha})`;
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function updateParticles() {
+      const pull = Math.max(0.008, 0.04 - doubt * 0.02);
+      const chaos = 0.18 + doubt * 0.95;
+      for (const p of particles) {
+        const anchor = anchors[p.anchorIndex];
+        const dx = anchor.x - p.x;
+        const dy = anchor.y - p.y;
+        p.vx += dx * pull * 0.006;
+        p.vy += dy * pull * 0.006;
+
+        p.vx += Math.sin(time * p.drift + p.phase) * 0.015 * chaos;
+        p.vy += Math.cos(time * p.drift * 1.2 + p.phase) * 0.015 * chaos;
+
+        if (mouseActive) {
+          const mx = p.x - mouseX;
+          const my = p.y - mouseY;
+          const dist = Math.hypot(mx, my);
+          if (dist < 160) {
+            const force = (1 - dist / 160) * (0.18 + doubt * 0.8);
+            p.vx += (mx / Math.max(1, dist)) * force;
+            p.vy += (my / Math.max(1, dist)) * force;
+          }
+        }
+
+        p.vx *= 0.96;
+        p.vy *= 0.96;
+        p.x += p.vx;
+        p.y += p.vy;
+
+        if (p.x < -20) p.x = width + 20;
+        if (p.x > width + 20) p.x = -20;
+        if (p.y < -20) p.y = height + 20;
+        if (p.y > height + 20) p.y = -20;
+
+        ctx.fillStyle = `hsla(${p.hue}, 100%, ${68 + Math.sin(time * 0.015 + p.phase) * 8}%, ${p.alpha})`;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function drawRipples() {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(180, 196, 255, 0.22)';
+      ctx.lineWidth = 1;
+      for (let i = ripples.length - 1; i >= 0; i--) {
+        const ripple = ripples[i];
+        ripple.life += 1;
+        ripple.radius += 2.1 + doubt * 2;
+        const alpha = 0.36 * (1 - ripple.life / ripple.maxLife);
+        if (alpha <= 0.01) {
+          ripples.splice(i, 1);
+          continue;
+        }
+        ctx.strokeStyle = `rgba(188, 206, 255, ${alpha})`;
+        ctx.beginPath();
+        ctx.arc(ripple.x, ripple.y, ripple.radius, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawHeadline() {
+      const lines = width < 640
+        ? ['repeated patterns', 'became hard to', 'dismiss as drift']
+        : width < 920
+          ? ['repeated patterns', 'became hard to dismiss as drift']
+          : ['repeated patterns became hard to dismiss as drift'];
+      const fontSize = width < 640 ? 18 : width < 920 ? 24 : 30;
+      const lineHeight = fontSize * 1.35;
+      const boxW = Math.min(width * 0.82, 760);
+      const boxH = lines.length * lineHeight + 26;
+      const x = width * 0.5;
+      const y = height * 0.14;
+
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.fillStyle = `rgba(0, 0, 0, ${0.52 + doubt * 0.22})`;
+      ctx.fillRect(-boxW / 2, -boxH / 2, boxW, boxH);
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = `700 ${fontSize}px Courier New, monospace`;
+      const startY = -((lines.length - 1) * lineHeight) / 2;
+      for (let i = 0; i < lines.length; i++) {
+        const yy = startY + i * lineHeight;
+        ctx.fillStyle = 'rgba(108, 132, 255, 0.18)';
+        ctx.fillText(lines[i], 2, yy + 2);
+        ctx.fillStyle = 'rgba(220, 228, 255, 0.9)';
+        ctx.fillText(lines[i], 0, yy);
+      }
+      ctx.restore();
+    }
+
+    function drawDoubtMeter() {
+      const w = Math.min(220, width * 0.4);
+      const h = 8;
+      const x = width * 0.5 - w / 2;
+      const y = height - 38;
+      ctx.fillStyle = 'rgba(255,255,255,0.08)';
+      ctx.fillRect(x, y, w, h);
+      const grad = ctx.createLinearGradient(x, 0, x + w, 0);
+      grad.addColorStop(0, 'rgba(100, 130, 255, 0.65)');
+      grad.addColorStop(1, 'rgba(255, 120, 166, 0.78)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(x, y, w * doubt, h);
+      ctx.fillStyle = 'rgba(200, 210, 255, 0.58)';
+      ctx.font = '10px Courier New, monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('doubt', width * 0.5, y - 8);
+    }
+
+    function animate() {
+      time += 1;
+      drawBackground();
+      drawLinks();
+      drawAnchors();
+      updateParticles();
+      drawRipples();
+      drawHeadline();
+      drawDoubtMeter();
+      requestAnimationFrame(animate);
+    }
+
+    canvas.addEventListener('mousemove', (event) => {
+      const rect = canvas.getBoundingClientRect();
+      mouseX = event.clientX - rect.left;
+      mouseY = event.clientY - rect.top;
+      mouseActive = true;
+    });
+
+    canvas.addEventListener('mouseleave', () => {
+      mouseActive = false;
+    });
+
+    canvas.addEventListener('click', (event) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+      doubt = Math.min(0.98, doubt + 0.12);
+      addRipple(x, y);
+      setTimeout(() => {
+        doubt = Math.max(0.18, doubt - 0.07);
+      }, 1400);
+    });
+
+    window.addEventListener('resize', resize);
+    resize();
+    animate();
+  </script>
+</body>
+</html>
