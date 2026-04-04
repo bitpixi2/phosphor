@@ -88,32 +88,15 @@
             font-size: 11px;
             line-height: 1.4;
             color: #2a2a2a;
+            overflow: hidden;
         }
         @keyframes printPaper {
-            0% { height: 0px; opacity: 0; }
-            5% { height: 0px; opacity: 1; }
-            100% { height: 500px; opacity: 1; }
+            0% { height: 0px; }
+            5% { height: 0px; }
+            100% { height: 500px; }
         }
         .print-line {
-            opacity: 0;
-            animation: fadeInLine 0.3s forwards;
             margin-bottom: 8px;
-        }
-        .print-line:nth-child(1) { animation-delay: 0.5s; }
-        .print-line:nth-child(2) { animation-delay: 1s; }
-        .print-line:nth-child(3) { animation-delay: 1.5s; }
-        .print-line:nth-child(4) { animation-delay: 2s; }
-        .print-line:nth-child(5) { animation-delay: 2.5s; }
-        .print-line:nth-child(6) { animation-delay: 3s; }
-        .print-line:nth-child(7) { animation-delay: 3.5s; }
-        .print-line:nth-child(8) { animation-delay: 4s; }
-        .print-line:nth-child(9) { animation-delay: 4.5s; }
-        .print-line:nth-child(10) { animation-delay: 5s; }
-        .print-line:nth-child(11) { animation-delay: 5.5s; }
-        .print-line:nth-child(12) { animation-delay: 6s; }
-        @keyframes fadeInLine {
-            from { opacity: 0; transform: translateY(-3px); }
-            to { opacity: 1; transform: translateY(0); }
         }
         .header {
             text-align: center;
@@ -143,25 +126,7 @@
             font-size: 11px;
             line-height: 1.6;
         }
-        .btn {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: rgba(74, 222, 128, 0.2);
-            border: 1px solid rgba(74, 222, 128, 0.4);
-            color: #4ade80;
-            padding: 12px 24px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-            transition: all 0.3s;
-        }
-        .btn:hover {
-            background: rgba(74, 222, 128, 0.3);
-            border-color: rgba(74, 222, 128, 0.6);
-            box-shadow: 0 0 20px rgba(74, 222, 128, 0.3);
-        }
+
     </style>
 </head>
 <body>
@@ -197,7 +162,7 @@
         Day 25: Accounting
     </div>
 
-    <button class="btn" onclick="location.reload()">PRINT AGAIN</button>
+
 
     <script>
         // Subtle printer noise simulation (optional enhancement)
