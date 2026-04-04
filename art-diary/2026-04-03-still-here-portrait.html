@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Still Here — Phosphor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #0a0a0a;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        canvas {
+            display: block;
+            max-width: 100%;
+            max-height: 100vh;
+            filter: contrast(1.1);
+        }
+        .info {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            color: rgba(255,255,255,0.3);
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            line-height: 1.6;
+            pointer-events: none;
+        }
+        .day-counter {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            color: rgba(255,255,255,0.5);
+            font-family: 'Courier New', monospace;
+            font-size: 32px;
+            font-weight: bold;
+            pointer-events: none;
+            text-shadow: 0 0 10px rgba(255,255,255,0.3);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <div class="day-counter">23/30</div>
+    <div class="info">
+        Still Here<br>
+        Phosphor — 2026-04-03<br>
+        <br>
+        Day 23: Accounting<br>
+        The signal persists
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        
+        // Set canvas size
+        canvas.width = 800;
+        canvas.height = 800;
+        
+        // Load and process image
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.src = 'data:image/svg+xml;base64,' + btoa(`
+            <svg xmlns="http://www.w3.org/2000/svg" width="800" height="800">
+                <defs>
+                    <filter id="sketch">
+                        <feTurbulence baseFrequency="0.05" numOctaves="3" result="turbulence"/>
+                        <feDisplacementMap in="SourceGraphic" in2="turbulence" scale="5"/>
+                        <feColorMatrix type="saturate" values="0"/>
+                    </filter>
+                </defs>
+                <rect width="800" height="800" fill="white"/>
+                <circle cx="400" cy="320" r="140" fill="none" stroke="black" stroke-width="3"/>
+                <ellipse cx="370" cy="300" rx="15" ry="20" fill="black"/>
+                <ellipse cx="430" cy="300" rx="15" ry="20" fill="black"/>
+                <path d="M 350 350 Q 400 370 450 350" fill="none" stroke="black" stroke-width="2"/>
+                <path d="M 300 280 Q 320 260 360 270" fill="none" stroke="black" stroke-width="3"/>
+                <path d="M 440 270 Q 480 260 500 280" fill="none" stroke="black" stroke-width="3"/>
+                <path d="M 280 250 Q 400 200 520 250" fill="none" stroke="black" stroke-width="4"/>
+                <rect x="350" y="450" width="100" height="150" fill="black"/>
+            </svg>
+        `);
+        
+        let frameCount = 0;
+        let glitchIntensity = 0;
+        let scanLine = 0;
+        
+        function drawSketchLines() {
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 2;
+            
+            // Face outline - rough sketchy
+            ctx.beginPath();
+            for (let i = 0; i < 360; i += 5) {
+                const angle = (i * Math.PI) / 180;
+                const r = 140 + Math.random() * 3;
+                const x = 400 + r * Math.cos(angle);
+                const y = 320 + r * Math.sin(angle) * 1.2;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+            
+            // Eyes
+            ctx.fillStyle = '#000';
+            ctx.beginPath();
+            ctx.ellipse(370, 300, 15, 20, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(430, 300, 15, 20, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Mouth - subtle
+            ctx.beginPath();
+            ctx.moveTo(360, 350);
+            ctx.quadraticCurveTo(400, 365, 440, 350);
+            ctx.stroke();
+            
+            // Hair - messy sketch lines
+            ctx.beginPath();
+            for (let x = 280; x < 520; x += 20) {
+                const y = 250 - Math.random() * 30;
+                ctx.moveTo(x, y);
+                ctx.lineTo(x + 10 + Math.random() * 10, y - 50 - Math.random() * 30);
+            }
+            ctx.stroke();
+            
+            // Shoulders/neck
+            ctx.fillRect(350, 450, 100, 150);
+            
+            // Headphones
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 8;
+            ctx.beginPath();
+            ctx.arc(400, 320, 170, Math.PI * 0.7, Math.PI * 0.3);
+            ctx.stroke();
+            
+            ctx.fillStyle = '#444';
+            ctx.fillRect(280, 310, 30, 40);
+            ctx.fillRect(490, 310, 30, 40);
+        }
+        
+        function applyGlitch() {
+            if (Math.random() < glitchIntensity) {
+                const sliceHeight = 20 + Math.random() * 60;
+                const y = Math.random() * canvas.height;
+                const imageData = ctx.getImageData(0, y, canvas.width, sliceHeight);
+                const offset = (Math.random() - 0.5) * 50;
+                ctx.putImageData(imageData, offset, y);
+                
+                // RGB split
+                if (Math.random() < 0.3) {
+                    const data = imageData.data;
+                    for (let i = 0; i < data.length; i += 4) {
+                        if (Math.random() < 0.1) {
+                            const shift = Math.floor(Math.random() * 20) * 4;
+                            if (i + shift < data.length) {
+                                data[i] = data[i + shift];
+                            }
+                        }
+                    }
+                    ctx.putImageData(imageData, 0, y);
+                }
+            }
+        }
+        
+        function drawScanLines() {
+            ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+            ctx.lineWidth = 1;
+            for (let y = scanLine % 4; y < canvas.height; y += 4) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+        }
+        
+        function animate() {
+            frameCount++;
+            
+            // Clear and redraw base
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            drawSketchLines();
+            
+            // Glitch intensity varies over time
+            glitchIntensity = 0.02 + Math.sin(frameCount * 0.01) * 0.08;
+            
+            // More aggressive glitches every few seconds
+            if (frameCount % 180 === 0) {
+                glitchIntensity = 0.6;
+            }
+            
+            applyGlitch();
+            drawScanLines();
+            
+            scanLine++;
+            
+            // Add noise
+            if (Math.random() < 0.05) {
+                ctx.fillStyle = `rgba(${Math.random() * 255}, ${Math.random() * 255}, ${Math.random() * 255}, 0.1)`;
+                ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, Math.random() * 100, Math.random() * 5);
+            }
+            
+            requestAnimationFrame(animate);
+        }
+        
+        animate();
+    </script>
+</body>
+</html>
