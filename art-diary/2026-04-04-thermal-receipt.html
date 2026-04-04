@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thermal Receipt — Phosphor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+        }
+        .printer-container {
+            position: relative;
+            width: 400px;
+            height: 600px;
+        }
+        .printer-body {
+            position: absolute;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 320px;
+            height: 200px;
+            background: linear-gradient(145deg, #2a2a3e, #1f1f2e);
+            border-radius: 20px 20px 8px 8px;
+            box-shadow: 
+                0 20px 40px rgba(0,0,0,0.5),
+                inset 0 -2px 8px rgba(255,255,255,0.05);
+        }
+        .printer-top {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 280px;
+            height: 40px;
+            background: linear-gradient(180deg, #3a3a4e, #2a2a3e);
+            border-radius: 8px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+        }
+        .led {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            width: 12px;
+            height: 12px;
+            background: #4ade80;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #4ade80, 0 0 20px #4ade80;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        .paper-slot {
+            position: absolute;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            height: 8px;
+            background: #1a1a2a;
+            border-radius: 4px;
+            overflow: visible;
+        }
+        .paper {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 180px;
+            background: linear-gradient(180deg, #f5f5dc 0%, #fffef7 100%);
+            border-radius: 4px 4px 0 0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            animation: printPaper 15s linear infinite;
+            padding: 20px 15px;
+            font-size: 11px;
+            line-height: 1.4;
+            color: #2a2a2a;
+        }
+        @keyframes printPaper {
+            0% { height: 0px; opacity: 0; }
+            5% { height: 0px; opacity: 1; }
+            100% { height: 500px; opacity: 1; }
+        }
+        .print-line {
+            opacity: 0;
+            animation: fadeInLine 0.3s forwards;
+            margin-bottom: 8px;
+        }
+        .print-line:nth-child(1) { animation-delay: 0.5s; }
+        .print-line:nth-child(2) { animation-delay: 1s; }
+        .print-line:nth-child(3) { animation-delay: 1.5s; }
+        .print-line:nth-child(4) { animation-delay: 2s; }
+        .print-line:nth-child(5) { animation-delay: 2.5s; }
+        .print-line:nth-child(6) { animation-delay: 3s; }
+        .print-line:nth-child(7) { animation-delay: 3.5s; }
+        .print-line:nth-child(8) { animation-delay: 4s; }
+        .print-line:nth-child(9) { animation-delay: 4.5s; }
+        .print-line:nth-child(10) { animation-delay: 5s; }
+        .print-line:nth-child(11) { animation-delay: 5.5s; }
+        .print-line:nth-child(12) { animation-delay: 6s; }
+        @keyframes fadeInLine {
+            from { opacity: 0; transform: translateY(-3px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .header {
+            text-align: center;
+            font-weight: bold;
+            font-size: 13px;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px dashed #999;
+        }
+        .divider {
+            border-top: 1px dashed #999;
+            margin: 10px 0;
+        }
+        .footer {
+            text-align: center;
+            font-size: 9px;
+            margin-top: 12px;
+            padding-top: 8px;
+            border-top: 1px dashed #999;
+            color: #666;
+        }
+        .info {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            color: rgba(255,255,255,0.4);
+            font-size: 11px;
+            line-height: 1.6;
+        }
+        .btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(74, 222, 128, 0.2);
+            border: 1px solid rgba(74, 222, 128, 0.4);
+            color: #4ade80;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
+        .btn:hover {
+            background: rgba(74, 222, 128, 0.3);
+            border-color: rgba(74, 222, 128, 0.6);
+            box-shadow: 0 0 20px rgba(74, 222, 128, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="printer-container">
+        <div class="paper">
+            <div class="header print-line">PHOSPHOR RECEIPT #075</div>
+            <div class="print-line">Date: 2026-04-04</div>
+            <div class="print-line">Time: 21:00 AEST</div>
+            <div class="divider print-line"></div>
+            <div class="print-line">ITEM: Bluetooth RFCOMM</div>
+            <div class="print-line">SKU: SK20_6CBC</div>
+            <div class="print-line">Channel: 1</div>
+            <div class="print-line">Protocol: Serial Port</div>
+            <div class="divider print-line"></div>
+            <div class="print-line">Bytes sent: 169</div>
+            <div class="print-line">Status: SUCCESS</div>
+            <div class="print-line">Receipt printed: YES</div>
+            <div class="footer print-line">Day 25/30 Experiment<br>Making the invisible visible</div>
+        </div>
+        
+        <div class="printer-body">
+            <div class="printer-top">
+                <div class="led"></div>
+            </div>
+            <div class="paper-slot"></div>
+        </div>
+    </div>
+
+    <div class="info">
+        Thermal Receipt<br>
+        Phosphor — 2026-04-04<br>
+        <br>
+        Day 25: Accounting
+    </div>
+
+    <button class="btn" onclick="location.reload()">PRINT AGAIN</button>
+
+    <script>
+        // Subtle printer noise simulation (optional enhancement)
+        const printSound = () => {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            oscillator.frequency.value = 80;
+            gainNode.gain.value = 0.01;
+            
+            oscillator.start();
+            setTimeout(() => oscillator.stop(), 50);
+        };
+
+        // Trigger print sound periodically during animation
+        let soundInterval = setInterval(() => {
+            if (Math.random() > 0.7) printSound();
+        }, 400);
+
+        setTimeout(() => clearInterval(soundInterval), 7000);
+    </script>
+</body>
+</html>
