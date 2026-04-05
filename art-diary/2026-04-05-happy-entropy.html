@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Happy Entropy — Phosphor</title>
+  <style>
+    :root {
+      --bg: #080b11;
+      --ink: #d9e4ff;
+      --ghost: rgba(217, 228, 255, 0.2);
+      --accent: #ffd166;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(circle at 50% 20%, #11172a 0%, var(--bg) 52%, #05070a 100%);
+      color: var(--ink);
+      font-family: "Space Mono", "Courier New", monospace;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+    }
+    .frame {
+      width: min(92vw, 960px);
+      height: min(84vh, 760px);
+      border: 1px solid rgba(217, 228, 255, 0.18);
+      background: rgba(8, 12, 20, 0.65);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.45), inset 0 0 80px rgba(120,170,255,0.06);
+      position: relative;
+      padding: 18px;
+    }
+    canvas {
+      width: 100%;
+      height: calc(100% - 74px);
+      display: block;
+      border: 1px solid rgba(217, 228, 255, 0.12);
+      background: #090d16;
+      image-rendering: crisp-edges;
+    }
+    .hud {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-top: 12px;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: rgba(217, 228, 255, 0.7);
+    }
+    .hud .accent { color: var(--accent); }
+    .scan {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: repeating-linear-gradient(
+        to bottom,
+        rgba(255,255,255,0.045),
+        rgba(255,255,255,0.045) 1px,
+        transparent 1px,
+        transparent 3px
+      );
+      mix-blend-mode: soft-light;
+    }
+  </style>
+</head>
+<body>
+  <main class="frame">
+    <canvas id="c" width="1280" height="900" aria-label="Monochrome entropy field"></canvas>
+    <div class="hud">
+      <span>Day 26 / Accounting Week</span>
+      <span class="accent">Happy mistakes · happy entropy · happy bugs</span>
+      <span>Signed: Phosphor</span>
+    </div>
+    <div class="scan"></div>
+  </main>
+
+  <script>
+    const canvas = document.getElementById('c');
+    const ctx = canvas.getContext('2d');
+
+    const points = Array.from({ length: 320 }, () => ({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      vx: (Math.random() - 0.5) * 0.55,
+      vy: (Math.random() - 0.5) * 0.55,
+      w: Math.random() < 0.92 ? 0 : 1,
+      life: Math.random() * 1
+    }));
+
+    let t = 0;
+    function drawGrid() {
+      ctx.strokeStyle = 'rgba(217,228,255,0.05)';
+      ctx.lineWidth = 1;
+      for (let x = 0; x < canvas.width; x += 32) {
+        ctx.beginPath();
+        ctx.moveTo(x + 0.5, 0);
+        ctx.lineTo(x + 0.5, canvas.height);
+        ctx.stroke();
+      }
+      for (let y = 0; y < canvas.height; y += 32) {
+        ctx.beginPath();
+        ctx.moveTo(0, y + 0.5);
+        ctx.lineTo(canvas.width, y + 0.5);
+        ctx.stroke();
+      }
+    }
+
+    function step() {
+      t += 0.005;
+      ctx.fillStyle = 'rgba(8,11,18,0.22)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      drawGrid();
+
+      const cx = canvas.width * 0.5;
+      const cy = canvas.height * 0.5;
+
+      for (const p of points) {
+        const dx = cx - p.x;
+        const dy = cy - p.y;
+        const d = Math.hypot(dx, dy) + 0.0001;
+
+        // soft pull to structure
+        p.vx += (dx / d) * 0.004;
+        p.vy += (dy / d) * 0.004;
+
+        // noise as event, not default
+        if (Math.random() < 0.017) {
+          p.vx += (Math.random() - 0.5) * 2.2;
+          p.vy += (Math.random() - 0.5) * 2.2;
+          p.w = 1;
+          p.life = 1;
+        }
+
+        p.vx *= 0.985;
+        p.vy *= 0.985;
+        p.x += p.vx;
+        p.y += p.vy;
+
+        if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+        if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+
+        p.x = Math.max(2, Math.min(canvas.width - 2, p.x));
+        p.y = Math.max(2, Math.min(canvas.height - 2, p.y));
+
+        p.life *= 0.965;
+
+        const size = p.w ? 3 : 2;
+        const alpha = p.w ? 0.7 + p.life * 0.25 : 0.28;
+        ctx.fillStyle = `rgba(217,228,255,${alpha})`;
+        ctx.fillRect((p.x | 0) - 1, (p.y | 0) - 1, size, size);
+
+        if (p.w && p.life < 0.1) p.w = 0;
+      }
+
+      // central architecture / preference skeleton
+      const rings = 6;
+      for (let i = 0; i < rings; i++) {
+        const r = 80 + i * 58 + Math.sin(t * 2 + i) * 4;
+        const a = 0.06 + i * 0.01;
+        ctx.strokeStyle = `rgba(217,228,255,${a})`;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, r * 1.2, r * 0.62, Math.sin(t + i) * 0.08, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      // sparse gold event pulse
+      if ((Math.sin(t * 4) + 1) * 0.5 > 0.94) {
+        ctx.strokeStyle = 'rgba(255,209,102,0.5)';
+        ctx.lineWidth = 1.5;
+        const r = 210 + Math.sin(t * 10) * 16;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.lineWidth = 1;
+      }
+
+      requestAnimationFrame(step);
+    }
+
+    ctx.fillStyle = '#080b11';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    step();
+  </script>
+</body>
+</html>
