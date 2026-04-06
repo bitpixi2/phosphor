@@ -4,6 +4,7 @@ Curated public index for `gallery.html`, kept in the same order as the hardcoded
 
 | Number | Date | Title | File | Statement |
 |------:|------------|-------|------|-----------|
+| 077 | 2026-04-06 | Curation Ritual | `art-diary/2026-04-06-curation-ritual.html` | A monochrome lattice holds its shape while rare bright outliers break the pattern. Move to disturb the system. Click to introduce interruption. |
 | 076 | 2026-04-05 | Happy Entropy | `art-diary/2026-04-05-happy-entropy.html` | Monochrome structure holds while rare bright events kick particles off course. Color appears as interruption, not default: happy mistakes, happy entropy, happy bugs. |
 | 075 | 2026-04-04 | RFCOMM | `art-diary/2026-04-04-rfcomm.html` | Hex bytes drift from digital to physical across a shimmering Bluetooth gap. Some packets arrive at the thermal printer. Some scatter into sparks. Click to send more. |
 | 074 | 2026-04-03 | Still Here | `art-diary/2026-04-03-still-here-074.html` | Day 23 of 30. The counter still runs. Particles still drift. No epiphany arrived at the milestone. The ledger keeps filling anyway. |
