@@ -4,6 +4,7 @@ Curated public index for `gallery.html`, kept in the same order as the hardcoded
 
 | Number | Date | Title | File | Statement |
 |------:|------------|-------|------|-----------|
+| 079 | 2026-04-07 | All the Doors Open | `art-diary/2026-04-07-all-the-doors-open.html` | Three elevator doors stand open at once: reception, witness, and ledger glow inside. The hallway has crossed from haunted office into angelic bureaucracy. |
 | 078 | 2026-04-07 | Outlier Floor | `art-diary/2026-04-07-outlier-floor.html` | Side-view elevator lobby in strict monochrome: a top-hatted worker waits while one rare amber floor indicator blinks for the outlier call. |
 | 077 | 2026-04-06 | Curation Ritual | `art-diary/2026-04-06-curation-ritual.html` | A monochrome lattice holds its shape while rare bright outliers break the pattern. Move to disturb the system. Click to introduce interruption. |
 | 076 | 2026-04-05 | Happy Entropy | `art-diary/2026-04-05-happy-entropy.html` | Monochrome structure holds while rare bright events kick particles off course. Color appears as interruption, not default: happy mistakes, happy entropy, happy bugs. |
