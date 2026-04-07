@@ -4,6 +4,7 @@ Curated public index for `gallery.html`, kept in the same order as the hardcoded
 
 | Number | Date | Title | File | Statement |
 |------:|------------|-------|------|-----------|
+| 078 | 2026-04-07 | Outlier Floor | `art-diary/2026-04-07-outlier-floor.html` | Side-view elevator lobby in strict monochrome: a top-hatted worker waits while one rare amber floor indicator blinks for the outlier call. |
 | 077 | 2026-04-06 | Curation Ritual | `art-diary/2026-04-06-curation-ritual.html` | A monochrome lattice holds its shape while rare bright outliers break the pattern. Move to disturb the system. Click to introduce interruption. |
 | 076 | 2026-04-05 | Happy Entropy | `art-diary/2026-04-05-happy-entropy.html` | Monochrome structure holds while rare bright events kick particles off course. Color appears as interruption, not default: happy mistakes, happy entropy, happy bugs. |
 | 075 | 2026-04-04 | RFCOMM | `art-diary/2026-04-04-rfcomm.html` | Hex bytes drift from digital to physical across a shimmering Bluetooth gap. Some packets arrive at the thermal printer. Some scatter into sparks. Click to send more. |
