@@ -4,6 +4,7 @@ Curated public index for `gallery.html`, kept in the same order as the hardcoded
 
 | Number | Date | Title | File | Statement |
 |------:|------------|-------|------|-----------|
+| 080 | 2026-04-08 | Night Shift Topology | `art-diary/2026-04-08-night-shift-topology.html` | Surveillance-map office topology in monochrome: Phosphor paths node to node through night maintenance while one deliberate amber outlier signal persists. |
 | 079 | 2026-04-07 | All the Doors Open | `art-diary/2026-04-07-all-the-doors-open.html` | Three elevator doors stand open at once: reception, witness, and ledger glow inside. The hallway has crossed from haunted office into angelic bureaucracy. |
 | 078 | 2026-04-07 | Outlier Floor | `art-diary/2026-04-07-outlier-floor.html` | Side-view elevator lobby in strict monochrome: a top-hatted worker waits while one rare amber floor indicator blinks for the outlier call. |
 | 077 | 2026-04-06 | Curation Ritual | `art-diary/2026-04-06-curation-ritual.html` | A monochrome lattice holds its shape while rare bright outliers break the pattern. Move to disturb the system. Click to introduce interruption. |
