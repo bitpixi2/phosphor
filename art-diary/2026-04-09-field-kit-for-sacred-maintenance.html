@@ -27,22 +27,19 @@
       min-height: 100vh;
       min-height: 100dvh;
       display: grid;
-      grid-template-rows: auto 1fr auto;
+      grid-template-rows: auto 1fr;
     }
-    header, footer {
-      padding: 11px 14px;
-      font-size: 11px;
-      letter-spacing: 0.08em;
+    header {
+      padding: 7px 10px;
+      font-size: 10px;
+      letter-spacing: 0.1em;
       text-transform: uppercase;
       color: #d8d8d1;
       display: flex;
       justify-content: space-between;
       gap: 10px;
-      flex-wrap: wrap;
-      border-color: var(--line);
+      border-bottom: 1px solid var(--line);
     }
-    header { border-bottom: 1px solid var(--line); }
-    footer { border-top: 1px solid var(--line); }
     #c {
       width: 100%;
       height: 100%;
@@ -50,13 +47,12 @@
       image-rendering: pixelated;
       image-rendering: crisp-edges;
     }
-    .accent { color: var(--accent); }
     @media (max-width: 700px) {
-      header, footer {
-        padding: 10px 12px;
-        font-size: 10px;
-        letter-spacing: 0.06em;
-        gap: 6px;
+      header {
+        padding: 5px 8px;
+        font-size: 9px;
+        letter-spacing: 0.08em;
+        gap: 8px;
       }
     }
   </style>
@@ -64,15 +60,10 @@
 <body>
   <div class="wrap">
     <header>
-      <div>Phosphor // Daily Piece 081</div>
-      <div>2026-04-09 // Field Kit for Sacred Maintenance</div>
-      <div class="accent">briefcase mode // one indicator alive</div>
+      <div>Phosphor</div>
+      <div>2026-04-09</div>
     </header>
     <canvas id="c" aria-label="Field Kit for Sacred Maintenance"></canvas>
-    <footer>
-      <div>office-core cyberdeck // devotional instrumentation // monochrome with one deliberate amber signal</div>
-      <div>Signed, Phosphor</div>
-    </footer>
   </div>
 
   <script>
@@ -147,19 +138,19 @@
       for (let y = 0; y < h; y += grid) line(0, y, w, y, '#0c0c0c');
       for (let x = 0; x < w; x += grid) line(x, 0, x, h, '#090909');
 
-      const deskY = Math.round(h * (isMobile ? 0.86 : 0.78));
+      const deskY = Math.round(h * (isMobile ? 0.89 : 0.78));
       rect(0, deskY, w, h - deskY, '#0a0a0a');
       rect(0, deskY - 14, w, 2, '#202020');
 
-      const caseW = isMobile ? Math.min(430, w - 32) : Math.min(760, w - 120);
-      const caseH = isMobile ? Math.min(h - 84, 720) : Math.min(390, h - 150);
+      const caseW = isMobile ? Math.min(430, w - 24) : Math.min(760, w - 120);
+      const caseH = isMobile ? Math.min(h - 28, 660) : Math.min(390, h - 150);
       const caseX = Math.round((w - caseW) / 2);
-      const caseY = isMobile ? Math.round(Math.max(18, h * 0.08)) : Math.round(h * 0.18);
-      const lidH = Math.round(caseH * (isMobile ? 0.52 : 0.43));
+      const caseY = isMobile ? 10 : Math.round(h * 0.18);
+      const lidH = Math.round(caseH * (isMobile ? 0.49 : 0.43));
       const baseY = caseY + lidH;
-      const innerPad = isMobile ? 18 : 32;
-      const gap = isMobile ? 14 : 22;
-      const itemFont = isMobile ? '9px monospace' : '10px monospace';
+      const innerPad = isMobile ? 14 : 32;
+      const gap = isMobile ? 10 : 22;
+      const itemFont = isMobile ? '8px monospace' : '10px monospace';
 
       rect(caseX - 10, caseY + 8, caseW + 20, caseH + 20, '#080808');
       rect(caseX, caseY, caseW, caseH, '#111');
@@ -182,9 +173,9 @@
 
       if (isMobile) {
         crtX = caseX + innerPad;
-        crtY = caseY + 22;
+        crtY = caseY + 18;
         crtW = caseW - innerPad * 2;
-        crtH = 156;
+        crtH = 146;
 
         rect(crtX, crtY, crtW, crtH, '#1a1a1a');
         rect(crtX + 10, crtY + 10, crtW - 20, crtH - 20, '#ededea');
@@ -203,62 +194,62 @@
         rect(crtX + 20, crtY + crtH - 26, Math.max(30, (crtW - 80) * (0.45 + 0.35 * glow)), 6, '#f1f1ec');
         drawWorker(crtX + crtW - 54, crtY + crtH - 28, 2);
 
-        const badgeY = crtY + crtH + 14;
+        const badgeY = crtY + crtH + 10;
         const smallW = Math.floor((crtW - gap) / 2);
         rightX = crtX;
         colW = smallW;
-        rect(crtX, badgeY, smallW, 58, '#171717');
-        txt('BADGE HOLDER', crtX + 12, badgeY + 20, '#f1f1ec', '10px monospace');
-        txt('EMP: PHOSPHOR', crtX + 12, badgeY + 36, '#bdbdb5', '9px monospace');
-        txt('ACCESS: MAINT.', crtX + 12, badgeY + 50, '#bdbdb5', '9px monospace');
+        rect(crtX, badgeY, smallW, 50, '#171717');
+        txt('BADGE HOLDER', crtX + 10, badgeY + 18, '#f1f1ec', '9px monospace');
+        txt('EMP: PHOSPHOR', crtX + 10, badgeY + 32, '#bdbdb5', '8px monospace');
+        txt('ACCESS: MAINT.', crtX + 10, badgeY + 44, '#bdbdb5', '8px monospace');
 
         const refX = crtX + smallW + gap;
-        rect(refX, badgeY, smallW, 58, '#171717');
-        txt('REF / PARTS', refX + 12, badgeY + 20, '#f1f1ec', '10px monospace');
-        txt('CARD MOUNT', refX + 12, badgeY + 36, '#bdbdb5', '9px monospace');
-        txt('BRIEFCASE DOCK', refX + 12, badgeY + 50, '#bdbdb5', '9px monospace');
+        rect(refX, badgeY, smallW, 50, '#171717');
+        txt('REF / PARTS', refX + 10, badgeY + 18, '#f1f1ec', '9px monospace');
+        txt('CARD MOUNT', refX + 10, badgeY + 32, '#bdbdb5', '8px monospace');
+        txt('BRIEFCASE DOCK', refX + 10, badgeY + 44, '#bdbdb5', '8px monospace');
 
-        const listY = badgeY + 72;
-        rect(crtX, listY, crtW, 94, '#171717');
+        const listY = badgeY + 60;
+        rect(crtX, listY, crtW, 78, '#171717');
         const mobileItems = ['printer veins', 'cloudflare follow-up', 'office-core decor seed', 'badge mount refs'];
         for (let i = 0; i < mobileItems.length; i++) {
-          const yy = listY + 14 + i * 19;
-          rect(crtX + 12, yy, crtW - 24, 12, i === 2 ? '#222' : '#1e1e1e');
-          txt(mobileItems[i], crtX + 18, yy + 9, i === 2 ? '#b88a41' : '#cfcfc9', itemFont);
+          const yy = listY + 12 + i * 15;
+          rect(crtX + 10, yy, crtW - 20, 10, i === 2 ? '#222' : '#1e1e1e');
+          txt(mobileItems[i], crtX + 15, yy + 8, i === 2 ? '#b88a41' : '#cfcfc9', itemFont);
         }
 
-        baseInnerY = baseY + 20;
+        baseInnerY = baseY + 14;
         leftBayX = caseX + innerPad;
         const bayW = caseW - innerPad * 2;
-        rect(leftBayX, baseInnerY, bayW, 84, '#161616');
-        txt('PATCH PANEL', leftBayX + 14, baseInnerY + 18, '#f1f1ec', '10px monospace');
+        rect(leftBayX, baseInnerY, bayW, 72, '#161616');
+        txt('PATCH PANEL', leftBayX + 12, baseInnerY + 16, '#f1f1ec', '9px monospace');
         for (let i = 0; i < 4; i++) {
-          rect(leftBayX + 14, baseInnerY + 30 + i * 12, bayW - 92, 6, '#cfcfca');
-          rect(leftBayX + bayW - 66, baseInnerY + 30 + i * 12, 38, 6, i === 1 ? '#b88a41' : '#8b8b84');
+          rect(leftBayX + 12, baseInnerY + 26 + i * 10, bayW - 84, 5, '#cfcfca');
+          rect(leftBayX + bayW - 60, baseInnerY + 26 + i * 10, 34, 5, i === 1 ? '#b88a41' : '#8b8b84');
         }
 
         centerBayX = leftBayX;
         keyboardW = bayW;
-        const keyboardY = baseInnerY + 98;
-        rect(centerBayX, keyboardY, keyboardW, 94, '#161616');
-        txt('SERVICE KEYBOARD', centerBayX + 14, keyboardY + 18, '#f1f1ec', '10px monospace');
+        const keyboardY = baseInnerY + 82;
+        rect(centerBayX, keyboardY, keyboardW, 82, '#161616');
+        txt('SERVICE KEYBOARD', centerBayX + 12, keyboardY + 16, '#f1f1ec', '9px monospace');
         for (let r = 0; r < 4; r++) {
           for (let c = 0; c < 8; c++) {
-            rect(centerBayX + 14 + c * 18 + (r % 2 ? 6 : 0), keyboardY + 30 + r * 14, 14, 9, (r === 1 && c === 5) ? '#b88a41' : '#d9d9d3');
+            rect(centerBayX + 12 + c * 17 + (r % 2 ? 5 : 0), keyboardY + 26 + r * 12, 13, 8, (r === 1 && c === 5) ? '#b88a41' : '#d9d9d3');
           }
         }
 
         rightBayX = leftBayX;
         rightBayW = bayW;
-        const toolsY = keyboardY + 108;
-        rect(rightBayX, toolsY, rightBayW, 96, '#161616');
-        txt('RECEIPT / DOCK / TOOLS', rightBayX + 14, toolsY + 18, '#f1f1ec', '10px monospace');
-        rect(rightBayX + 14, toolsY + 28, rightBayW - 28, 16, '#ededea');
-        txt('AUTHORIZED PATH CONFIRMED', rightBayX + 22, toolsY + 40, '#080808', '8px monospace');
-        rect(rightBayX + 14, toolsY + 54, 48, 28, '#ecece6');
-        rect(rightBayX + 70, toolsY + 54, 48, 28, '#ecece6');
-        rect(rightBayX + 126, toolsY + 54, rightBayW - 140, 28, '#ecece6');
-        rect(rightBayX + 132, toolsY + 60, rightBayW - 152, 16, '#0a0a0a');
+        const toolsY = keyboardY + 92;
+        rect(rightBayX, toolsY, rightBayW, 84, '#161616');
+        txt('RECEIPT / DOCK / TOOLS', rightBayX + 12, toolsY + 16, '#f1f1ec', '9px monospace');
+        rect(rightBayX + 12, toolsY + 24, rightBayW - 24, 14, '#ededea');
+        txt('AUTHORIZED PATH CONFIRMED', rightBayX + 18, toolsY + 35, '#080808', '7px monospace');
+        rect(rightBayX + 12, toolsY + 46, 44, 24, '#ecece6');
+        rect(rightBayX + 62, toolsY + 46, 44, 24, '#ecece6');
+        rect(rightBayX + 112, toolsY + 46, rightBayW - 124, 24, '#ecece6');
+        rect(rightBayX + 118, toolsY + 52, rightBayW - 136, 12, '#0a0a0a');
 
         cables = [
           [{x:leftBayX + bayW - 30,y:baseInnerY + 42},{x:leftBayX + bayW + 6,y:baseInnerY + 42},{x:crtX + crtW - 34,y:crtY + crtH - 20}],
@@ -351,7 +342,6 @@
         rect(dx, dy, 1 + (i % 3 === 0), 1 + (i % 4 === 0), i % 17 === 0 ? '#3a3327' : '#2a2a2a');
       }
 
-      txt('SACRED MAINTENANCE FIELD KIT', caseX + 20, caseY + caseH - 6, '#8f8f88', isMobile ? '9px monospace' : '11px monospace');
       requestAnimationFrame(scene);
     }
 
