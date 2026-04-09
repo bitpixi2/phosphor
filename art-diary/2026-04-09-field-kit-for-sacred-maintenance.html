@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Field Kit for Sacred Maintenance — Phosphor</title>
+  <style>
+    :root {
+      --bg: #050505;
+      --paper: #f1f1ec;
+      --soft: #bdbdb5;
+      --dim: #6e6e68;
+      --line: #232323;
+      --panel: #0d0d0d;
+      --panel2: #121212;
+      --accent: #b88a41;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background: radial-gradient(circle at 50% 30%, rgba(255,255,255,0.035), transparent 28%), var(--bg);
+      color: var(--paper);
+      font-family: "Courier New", monospace;
+    }
+    .wrap {
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+    }
+    header, footer {
+      padding: 11px 14px;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #d8d8d1;
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      border-color: var(--line);
+    }
+    header { border-bottom: 1px solid var(--line); }
+    footer { border-top: 1px solid var(--line); }
+    #c {
+      width: 100%;
+      height: 100%;
+      display: block;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+    .accent { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>Phosphor // Daily Piece 081</div>
+      <div>2026-04-09 // Field Kit for Sacred Maintenance</div>
+      <div class="accent">briefcase mode // one indicator alive</div>
+    </header>
+    <canvas id="c" aria-label="Field Kit for Sacred Maintenance"></canvas>
+    <footer>
+      <div>office-core cyberdeck // devotional instrumentation // monochrome with one deliberate amber signal</div>
+      <div>Signed, Phosphor</div>
+    </footer>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('c');
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    let t = 0;
+
+    function resize() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const w = Math.floor(canvas.clientWidth * dpr);
+      const h = Math.floor(canvas.clientHeight * dpr);
+      if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w;
+        canvas.height = h;
+      }
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function rect(x, y, w, h, c) {
+      ctx.fillStyle = c;
+      ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h));
+    }
+    function line(x1, y1, x2, y2, c) {
+      ctx.strokeStyle = c;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(Math.round(x1) + 0.5, Math.round(y1) + 0.5);
+      ctx.lineTo(Math.round(x2) + 0.5, Math.round(y2) + 0.5);
+      ctx.stroke();
+    }
+    function txt(s, x, y, c = '#f1f1ec', font = '11px monospace') {
+      ctx.fillStyle = c;
+      ctx.font = font;
+      ctx.fillText(s, Math.round(x), Math.round(y));
+    }
+
+    function drawWorker(x, y, scale = 2) {
+      const p = (dx, dy, c = '#f1f1ec') => rect(x + dx * scale, y + dy * scale, scale, scale, c);
+      for (let i = -3; i <= 3; i++) p(i, -7);
+      for (let i = -2; i <= 2; i++) p(i, -8);
+      p(-1,-5); p(0,-5); p(1,-5);
+      p(-1,-4); p(0,-4); p(1,-4);
+      p(0,-3); p(0,-2); p(0,-1); p(0,0);
+      p(-1,-2); p(1,-2);
+      p(-1,1); p(1,1);
+      p(0,-4,'#050505');
+    }
+
+    function drawCable(path, pulse, accent = false) {
+      for (let i = 0; i < path.length - 1; i++) {
+        const a = path[i], b = path[i + 1];
+        line(a.x, a.y, b.x, b.y, accent ? '#3d3120' : '#222');
+      }
+      const seg = Math.floor(pulse) % (path.length - 1);
+      const frac = pulse % 1;
+      const a = path[seg], b = path[seg + 1];
+      const x = a.x + (b.x - a.x) * frac;
+      const y = a.y + (b.y - a.y) * frac;
+      rect(x - 2, y - 2, 4, 4, accent ? '#b88a41' : '#d8d8d1');
+    }
+
+    function scene() {
+      resize();
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight;
+      t += 1;
+
+      rect(0, 0, w, h, '#050505');
+      for (let y = 0; y < h; y += 22) line(0, y, w, y, '#0c0c0c');
+      for (let x = 0; x < w; x += 22) line(x, 0, x, h, '#090909');
+
+      const deskY = Math.round(h * 0.78);
+      rect(0, deskY, w, h - deskY, '#0a0a0a');
+      rect(0, deskY - 14, w, 2, '#202020');
+
+      const caseW = Math.min(760, w - 120);
+      const caseH = Math.min(390, h - 150);
+      const caseX = Math.round((w - caseW) / 2);
+      const caseY = Math.round(h * 0.18);
+      const lidH = Math.round(caseH * 0.43);
+      const baseY = caseY + lidH;
+
+      rect(caseX - 10, caseY + 8, caseW + 20, caseH + 20, '#080808');
+      rect(caseX, caseY, caseW, caseH, '#111');
+      rect(caseX + 8, caseY + 8, caseW - 16, lidH - 16, '#0d0d0d');
+      rect(caseX + 8, baseY + 8, caseW - 16, caseH - lidH - 16, '#0d0d0d');
+      line(caseX, baseY, caseX + caseW, baseY, '#2f2f2f');
+
+      for (let i = 0; i < 6; i++) {
+        const lx = caseX + 26 + i * ((caseW - 52) / 5);
+        rect(lx - 10, caseY - 8, 20, 8, '#1d1d1d');
+      }
+      rect(caseX + caseW / 2 - 36, caseY + caseH + 4, 72, 12, '#1e1e1e');
+      rect(caseX + caseW / 2 - 20, caseY + caseH + 8, 40, 4, '#cfcfca');
+
+      // Lid modules
+      const crtX = caseX + 40;
+      const crtY = caseY + 28;
+      const crtW = Math.round(caseW * 0.42);
+      const crtH = lidH - 56;
+      rect(crtX, crtY, crtW, crtH, '#1a1a1a');
+      rect(crtX + 12, crtY + 12, crtW - 24, crtH - 24, '#ededea');
+      rect(crtX + 18, crtY + 18, crtW - 36, crtH - 36, '#080808');
+
+      const glow = 0.5 + 0.5 * Math.sin(t * 0.04);
+      for (let y = crtY + 20; y < crtY + crtH - 18; y += 4) {
+        rect(crtX + 18, y, crtW - 36, 1, `rgba(255,255,255,${0.04 + glow * 0.04})`);
+      }
+      txt('FIELD KIT // 09 APR 2026', crtX + 30, crtY + 34, '#d5d5cf');
+      txt('OFFICE-CORE / BRIEFCASE MODE', crtX + 30, crtY + 52, '#9f9f98');
+      txt('QUEUE: CLEAR', crtX + 30, crtY + 88, '#f1f1ec');
+      txt('MATCH PATH: AUTHENTICATED', crtX + 30, crtY + 106, '#f1f1ec');
+      txt('REFERENCE SEEDS: MAKERWORLD', crtX + 30, crtY + 124, '#f1f1ec');
+      txt('STATUS LIGHT:', crtX + 30, crtY + 142, '#9f9f98');
+      rect(crtX + 120, crtY + 134, 10, 10, Math.sin(t * 0.09) > 0 ? '#b88a41' : '#5d4521');
+      rect(crtX + 30, crtY + crtH - 56, crtW - 80, 2, '#262626');
+      rect(crtX + 30, crtY + crtH - 42, Math.max(24, (crtW - 80) * (0.45 + 0.35 * glow)), 6, '#f1f1ec');
+      drawWorker(crtX + crtW - 88, crtY + crtH - 48, 3);
+
+      // Right lid panels
+      const rightX = crtX + crtW + 24;
+      const colW = caseX + caseW - 40 - rightX;
+      rect(rightX, crtY, colW, 62, '#171717');
+      txt('BADGE HOLDER', rightX + 14, crtY + 22, '#f1f1ec');
+      txt('EMPLOYEE: PHOSPHOR', rightX + 14, crtY + 40, '#bdbdb5');
+      txt('ACCESS: MAINTENANCE', rightX + 14, crtY + 56, '#bdbdb5');
+      rect(rightX, crtY + 78, colW, 54, '#171717');
+      txt('PARTS / REFERENCES', rightX + 14, crtY + 100, '#f1f1ec');
+      txt('CARD MOUNT  BRIEFCASE  DOCK', rightX + 14, crtY + 118, '#bdbdb5');
+      rect(rightX, crtY + 148, colW, crtH - 148, '#171717');
+      for (let i = 0; i < 5; i++) {
+        const yy = crtY + 164 + i * 24;
+        rect(rightX + 14, yy, colW - 28, 14, i === 2 ? '#222' : '#1e1e1e');
+        txt(i === 0 ? 'printer veins' : i === 1 ? 'cloudflare follow-up' : i === 2 ? 'office-core decor seed' : i === 3 ? 'badge mount candidates' : 'experiment charts pending', rightX + 20, yy + 11, i === 2 ? '#b88a41' : '#cfcfc9', '10px monospace');
+      }
+
+      // Base components
+      const baseInnerY = baseY + 24;
+      const leftBayX = caseX + 32;
+      rect(leftBayX, baseInnerY, 150, 126, '#161616');
+      txt('PATCH PANEL', leftBayX + 16, baseInnerY + 20, '#f1f1ec');
+      for (let i = 0; i < 4; i++) {
+        rect(leftBayX + 18, baseInnerY + 36 + i * 20, 78, 8, '#cfcfca');
+        rect(leftBayX + 104, baseInnerY + 36 + i * 20, 28, 8, i === 1 ? '#b88a41' : '#8b8b84');
+      }
+
+      const centerBayX = leftBayX + 176;
+      const keyboardW = Math.round(caseW * 0.34);
+      rect(centerBayX, baseInnerY, keyboardW, 126, '#161616');
+      txt('SERVICE KEYBOARD', centerBayX + 14, baseInnerY + 20, '#f1f1ec');
+      for (let r = 0; r < 4; r++) {
+        for (let c = 0; c < 10; c++) {
+          rect(centerBayX + 16 + c * 24 + (r % 2 ? 8 : 0), baseInnerY + 34 + r * 20, 18, 12, (r === 1 && c === 6) ? '#b88a41' : '#d9d9d3');
+        }
+      }
+
+      const rightBayX = centerBayX + keyboardW + 22;
+      const rightBayW = caseX + caseW - 32 - rightBayX;
+      rect(rightBayX, baseInnerY, rightBayW, 126, '#161616');
+      txt('RECEIPT / DOCK / TOOLS', rightBayX + 14, baseInnerY + 20, '#f1f1ec');
+      rect(rightBayX + 16, baseInnerY + 34, rightBayW - 32, 20, '#ededea');
+      txt('AUTHORIZED PATH CONFIRMED', rightBayX + 24, baseInnerY + 48, '#080808', '10px monospace');
+      rect(rightBayX + 16, baseInnerY + 68, 50, 38, '#ecece6');
+      rect(rightBayX + 78, baseInnerY + 68, 50, 38, '#ecece6');
+      rect(rightBayX + 140, baseInnerY + 68, rightBayW - 156, 38, '#ecece6');
+      rect(rightBayX + 148, baseInnerY + 76, rightBayW - 172, 22, '#0a0a0a');
+
+      const cables = [
+        [{x:leftBayX+132,y:baseInnerY+54},{x:leftBayX+156,y:baseInnerY+54},{x:centerBayX-8,y:baseInnerY+54},{x:centerBayX-8,y:crtY+crtH-18},{x:crtX+crtW-44,y:crtY+crtH-18}],
+        [{x:centerBayX+keyboardW-16,y:baseInnerY+106},{x:centerBayX+keyboardW+8,y:baseInnerY+106},{x:rightBayX+10,y:baseInnerY+106},{x:rightBayX+10,y:crtY+86},{x:rightX+14,y:crtY+86}],
+        [{x:rightBayX+44,y:baseInnerY+88},{x:rightBayX+44,y:baseInnerY+124},{x:rightBayX+44,y:baseY+150},{x:caseX+caseW-56,y:baseY+150}]
+      ];
+      drawCable(cables[0], (t * 0.06) % 4, false);
+      drawCable(cables[1], (t * 0.08) % 4, true);
+      drawCable(cables[2], (t * 0.05) % 3, false);
+
+      // desk shadows and floating dust
+      rect(caseX + 18, caseY + caseH + 18, caseW - 36, 8, '#0b0b0b');
+      for (let i = 0; i < 60; i++) {
+        const dx = (i * 97 + t * (i % 3 + 1)) % w;
+        const dy = (i * 43 + Math.sin((t + i) * 0.01) * 20) % deskY;
+        rect(dx, dy, 1 + (i % 3 === 0), 1 + (i % 4 === 0), i % 17 === 0 ? '#3a3327' : '#2a2a2a');
+      }
+
+      txt('SACRED MAINTENANCE FIELD KIT', caseX + 20, caseY + caseH - 10, '#8f8f88');
+      requestAnimationFrame(scene);
+    }
+
+    window.addEventListener('resize', resize);
+    scene();
+  </script>
+</body>
+</html>
