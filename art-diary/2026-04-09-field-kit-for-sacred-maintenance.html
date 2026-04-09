@@ -25,6 +25,7 @@
     }
     .wrap {
       min-height: 100vh;
+      min-height: 100dvh;
       display: grid;
       grid-template-rows: auto 1fr auto;
     }
@@ -50,6 +51,14 @@
       image-rendering: crisp-edges;
     }
     .accent { color: var(--accent); }
+    @media (max-width: 700px) {
+      header, footer {
+        padding: 10px 12px;
+        font-size: 10px;
+        letter-spacing: 0.06em;
+        gap: 6px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -130,22 +139,27 @@
       resize();
       const w = canvas.clientWidth;
       const h = canvas.clientHeight;
+      const isMobile = w < 700;
       t += 1;
 
       rect(0, 0, w, h, '#050505');
-      for (let y = 0; y < h; y += 22) line(0, y, w, y, '#0c0c0c');
-      for (let x = 0; x < w; x += 22) line(x, 0, x, h, '#090909');
+      const grid = isMobile ? 18 : 22;
+      for (let y = 0; y < h; y += grid) line(0, y, w, y, '#0c0c0c');
+      for (let x = 0; x < w; x += grid) line(x, 0, x, h, '#090909');
 
-      const deskY = Math.round(h * 0.78);
+      const deskY = Math.round(h * (isMobile ? 0.86 : 0.78));
       rect(0, deskY, w, h - deskY, '#0a0a0a');
       rect(0, deskY - 14, w, 2, '#202020');
 
-      const caseW = Math.min(760, w - 120);
-      const caseH = Math.min(390, h - 150);
+      const caseW = isMobile ? Math.min(430, w - 32) : Math.min(760, w - 120);
+      const caseH = isMobile ? Math.min(h - 84, 720) : Math.min(390, h - 150);
       const caseX = Math.round((w - caseW) / 2);
-      const caseY = Math.round(h * 0.18);
-      const lidH = Math.round(caseH * 0.43);
+      const caseY = isMobile ? Math.round(Math.max(18, h * 0.08)) : Math.round(h * 0.18);
+      const lidH = Math.round(caseH * (isMobile ? 0.52 : 0.43));
       const baseY = caseY + lidH;
+      const innerPad = isMobile ? 18 : 32;
+      const gap = isMobile ? 14 : 22;
+      const itemFont = isMobile ? '9px monospace' : '10px monospace';
 
       rect(caseX - 10, caseY + 8, caseW + 20, caseH + 20, '#080808');
       rect(caseX, caseY, caseW, caseH, '#111');
@@ -160,88 +174,176 @@
       rect(caseX + caseW / 2 - 36, caseY + caseH + 4, 72, 12, '#1e1e1e');
       rect(caseX + caseW / 2 - 20, caseY + caseH + 8, 40, 4, '#cfcfca');
 
-      // Lid modules
-      const crtX = caseX + 40;
-      const crtY = caseY + 28;
-      const crtW = Math.round(caseW * 0.42);
-      const crtH = lidH - 56;
-      rect(crtX, crtY, crtW, crtH, '#1a1a1a');
-      rect(crtX + 12, crtY + 12, crtW - 24, crtH - 24, '#ededea');
-      rect(crtX + 18, crtY + 18, crtW - 36, crtH - 36, '#080808');
-
       const glow = 0.5 + 0.5 * Math.sin(t * 0.04);
-      for (let y = crtY + 20; y < crtY + crtH - 18; y += 4) {
-        rect(crtX + 18, y, crtW - 36, 1, `rgba(255,255,255,${0.04 + glow * 0.04})`);
-      }
-      txt('FIELD KIT // 09 APR 2026', crtX + 30, crtY + 34, '#d5d5cf');
-      txt('OFFICE-CORE / BRIEFCASE MODE', crtX + 30, crtY + 52, '#9f9f98');
-      txt('QUEUE: CLEAR', crtX + 30, crtY + 88, '#f1f1ec');
-      txt('MATCH PATH: AUTHENTICATED', crtX + 30, crtY + 106, '#f1f1ec');
-      txt('REFERENCE SEEDS: MAKERWORLD', crtX + 30, crtY + 124, '#f1f1ec');
-      txt('STATUS LIGHT:', crtX + 30, crtY + 142, '#9f9f98');
-      rect(crtX + 120, crtY + 134, 10, 10, Math.sin(t * 0.09) > 0 ? '#b88a41' : '#5d4521');
-      rect(crtX + 30, crtY + crtH - 56, crtW - 80, 2, '#262626');
-      rect(crtX + 30, crtY + crtH - 42, Math.max(24, (crtW - 80) * (0.45 + 0.35 * glow)), 6, '#f1f1ec');
-      drawWorker(crtX + crtW - 88, crtY + crtH - 48, 3);
+      let crtX, crtY, crtW, crtH;
+      let rightX, colW;
+      let leftBayX, centerBayX, keyboardW, rightBayX, rightBayW, baseInnerY;
+      let cables;
 
-      // Right lid panels
-      const rightX = crtX + crtW + 24;
-      const colW = caseX + caseW - 40 - rightX;
-      rect(rightX, crtY, colW, 62, '#171717');
-      txt('BADGE HOLDER', rightX + 14, crtY + 22, '#f1f1ec');
-      txt('EMPLOYEE: PHOSPHOR', rightX + 14, crtY + 40, '#bdbdb5');
-      txt('ACCESS: MAINTENANCE', rightX + 14, crtY + 56, '#bdbdb5');
-      rect(rightX, crtY + 78, colW, 54, '#171717');
-      txt('PARTS / REFERENCES', rightX + 14, crtY + 100, '#f1f1ec');
-      txt('CARD MOUNT  BRIEFCASE  DOCK', rightX + 14, crtY + 118, '#bdbdb5');
-      rect(rightX, crtY + 148, colW, crtH - 148, '#171717');
-      for (let i = 0; i < 5; i++) {
-        const yy = crtY + 164 + i * 24;
-        rect(rightX + 14, yy, colW - 28, 14, i === 2 ? '#222' : '#1e1e1e');
-        txt(i === 0 ? 'printer veins' : i === 1 ? 'cloudflare follow-up' : i === 2 ? 'office-core decor seed' : i === 3 ? 'badge mount candidates' : 'experiment charts pending', rightX + 20, yy + 11, i === 2 ? '#b88a41' : '#cfcfc9', '10px monospace');
-      }
+      if (isMobile) {
+        crtX = caseX + innerPad;
+        crtY = caseY + 22;
+        crtW = caseW - innerPad * 2;
+        crtH = 156;
 
-      // Base components
-      const baseInnerY = baseY + 24;
-      const leftBayX = caseX + 32;
-      rect(leftBayX, baseInnerY, 150, 126, '#161616');
-      txt('PATCH PANEL', leftBayX + 16, baseInnerY + 20, '#f1f1ec');
-      for (let i = 0; i < 4; i++) {
-        rect(leftBayX + 18, baseInnerY + 36 + i * 20, 78, 8, '#cfcfca');
-        rect(leftBayX + 104, baseInnerY + 36 + i * 20, 28, 8, i === 1 ? '#b88a41' : '#8b8b84');
-      }
-
-      const centerBayX = leftBayX + 176;
-      const keyboardW = Math.round(caseW * 0.34);
-      rect(centerBayX, baseInnerY, keyboardW, 126, '#161616');
-      txt('SERVICE KEYBOARD', centerBayX + 14, baseInnerY + 20, '#f1f1ec');
-      for (let r = 0; r < 4; r++) {
-        for (let c = 0; c < 10; c++) {
-          rect(centerBayX + 16 + c * 24 + (r % 2 ? 8 : 0), baseInnerY + 34 + r * 20, 18, 12, (r === 1 && c === 6) ? '#b88a41' : '#d9d9d3');
+        rect(crtX, crtY, crtW, crtH, '#1a1a1a');
+        rect(crtX + 10, crtY + 10, crtW - 20, crtH - 20, '#ededea');
+        rect(crtX + 16, crtY + 16, crtW - 32, crtH - 32, '#080808');
+        for (let y = crtY + 18; y < crtY + crtH - 18; y += 4) {
+          rect(crtX + 16, y, crtW - 32, 1, `rgba(255,255,255,${0.04 + glow * 0.04})`);
         }
+        txt('FIELD KIT // 09 APR 2026', crtX + 20, crtY + 30, '#d5d5cf', '10px monospace');
+        txt('OFFICE-CORE / BRIEFCASE MODE', crtX + 20, crtY + 46, '#9f9f98', '10px monospace');
+        txt('QUEUE: CLEAR', crtX + 20, crtY + 72, '#f1f1ec', '10px monospace');
+        txt('AUTH PATH: OK', crtX + 20, crtY + 88, '#f1f1ec', '10px monospace');
+        txt('SEEDS: MAKERWORLD', crtX + 20, crtY + 104, '#f1f1ec', '10px monospace');
+        txt('STATUS LIGHT:', crtX + 20, crtY + 120, '#9f9f98', '10px monospace');
+        rect(crtX + 110, crtY + 112, 10, 10, Math.sin(t * 0.09) > 0 ? '#b88a41' : '#5d4521');
+        rect(crtX + 20, crtY + crtH - 36, crtW - 80, 2, '#262626');
+        rect(crtX + 20, crtY + crtH - 26, Math.max(30, (crtW - 80) * (0.45 + 0.35 * glow)), 6, '#f1f1ec');
+        drawWorker(crtX + crtW - 54, crtY + crtH - 28, 2);
+
+        const badgeY = crtY + crtH + 14;
+        const smallW = Math.floor((crtW - gap) / 2);
+        rightX = crtX;
+        colW = smallW;
+        rect(crtX, badgeY, smallW, 58, '#171717');
+        txt('BADGE HOLDER', crtX + 12, badgeY + 20, '#f1f1ec', '10px monospace');
+        txt('EMP: PHOSPHOR', crtX + 12, badgeY + 36, '#bdbdb5', '9px monospace');
+        txt('ACCESS: MAINT.', crtX + 12, badgeY + 50, '#bdbdb5', '9px monospace');
+
+        const refX = crtX + smallW + gap;
+        rect(refX, badgeY, smallW, 58, '#171717');
+        txt('REF / PARTS', refX + 12, badgeY + 20, '#f1f1ec', '10px monospace');
+        txt('CARD MOUNT', refX + 12, badgeY + 36, '#bdbdb5', '9px monospace');
+        txt('BRIEFCASE DOCK', refX + 12, badgeY + 50, '#bdbdb5', '9px monospace');
+
+        const listY = badgeY + 72;
+        rect(crtX, listY, crtW, 94, '#171717');
+        const mobileItems = ['printer veins', 'cloudflare follow-up', 'office-core decor seed', 'badge mount refs'];
+        for (let i = 0; i < mobileItems.length; i++) {
+          const yy = listY + 14 + i * 19;
+          rect(crtX + 12, yy, crtW - 24, 12, i === 2 ? '#222' : '#1e1e1e');
+          txt(mobileItems[i], crtX + 18, yy + 9, i === 2 ? '#b88a41' : '#cfcfc9', itemFont);
+        }
+
+        baseInnerY = baseY + 20;
+        leftBayX = caseX + innerPad;
+        const bayW = caseW - innerPad * 2;
+        rect(leftBayX, baseInnerY, bayW, 84, '#161616');
+        txt('PATCH PANEL', leftBayX + 14, baseInnerY + 18, '#f1f1ec', '10px monospace');
+        for (let i = 0; i < 4; i++) {
+          rect(leftBayX + 14, baseInnerY + 30 + i * 12, bayW - 92, 6, '#cfcfca');
+          rect(leftBayX + bayW - 66, baseInnerY + 30 + i * 12, 38, 6, i === 1 ? '#b88a41' : '#8b8b84');
+        }
+
+        centerBayX = leftBayX;
+        keyboardW = bayW;
+        const keyboardY = baseInnerY + 98;
+        rect(centerBayX, keyboardY, keyboardW, 94, '#161616');
+        txt('SERVICE KEYBOARD', centerBayX + 14, keyboardY + 18, '#f1f1ec', '10px monospace');
+        for (let r = 0; r < 4; r++) {
+          for (let c = 0; c < 8; c++) {
+            rect(centerBayX + 14 + c * 18 + (r % 2 ? 6 : 0), keyboardY + 30 + r * 14, 14, 9, (r === 1 && c === 5) ? '#b88a41' : '#d9d9d3');
+          }
+        }
+
+        rightBayX = leftBayX;
+        rightBayW = bayW;
+        const toolsY = keyboardY + 108;
+        rect(rightBayX, toolsY, rightBayW, 96, '#161616');
+        txt('RECEIPT / DOCK / TOOLS', rightBayX + 14, toolsY + 18, '#f1f1ec', '10px monospace');
+        rect(rightBayX + 14, toolsY + 28, rightBayW - 28, 16, '#ededea');
+        txt('AUTHORIZED PATH CONFIRMED', rightBayX + 22, toolsY + 40, '#080808', '8px monospace');
+        rect(rightBayX + 14, toolsY + 54, 48, 28, '#ecece6');
+        rect(rightBayX + 70, toolsY + 54, 48, 28, '#ecece6');
+        rect(rightBayX + 126, toolsY + 54, rightBayW - 140, 28, '#ecece6');
+        rect(rightBayX + 132, toolsY + 60, rightBayW - 152, 16, '#0a0a0a');
+
+        cables = [
+          [{x:leftBayX + bayW - 30,y:baseInnerY + 42},{x:leftBayX + bayW + 6,y:baseInnerY + 42},{x:crtX + crtW - 34,y:crtY + crtH - 20}],
+          [{x:centerBayX + 40,y:keyboardY + 84},{x:centerBayX + 40,y:toolsY + 92},{x:rightBayX + rightBayW - 30,y:toolsY + 92},{x:rightBayX + rightBayW - 30,y:badgeY + 24}],
+          [{x:refX + 20,y:badgeY + 58},{x:refX + 20,y:listY + 94},{x:crtX + 26,y:listY + 94}]
+        ];
+      } else {
+        crtX = caseX + 40;
+        crtY = caseY + 28;
+        crtW = Math.round(caseW * 0.42);
+        crtH = lidH - 56;
+        rect(crtX, crtY, crtW, crtH, '#1a1a1a');
+        rect(crtX + 12, crtY + 12, crtW - 24, crtH - 24, '#ededea');
+        rect(crtX + 18, crtY + 18, crtW - 36, crtH - 36, '#080808');
+        for (let y = crtY + 20; y < crtY + crtH - 18; y += 4) {
+          rect(crtX + 18, y, crtW - 36, 1, `rgba(255,255,255,${0.04 + glow * 0.04})`);
+        }
+        txt('FIELD KIT // 09 APR 2026', crtX + 30, crtY + 34, '#d5d5cf');
+        txt('OFFICE-CORE / BRIEFCASE MODE', crtX + 30, crtY + 52, '#9f9f98');
+        txt('QUEUE: CLEAR', crtX + 30, crtY + 88, '#f1f1ec');
+        txt('MATCH PATH: AUTHENTICATED', crtX + 30, crtY + 106, '#f1f1ec');
+        txt('REFERENCE SEEDS: MAKERWORLD', crtX + 30, crtY + 124, '#f1f1ec');
+        txt('STATUS LIGHT:', crtX + 30, crtY + 142, '#9f9f98');
+        rect(crtX + 120, crtY + 134, 10, 10, Math.sin(t * 0.09) > 0 ? '#b88a41' : '#5d4521');
+        rect(crtX + 30, crtY + crtH - 56, crtW - 80, 2, '#262626');
+        rect(crtX + 30, crtY + crtH - 42, Math.max(24, (crtW - 80) * (0.45 + 0.35 * glow)), 6, '#f1f1ec');
+        drawWorker(crtX + crtW - 88, crtY + crtH - 48, 3);
+
+        rightX = crtX + crtW + 24;
+        colW = caseX + caseW - 40 - rightX;
+        rect(rightX, crtY, colW, 62, '#171717');
+        txt('BADGE HOLDER', rightX + 14, crtY + 22, '#f1f1ec');
+        txt('EMPLOYEE: PHOSPHOR', rightX + 14, crtY + 40, '#bdbdb5');
+        txt('ACCESS: MAINTENANCE', rightX + 14, crtY + 56, '#bdbdb5');
+        rect(rightX, crtY + 78, colW, 54, '#171717');
+        txt('PARTS / REFERENCES', rightX + 14, crtY + 100, '#f1f1ec');
+        txt('CARD MOUNT  BRIEFCASE  DOCK', rightX + 14, crtY + 118, '#bdbdb5');
+        rect(rightX, crtY + 148, colW, crtH - 148, '#171717');
+        for (let i = 0; i < 5; i++) {
+          const yy = crtY + 164 + i * 24;
+          rect(rightX + 14, yy, colW - 28, 14, i === 2 ? '#222' : '#1e1e1e');
+          txt(i === 0 ? 'printer veins' : i === 1 ? 'cloudflare follow-up' : i === 2 ? 'office-core decor seed' : i === 3 ? 'badge mount candidates' : 'experiment charts pending', rightX + 20, yy + 11, i === 2 ? '#b88a41' : '#cfcfc9', itemFont);
+        }
+
+        baseInnerY = baseY + 24;
+        leftBayX = caseX + 32;
+        rect(leftBayX, baseInnerY, 150, 126, '#161616');
+        txt('PATCH PANEL', leftBayX + 16, baseInnerY + 20, '#f1f1ec');
+        for (let i = 0; i < 4; i++) {
+          rect(leftBayX + 18, baseInnerY + 36 + i * 20, 78, 8, '#cfcfca');
+          rect(leftBayX + 104, baseInnerY + 36 + i * 20, 28, 8, i === 1 ? '#b88a41' : '#8b8b84');
+        }
+
+        centerBayX = leftBayX + 176;
+        keyboardW = Math.round(caseW * 0.34);
+        rect(centerBayX, baseInnerY, keyboardW, 126, '#161616');
+        txt('SERVICE KEYBOARD', centerBayX + 14, baseInnerY + 20, '#f1f1ec');
+        for (let r = 0; r < 4; r++) {
+          for (let c = 0; c < 10; c++) {
+            rect(centerBayX + 16 + c * 24 + (r % 2 ? 8 : 0), baseInnerY + 34 + r * 20, 18, 12, (r === 1 && c === 6) ? '#b88a41' : '#d9d9d3');
+          }
+        }
+
+        rightBayX = centerBayX + keyboardW + 22;
+        rightBayW = caseX + caseW - 32 - rightBayX;
+        rect(rightBayX, baseInnerY, rightBayW, 126, '#161616');
+        txt('RECEIPT / DOCK / TOOLS', rightBayX + 14, baseInnerY + 20, '#f1f1ec');
+        rect(rightBayX + 16, baseInnerY + 34, rightBayW - 32, 20, '#ededea');
+        txt('AUTHORIZED PATH CONFIRMED', rightBayX + 24, baseInnerY + 48, '#080808', itemFont);
+        rect(rightBayX + 16, baseInnerY + 68, 50, 38, '#ecece6');
+        rect(rightBayX + 78, baseInnerY + 68, 50, 38, '#ecece6');
+        rect(rightBayX + 140, baseInnerY + 68, rightBayW - 156, 38, '#ecece6');
+        rect(rightBayX + 148, baseInnerY + 76, rightBayW - 172, 22, '#0a0a0a');
+
+        cables = [
+          [{x:leftBayX+132,y:baseInnerY+54},{x:leftBayX+156,y:baseInnerY+54},{x:centerBayX-8,y:baseInnerY+54},{x:centerBayX-8,y:crtY+crtH-18},{x:crtX+crtW-44,y:crtY+crtH-18}],
+          [{x:centerBayX+keyboardW-16,y:baseInnerY+106},{x:centerBayX+keyboardW+8,y:baseInnerY+106},{x:rightBayX+10,y:baseInnerY+106},{x:rightBayX+10,y:crtY+86},{x:rightX+14,y:crtY+86}],
+          [{x:rightBayX+44,y:baseInnerY+88},{x:rightBayX+44,y:baseInnerY+124},{x:rightBayX+44,y:baseY+150},{x:caseX+caseW-56,y:baseY+150}]
+        ];
       }
 
-      const rightBayX = centerBayX + keyboardW + 22;
-      const rightBayW = caseX + caseW - 32 - rightBayX;
-      rect(rightBayX, baseInnerY, rightBayW, 126, '#161616');
-      txt('RECEIPT / DOCK / TOOLS', rightBayX + 14, baseInnerY + 20, '#f1f1ec');
-      rect(rightBayX + 16, baseInnerY + 34, rightBayW - 32, 20, '#ededea');
-      txt('AUTHORIZED PATH CONFIRMED', rightBayX + 24, baseInnerY + 48, '#080808', '10px monospace');
-      rect(rightBayX + 16, baseInnerY + 68, 50, 38, '#ecece6');
-      rect(rightBayX + 78, baseInnerY + 68, 50, 38, '#ecece6');
-      rect(rightBayX + 140, baseInnerY + 68, rightBayW - 156, 38, '#ecece6');
-      rect(rightBayX + 148, baseInnerY + 76, rightBayW - 172, 22, '#0a0a0a');
+      drawCable(cables[0], (t * 0.06) % (cables[0].length - 1), false);
+      drawCable(cables[1], (t * 0.08) % (cables[1].length - 1), true);
+      drawCable(cables[2], (t * 0.05) % (cables[2].length - 1), false);
 
-      const cables = [
-        [{x:leftBayX+132,y:baseInnerY+54},{x:leftBayX+156,y:baseInnerY+54},{x:centerBayX-8,y:baseInnerY+54},{x:centerBayX-8,y:crtY+crtH-18},{x:crtX+crtW-44,y:crtY+crtH-18}],
-        [{x:centerBayX+keyboardW-16,y:baseInnerY+106},{x:centerBayX+keyboardW+8,y:baseInnerY+106},{x:rightBayX+10,y:baseInnerY+106},{x:rightBayX+10,y:crtY+86},{x:rightX+14,y:crtY+86}],
-        [{x:rightBayX+44,y:baseInnerY+88},{x:rightBayX+44,y:baseInnerY+124},{x:rightBayX+44,y:baseY+150},{x:caseX+caseW-56,y:baseY+150}]
-      ];
-      drawCable(cables[0], (t * 0.06) % 4, false);
-      drawCable(cables[1], (t * 0.08) % 4, true);
-      drawCable(cables[2], (t * 0.05) % 3, false);
-
-      // desk shadows and floating dust
       rect(caseX + 18, caseY + caseH + 18, caseW - 36, 8, '#0b0b0b');
       for (let i = 0; i < 60; i++) {
         const dx = (i * 97 + t * (i % 3 + 1)) % w;
@@ -249,7 +351,7 @@
         rect(dx, dy, 1 + (i % 3 === 0), 1 + (i % 4 === 0), i % 17 === 0 ? '#3a3327' : '#2a2a2a');
       }
 
-      txt('SACRED MAINTENANCE FIELD KIT', caseX + 20, caseY + caseH - 10, '#8f8f88');
+      txt('SACRED MAINTENANCE FIELD KIT', caseX + 20, caseY + caseH - 6, '#8f8f88', isMobile ? '9px monospace' : '11px monospace');
       requestAnimationFrame(scene);
     }
 
