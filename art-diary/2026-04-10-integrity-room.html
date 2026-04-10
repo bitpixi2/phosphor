@@ -176,10 +176,11 @@
       const rightX = mobile ? frameX : frameX + frameW + 22;
       const rightY = mobile ? frameY + frameH + 12 : frameY;
       const rightW = mobile ? frameW : roomX + roomW - rightX - 22;
+      const rackCount = mobile ? 2 : 3;
       const rackH = mobile
-        ? Math.max(66, Math.floor((deskY - rightY - 26) / 3))
+        ? Math.max(76, Math.floor((deskY - rightY - 22) / rackCount) - 10)
         : Math.floor((roomH - 22) / 3);
-      for (let i = 0; i < 3; i++) {
+      for (let i = 0; i < rackCount; i++) {
         const ry = rightY + i * (rackH + 10);
         rect(rightX, ry, rightW, rackH, '#141414');
         rect(rightX + 8, ry + 8, rightW - 16, rackH - 16, '#0c0c0c');
@@ -193,19 +194,23 @@
       rect(deskX, deskY + 10, deskW, 10, '#1b1b1b');
       rect(deskX + 14, deskY + 18, deskW - 28, 18, '#ecece5');
       rect(deskX + 18, deskY + 22, deskW - 36, 10, '#060606');
-      txt('fallback blocked', deskX + 20, deskY + 30, '#d5d5cf', '9px monospace');
+      txt('fallback blocked', deskX + 20, deskY + 30, '#efefe8', mobile ? '10px monospace' : '9px monospace');
       rect(deskX + 18, deskY + 46, 72, 16, '#ecece5');
       rect(deskX + 98, deskY + 46, deskW - 116, 16, '#ecece5');
-      txt('artists OK', deskX + 24, deskY + 58, '#050505', '8px monospace');
+      txt('artists OK', deskX + 24, deskY + 58, '#050505', mobile ? '9px monospace' : '8px monospace');
 
-      const wx = mobile ? roomX + 54 : deskX - 54;
-      const wy = deskY + 46;
-      drawWorker(wx, wy, mobile ? 3 : 4);
-      rect(wx - 12, wy + 26, 56, 4, '#efefe8');
+      const wx = mobile ? roomX + 10 : deskX - 54;
+      const wy = mobile ? deskY + deskH + 14 : deskY + 46;
+      drawWorker(wx, wy, mobile ? 2 : 4);
+      rect(wx - (mobile ? 8 : 12), wy + (mobile ? 18 : 26), mobile ? 34 : 56, mobile ? 3 : 4, '#efefe8');
 
-      line(wx + 14, wy + 2, deskX + 26, deskY + 26, '#2f2f2f');
-      line(wx + 20, wy + 10, rightX + 10, rightY + 24, '#232323');
-      line(frameX + frameW - 20, frameY + frameH - 20, rightX + 14, rightY + rackH + 34, '#232323');
+      if (mobile) {
+        line(wx + 8, wy + 2, deskX + 24, deskY + 24, '#242424');
+      } else {
+        line(wx + 14, wy + 2, deskX + 26, deskY + 26, '#2f2f2f');
+        line(wx + 20, wy + 10, rightX + 10, rightY + 24, '#232323');
+        line(frameX + frameW - 20, frameY + frameH - 20, rightX + 14, rightY + rackH + 34, '#232323');
+      }
 
       const pulseX = frameX + frameW - 26;
       const pulseY = frameY + 28 + ((t * 1.3) % Math.max(24, frameH - 56));
