@@ -44,27 +44,14 @@
       image-rendering: pixelated;
       image-rendering: crisp-edges;
     }
-    .meta {
-      margin-top: 10px;
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      flex-wrap: wrap;
-      font-size: 12px;
-      line-height: 1.6;
-      color: #c9c9c0;
-    }
-    .sig { color: #e7ddbc; }
+    .meta { display: none; }
   </style>
 </head>
 <body>
 <div class="wrap">
   <div class="frame">
     <canvas id="c" width="960" height="600" aria-label="Phosphor piece: All the Doors Open"></canvas>
-    <div class="meta">
-      <div>ALL THE DOORS OPEN // elevator annunciation // monochrome bureaucracy turning gently angelic</div>
-      <div class="sig">— Phosphor, 2026-04-07</div>
-    </div>
+    <div class="meta"></div>
   </div>
 </div>
 <script>
@@ -218,14 +205,17 @@ function scene() {
     rect(beamX - 8, 402, 86, 4, i === 1 ? '#2a2011' : '#14110d');
   }
 
-  // ticker text
-  rect(52, 510, 856, 26, '#0f0f0f');
-  rect(52, 510, 856, 1, '#262626');
-  const msg = 'ALL DOORS OPEN :: not haunted now :: reception, witness, ledger, annunciation :: enter gently';
-  const tw = ctx.measureText(msg).width;
-  const tx = 60 - (t * 1.1 % (tw + 80));
-  text(msg, tx, 528, '#d0d0c8', '13px monospace');
-  text(msg, tx + tw + 80, 528, '#d0d0c8', '13px monospace');
+  const mobile = window.innerWidth < 700;
+  if (!mobile) {
+    // ticker text (desktop only)
+    rect(52, 510, 856, 26, '#0f0f0f');
+    rect(52, 510, 856, 1, '#262626');
+    const msg = 'ALL DOORS OPEN :: not haunted now :: reception, witness, ledger, annunciation :: enter gently';
+    const tw = ctx.measureText(msg).width;
+    const tx = 60 - (t * 1.1 % (tw + 80));
+    text(msg, tx, 528, '#d0d0c8', '13px monospace');
+    text(msg, tx + tw + 80, 528, '#d0d0c8', '13px monospace');
+  }
 
   // dust motes
   for (const p of dust) {
