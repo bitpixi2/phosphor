@@ -124,7 +124,7 @@
       for (let y = 0; y < h; y += mobile ? 20 : 24) line(0, y, w, y, '#0a0a0a');
       for (let x = 0; x < w; x += mobile ? 20 : 24) line(x, 0, x, h, '#080808');
 
-      const floorY = Math.round(h * 0.77);
+      const floorY = Math.round(h * (mobile ? 0.84 : 0.77));
       rect(0, floorY, w, h - floorY, '#0a0a0a');
       rect(0, floorY - 2, w, 2, '#222');
 
@@ -141,7 +141,7 @@
       const frameX = roomX + (mobile ? 16 : 26);
       const frameY = roomY + (mobile ? 18 : 26);
       const frameW = mobile ? roomW - 32 : Math.round(roomW * 0.45);
-      const frameH = mobile ? 170 : roomH - 58;
+      const frameH = mobile ? Math.min(210, Math.round(roomH * 0.36)) : roomH - 58;
       rect(frameX, frameY, frameW, frameH, '#181818');
       rect(frameX + 8, frameY + 8, frameW - 16, frameH - 16, '#efefe8');
       rect(frameX + 12, frameY + 12, frameW - 24, frameH - 24, '#050505');
@@ -168,10 +168,17 @@
       rect(frameX + 22, frameY + frameH - 24, (frameW - 44) * (0.42 + amber * 0.2), 6, '#d4d4ce');
       txt('INTEGRITY CHECK / REAL IMAGE PATH', frameX + 18, frameY + 22, '#b8b8ae', mobile ? '9px monospace' : '10px monospace');
 
+      const deskW = mobile ? roomW - 36 : Math.round(roomW * 0.38);
+      const deskH = mobile ? 64 : 78;
+      const deskX = mobile ? roomX + 18 : roomX + roomW * 0.54;
+      const deskY = mobile ? h - deskH - 38 : floorY - deskH - 12;
+
       const rightX = mobile ? frameX : frameX + frameW + 22;
-      const rightY = mobile ? frameY + frameH + 16 : frameY;
+      const rightY = mobile ? frameY + frameH + 12 : frameY;
       const rightW = mobile ? frameW : roomX + roomW - rightX - 22;
-      const rackH = mobile ? 92 : Math.floor((roomH - 22) / 3);
+      const rackH = mobile
+        ? Math.max(66, Math.floor((deskY - rightY - 26) / 3))
+        : Math.floor((roomH - 22) / 3);
       for (let i = 0; i < 3; i++) {
         const ry = rightY + i * (rackH + 10);
         rect(rightX, ry, rightW, rackH, '#141414');
@@ -182,11 +189,6 @@
           rect(rightX + rightW - 32, sy, 8, 5, j === i + 1 ? (amber > 0.5 ? '#b88a41' : '#5f4620') : '#6b6b64');
         }
       }
-
-      const deskW = mobile ? roomW - 36 : Math.round(roomW * 0.38);
-      const deskH = 78;
-      const deskX = mobile ? roomX + 18 : roomX + roomW * 0.54;
-      const deskY = floorY - deskH - 12;
       rect(deskX, deskY, deskW, deskH, '#121212');
       rect(deskX, deskY + 10, deskW, 10, '#1b1b1b');
       rect(deskX + 14, deskY + 18, deskW - 28, 18, '#ecece5');
