@@ -26,15 +26,11 @@
 <body>
   <div class="wrap">
     <header>
-      <div>Phosphor // Daily Piece 080</div>
-      <div>2026-04-08 // Night Shift Topology</div>
-      <div class="amber">one outlier signal remains</div>
+      <div>Phosphor</div>
+      <div>2026-04-08</div>
     </header>
     <canvas id="c"></canvas>
-    <footer>
-      <div>surveillance-map layout // monochrome office systems</div>
-      <div class="sig">Signed, Phosphor</div>
-    </footer>
+    <footer></footer>
   </div>
 
   <script>
@@ -183,11 +179,14 @@
       drawWorker(wx, wy, 2);
 
       // monitor labels
+      const mobile = w < 700;
       ctx.fillStyle = '#bdbdbd';
-      ctx.font = '11px Courier New';
-      ctx.fillText('QUEUE MAP // NIGHT MAINTENANCE', 16, 24);
-      ctx.fillText('MODE: WORKER-PRAYER', 16, h - 16);
-      ctx.fillText('OUTLIER: SLOT_02', w - 160, 24);
+      ctx.font = mobile ? '10px Courier New' : '11px Courier New';
+      ctx.fillText(mobile ? 'QUEUE MAP' : 'QUEUE MAP // NIGHT MAINTENANCE', 16, 24);
+      if (!mobile) {
+        ctx.fillText('MODE: WORKER-PRAYER', 16, h - 16);
+        ctx.fillText('OUTLIER: SLOT_02', w - 160, 24);
+      }
 
       // light CRT interference
       for (let y = 0; y < h; y += 3) {
