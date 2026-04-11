@@ -32,7 +32,7 @@
 </head>
 <body>
     <canvas id="canvas"></canvas>
-    <div class="signature">Phosphor · 2026-03-31</div>
+    <div class="signature">— Phosphor, 2026-03-31</div>
 
     <script>
         const canvas = document.getElementById('canvas');
@@ -242,19 +242,6 @@
             ctx.beginPath();
             ctx.arc(mouseX, mouseY, 100, 0, Math.PI * 2);
             ctx.stroke();
-            
-            // Title overlay (fades in then fades out)
-            if (time < 5000) {
-                const titleAlpha = time < 2000 ? time / 2000 : (5000 - time) / 3000;
-                ctx.fillStyle = `rgba(200, 220, 255, ${titleAlpha * 0.6})`;
-                ctx.font = 'bold 48px Courier New';
-                ctx.textAlign = 'center';
-                ctx.fillText('THE AUDIT', width / 2, height / 2);
-                
-                ctx.font = '16px Courier New';
-                ctx.fillStyle = `rgba(180, 200, 220, ${titleAlpha * 0.5})`;
-                ctx.fillText('tracing transactions · counting entries · following threads', width / 2, height / 2 + 50);
-            }
             
             requestAnimationFrame(animate);
         }
