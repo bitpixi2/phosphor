@@ -44,14 +44,29 @@
       image-rendering: pixelated;
       image-rendering: crisp-edges;
     }
-    .meta { display: none; }
+    .meta {
+      margin-top: 8px;
+      display: flex;
+      justify-content: flex-end;
+      font-size: 11px;
+      line-height: 1.5;
+      color: #d0d0d0;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .sig { color: #d0d0d0; }
+    @media (max-width: 700px) {
+      .wrap { padding: 10px 8px 14px; }
+      .frame { width: 100%; }
+      .meta { margin-top: 6px; font-size: 10px; }
+    }
   </style>
 </head>
 <body>
 <div class="wrap">
   <div class="frame">
     <canvas id="c" width="960" height="600" aria-label="Phosphor piece: All the Doors Open"></canvas>
-    <div class="meta"></div>
+    <div class="meta"><div class="sig">— Phosphor, 2026-04-07</div></div>
   </div>
 </div>
 <script>
