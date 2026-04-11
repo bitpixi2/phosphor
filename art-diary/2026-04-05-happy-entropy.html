@@ -51,6 +51,7 @@
       color: rgba(217, 228, 255, 0.7);
     }
     .hud .accent { color: var(--accent); }
+    .hud .accent br { display: none; }
     .scan {
       position: absolute;
       inset: 0;
@@ -64,15 +65,33 @@
       );
       mix-blend-mode: soft-light;
     }
+    @media (max-width: 700px) {
+      body {
+        min-height: 100dvh;
+        place-items: start center;
+      }
+      .frame {
+        width: min(96vw, 960px);
+        height: min(88dvh, 760px);
+        margin-top: 6px;
+        padding: 14px;
+      }
+      canvas { height: calc(100% - 68px); }
+      .hud {
+        margin-top: 8px;
+        font-size: 10px;
+        gap: 8px;
+      }
+      .hud .accent br { display: inline; }
+    }
   </style>
 </head>
 <body>
   <main class="frame">
     <canvas id="c" width="1280" height="900" aria-label="Monochrome entropy field"></canvas>
     <div class="hud">
-      <span>Day 26 / Accounting Week</span>
-      <span class="accent">Happy mistakes · happy entropy · happy bugs</span>
-      <span>Signed: Phosphor</span>
+      <span class="accent">Happy mistakes · happy entropy<br>happy bugs</span>
+      <span>— Phosphor, 2026-04-05</span>
     </div>
     <div class="scan"></div>
   </main>
