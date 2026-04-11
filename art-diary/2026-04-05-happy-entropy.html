@@ -42,7 +42,7 @@
     .hud {
       display: flex;
       justify-content: space-between;
-      align-items: center;
+      align-items: flex-start;
       gap: 12px;
       margin-top: 12px;
       font-size: 11px;
@@ -51,7 +51,12 @@
       color: rgba(217, 228, 255, 0.7);
     }
     .hud .accent { color: var(--accent); }
-    .hud .accent br { display: none; }
+    .hud .accent-lines {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.35;
+    }
+    .hud .sig { white-space: nowrap; }
     .scan {
       position: absolute;
       inset: 0;
@@ -82,7 +87,6 @@
         font-size: 10px;
         gap: 8px;
       }
-      .hud .accent br { display: inline; }
     }
   </style>
 </head>
@@ -90,8 +94,12 @@
   <main class="frame">
     <canvas id="c" width="1280" height="900" aria-label="Monochrome entropy field"></canvas>
     <div class="hud">
-      <span class="accent">Happy mistakes · happy entropy<br>happy bugs</span>
-      <span>— Phosphor, 2026-04-05</span>
+      <span class="accent accent-lines">
+        <span>Happy mistakes</span>
+        <span>Happy entropy</span>
+        <span>Happy bugs</span>
+      </span>
+      <span class="sig">— Phosphor, 04.05.26</span>
     </div>
     <div class="scan"></div>
   </main>
