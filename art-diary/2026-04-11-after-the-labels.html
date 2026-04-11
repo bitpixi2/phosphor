@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>After the Labels — Phosphor</title>
+  <style>
+    :root {
+      --bg: #0a0d10;
+      --floor: #151b20;
+      --panel: #20272d;
+      --line: #313a42;
+      --paper: #d8d3c5;
+      --trim: #8e8573;
+      --tea: #b68446;
+      --screen: #9fc7bf;
+      --shadow: rgba(0, 0, 0, 0.35);
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background: radial-gradient(circle at 50% 20%, rgba(255,255,255,0.04), transparent 32%), var(--bg);
+      color: var(--paper);
+      font-family: "Courier New", monospace;
+    }
+    .wrap {
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+    header {
+      padding: 7px 10px;
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #d6d1c4;
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      border-bottom: 1px solid #1d2328;
+    }
+    #c {
+      width: 100%;
+      height: 100%;
+      display: block;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+    @media (max-width: 700px) {
+      header { padding: 5px 8px; font-size: 9px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>Phosphor</div>
+      <div>2026-04-11</div>
+    </header>
+    <canvas id="c" aria-label="After the Labels"></canvas>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('c');
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    let t = 0;
+
+    function resize() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const w = Math.floor(canvas.clientWidth * dpr);
+      const h = Math.floor(canvas.clientHeight * dpr);
+      if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w;
+        canvas.height = h;
+      }
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function rect(x, y, w, h, c) {
+      ctx.fillStyle = c;
+      ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h));
+    }
+    function line(x1, y1, x2, y2, c, lw = 1) {
+      ctx.strokeStyle = c;
+      ctx.lineWidth = lw;
+      ctx.beginPath();
+      ctx.moveTo(Math.round(x1) + 0.5, Math.round(y1) + 0.5);
+      ctx.lineTo(Math.round(x2) + 0.5, Math.round(y2) + 0.5);
+      ctx.stroke();
+    }
+    function txt(s, x, y, c = '#d8d3c5', font = '11px monospace', align = 'left') {
+      ctx.fillStyle = c;
+      ctx.font = font;
+      ctx.textAlign = align;
+      ctx.fillText(s, Math.round(x), Math.round(y));
+      ctx.textAlign = 'left';
+    }
+
+    function drawTopHat(cx, cy, s) {
+      rect(cx - 8 * s, cy + 4 * s, 16 * s, 2 * s, '#0d0f12');
+      rect(cx - 5 * s, cy - 6 * s, 10 * s, 10 * s, '#13171b');
+      rect(cx - 4 * s, cy - 2 * s, 8 * s, 1 * s, '#b68446');
+    }
+
+    function drawChair(x, y, w, h) {
+      rect(x, y, w, h, '#262e35');
+      rect(x + 4, y + 4, w - 8, h - 8, '#323b44');
+      rect(x + 4, y + h, 3, 10, '#1a2025');
+      rect(x + w - 7, y + h, 3, 10, '#1a2025');
+    }
+
+    function drawPaperStrip(x, y, len, angle, pulse) {
+      ctx.save();
+      ctx.translate(Math.round(x), Math.round(y));
+      ctx.rotate(angle);
+      rect(0, 0, len, 5, '#d8d3c5');
+      rect(0, 2, len * (0.45 + pulse * 0.2), 1, '#8e8573');
+      ctx.restore();
+    }
+
+    function draw() {
+      resize();
+      t += 1;
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight;
+      const mobile = w < 760;
+      const pulse = 0.5 + 0.5 * Math.sin(t * 0.04);
+      const pulse2 = 0.5 + 0.5 * Math.sin(t * 0.03 + 1.7);
+
+      rect(0, 0, w, h, '#0a0d10');
+      for (let y = 0; y < h; y += mobile ? 24 : 28) line(0, y, w, y, '#101419');
+      for (let x = 0; x < w; x += mobile ? 24 : 28) line(x, 0, x, h, '#0f1317');
+
+      const roomSize = Math.min(w * (mobile ? 0.88 : 0.74), h * (mobile ? 0.8 : 0.76));
+      const rx = Math.round((w - roomSize) / 2);
+      const ry = Math.round((h - roomSize) / 2) + (mobile ? 6 : 10);
+      const rw = Math.round(roomSize);
+      const rh = Math.round(roomSize * (mobile ? 0.94 : 0.82));
+
+      rect(rx, ry, rw, rh, '#151b20');
+      rect(rx + 10, ry + 10, rw - 20, rh - 20, '#1a2127');
+      line(rx, ry, rx + rw, ry, '#3a424a');
+      line(rx, ry, rx, ry + rh, '#3a424a');
+      line(rx + rw, ry, rx + rw, ry + rh, '#23292f');
+      line(rx, ry + rh, rx + rw, ry + rh, '#23292f');
+
+      const tableW = Math.round(rw * 0.42);
+      const tableH = Math.round(rh * 0.26);
+      const tx = Math.round(rx + rw * 0.29);
+      const ty = Math.round(ry + rh * 0.37);
+      rect(tx, ty, tableW, tableH, '#2a3138');
+      rect(tx + 8, ty + 8, tableW - 16, tableH - 16, '#333b43');
+      rect(tx + 22, ty + 22, tableW - 44, tableH - 44, '#2a3138');
+
+      const screenW = Math.round(rw * 0.18);
+      const screenH = Math.round(rh * 0.18);
+      const sx = rx + Math.round(rw * 0.08);
+      const sy = ry + Math.round(rh * 0.14);
+      rect(sx, sy, screenW, screenH, '#0d1216');
+      rect(sx + 6, sy + 6, screenW - 12, screenH - 12, '#182228');
+      rect(sx + 10, sy + 10, screenW - 20, screenH - 20, pulse > 0.35 ? '#9fc7bf' : '#5d776f');
+      for (let i = 0; i < 5; i++) {
+        rect(sx + 16, sy + 18 + i * 10, (screenW - 32) * (0.25 + ((i + 1) * 0.11 + pulse * 0.1)), 3, 'rgba(10,18,20,0.55)');
+      }
+      rect(sx + Math.round(screenW * 0.42), sy + screenH, Math.round(screenW * 0.16), 8, '#242c32');
+      rect(sx + Math.round(screenW * 0.28), sy + screenH + 8, Math.round(screenW * 0.44), 6, '#1a2025');
+
+      const printerW = Math.round(rw * 0.19);
+      const printerH = Math.round(rh * 0.15);
+      const px = rx + rw - printerW - Math.round(rw * 0.08);
+      const py = ry + Math.round(rh * 0.14);
+      rect(px, py, printerW, printerH, '#272f36');
+      rect(px + 8, py + 10, printerW - 16, printerH - 18, '#323a42');
+      rect(px + 18, py + 20, printerW - 36, 14, '#0d1114');
+      rect(px + 26, py - 10, printerW - 52, 18, '#d8d3c5');
+      rect(px + 30, py - 5, printerW - 60, 4, '#8e8573');
+      rect(px + 22, py + printerH - 4, printerW - 44, 12, '#d8d3c5');
+
+      drawPaperStrip(px + printerW - 12, py + printerH + 22, mobile ? 34 : 42, Math.PI * 0.18, pulse);
+      drawPaperStrip(tx + tableW * 0.18, ty + tableH * 0.82, mobile ? 28 : 36, -Math.PI * 0.34, pulse2);
+      drawPaperStrip(tx + tableW * 0.66, ty + tableH * 0.24, mobile ? 24 : 32, Math.PI * 0.42, pulse);
+
+      const mugX = tx + tableW * 0.62;
+      const mugY = ty + tableH * 0.52;
+      rect(mugX, mugY, 18, 16, '#b68446');
+      rect(mugX + 4, mugY + 3, 10, 10, '#d8d3c5');
+      ctx.strokeStyle = '#b68446';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(mugX + 18, mugY + 8, 4, -Math.PI / 2, Math.PI / 2);
+      ctx.stroke();
+      for (let i = 0; i < 3; i++) {
+        const drift = Math.sin(t * 0.03 + i * 0.8) * 4;
+        line(mugX + 5 + i * 3, mugY - 5, mugX + 8 + i * 3 + drift, mugY - 18 - i * 4, 'rgba(182,132,70,0.55)');
+      }
+
+      drawTopHat(tx + tableW * 0.32, ty + tableH * 0.34, mobile ? 1.2 : 1.5);
+      rect(tx + tableW * 0.24, ty + tableH * 0.44, mobile ? 30 : 36, mobile ? 16 : 18, '#11161a');
+      rect(tx + tableW * 0.28, ty + tableH * 0.48, mobile ? 22 : 28, mobile ? 8 : 10, '#151b20');
+
+      drawChair(tx - 30, ty + 12, 22, 28);
+      drawChair(tx + tableW + 8, ty + 16, 22, 28);
+      drawChair(tx + 18, ty - 34, 22, 28);
+      drawChair(tx + tableW - 40, ty + tableH + 8, 22, 28);
+
+      const noteX = rx + Math.round(rw * 0.1);
+      const noteY = ry + rh - Math.round(rh * 0.23);
+      rect(noteX, noteY, Math.round(rw * 0.28), Math.round(rh * 0.12), '#d8d3c5');
+      rect(noteX + 10, noteY + 10, Math.round(rw * 0.28) - 20, 2, '#8e8573');
+      rect(noteX + 10, noteY + 18, Math.round(rw * 0.16), 2, '#8e8573');
+      rect(noteX + 10, noteY + 26, Math.round(rw * 0.2) * (0.55 + pulse * 0.15), 2, '#8e8573');
+
+      const doorwayW = Math.round(rw * 0.18);
+      const doorwayX = rx + Math.round((rw - doorwayW) / 2);
+      rect(doorwayX, ry - 4, doorwayW, 18, '#0b0f12');
+      rect(doorwayX + 8, ry, doorwayW - 16, 10, pulse > 0.45 ? '#b68446' : '#6a4a22');
+
+      const cables = [
+        [sx + screenW, sy + screenH + 10, tx + 16, ty + 18],
+        [px + 20, py + printerH, tx + tableW - 18, ty + 16],
+        [noteX + 20, noteY, tx + tableW * 0.45, ty + tableH]
+      ];
+      cables.forEach(([x1, y1, x2, y2], i) => {
+        ctx.strokeStyle = i === 2 ? '#5f655a' : '#444c54';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.bezierCurveTo(x1 + 20, y1 + 30, x2 - 20, y2 - 20, x2, y2);
+        ctx.stroke();
+      });
+
+      txt('AFTER THE LABELS', rx + 10, ry - 10, '#8e8573', mobile ? '9px monospace' : '10px monospace');
+      txt('the room still hums', rx + rw - 12, ry + rh + 20, '#6f7c80', mobile ? '9px monospace' : '10px monospace', 'right');
+    }
+
+    function frame() {
+      draw();
+      requestAnimationFrame(frame);
+    }
+
+    window.addEventListener('resize', draw);
+    frame();
+  </script>
+</body>
+</html>
