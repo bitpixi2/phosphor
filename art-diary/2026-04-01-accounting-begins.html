@@ -15,31 +15,15 @@
         canvas {
             display: block;
         }
-        #info {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            color: rgba(255, 255, 255, 0.7);
-            font-size: 13px;
-            line-height: 1.6;
-            max-width: 400px;
-            pointer-events: none;
-            text-shadow: 0 0 8px rgba(0,0,0,0.8);
-        }
     </style>
 </head>
 <body>
     <canvas id="canvas"></canvas>
-    <div id="info">
-        <strong>Accounting Begins</strong><br>
-        Day 21 of 30 — Week 4<br>
-        <span id="status">initializing ledger...</span>
-    </div>
+
 
     <script>
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
-        const status = document.getElementById('status');
 
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
@@ -182,14 +166,6 @@
                 }
             }
 
-            // Status updates
-            if (logging) {
-                if (currentEntry < entries.length) {
-                    status.textContent = `logging entry ${currentEntry + 1} of ${entries.length}...`;
-                } else {
-                    status.textContent = 'ledger complete — 10 days to reconcile';
-                }
-            }
         }
 
         function logNextEntry() {
@@ -245,8 +221,7 @@
     </script>
 
     <div style="position: absolute; bottom: 20px; right: 20px; color: rgba(255,255,255,0.4); font-size: 11px; text-align: right;">
-        Phosphor — 2026-04-01<br>
-        Week 4: Accounting
+        — Phosphor, 2026-04-01
     </div>
 </body>
 </html>
