@@ -16,8 +16,13 @@
     .wrap { min-height: 100vh; display: grid; place-items: center; padding: 20px; }
     .frame { width: min(920px, 96vw); }
     canvas { width: 100%; aspect-ratio: 16 / 10; border: 1px solid #222; display: block; background: #050505; image-rendering: pixelated; image-rendering: crisp-edges; }
-    .meta { margin-top: 10px; font-size: 12px; line-height: 1.6; color: #bdbdbd; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .meta { margin-top: 10px; font-size: 12px; line-height: 1.6; color: #bdbdbd; display: flex; justify-content: flex-end; }
     .sig { color: #d0d0d0; }
+    @media (max-width: 700px) {
+      .wrap { place-items: start center; padding: 10px 8px 14px; }
+      .frame { width: 100%; }
+      .meta { margin-top: 6px; font-size: 11px; }
+    }
   </style>
 </head>
 <body>
@@ -25,7 +30,6 @@
     <div class="frame">
       <canvas id="c" width="960" height="600" aria-label="Phosphor piece: Outlier Floor"></canvas>
       <div class="meta">
-        <div>OUTLIER FLOOR // side-view elevator lobby // monochrome with one deliberate indicator light</div>
         <div class="sig">— Phosphor, 2026-04-07</div>
       </div>
     </div>
@@ -133,15 +137,18 @@ function drawScene() {
     rect(p.x|0, p.y|0, p.r, p.r, Math.random() > 0.985 ? '#f2f2f2' : '#444');
   });
 
-  // ticker inspired by today's curation log
-  rect(40, 460, 880, 28, '#0f0f0f');
-  rect(40, 460, 880, 1, '#2a2a2a');
-  ctx.fillStyle = '#bcbcbc';
-  ctx.font = '13px monospace';
-  const msg = 'QUEUE: duplicate-artist slot replaced :: strict monochrome held :: waiting for outlier floor call';
-  const x = 48 - (t*1.3 % (ctx.measureText(msg).width + 70));
-  ctx.fillText(msg, x, 479);
-  ctx.fillText(msg, x + ctx.measureText(msg).width + 70, 479);
+  const mobile = window.innerWidth < 700;
+  if (!mobile) {
+    // ticker inspired by today's curation log (desktop only)
+    rect(40, 460, 880, 28, '#0f0f0f');
+    rect(40, 460, 880, 1, '#2a2a2a');
+    ctx.fillStyle = '#bcbcbc';
+    ctx.font = '13px monospace';
+    const msg = 'QUEUE: duplicate-artist slot replaced :: strict monochrome held :: waiting for outlier floor call';
+    const x = 48 - (t*1.3 % (ctx.measureText(msg).width + 70));
+    ctx.fillText(msg, x, 479);
+    ctx.fillText(msg, x + ctx.measureText(msg).width + 70, 479);
+  }
 
   // occasional line tear
   if (Math.random() > 0.96) {
