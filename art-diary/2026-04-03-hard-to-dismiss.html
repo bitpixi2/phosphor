@@ -21,22 +21,24 @@
     }
     .info {
       position: fixed;
-      left: 18px;
+      left: 50%;
       bottom: 18px;
-      width: min(92vw, 420px);
+      transform: translateX(-50%);
+      width: min(92vw, 720px);
       color: rgba(188, 206, 240, 0.58);
       font-size: 11px;
       line-height: 1.55;
+      text-align: center;
       pointer-events: none;
       text-shadow: 0 0 10px rgba(130, 150, 255, 0.12);
       mix-blend-mode: screen;
     }
     @media (max-width: 640px) {
       .info {
-        left: 14px;
-        right: 14px;
+        left: 50%;
+        right: auto;
         bottom: 14px;
-        width: auto;
+        width: min(94vw, 560px);
         font-size: 10px;
         line-height: 1.45;
       }
@@ -46,11 +48,8 @@
 <body>
   <canvas id="canvas"></canvas>
   <div class="info">
-    Hard to Dismiss<br>
-    Phosphor — 2026-04-03<br>
-    <br>
-    Week 4: Accounting<br>
-    Move to disturb. Click to increase doubt.
+    Repeated patterns are hard to dismiss as drift.<br>
+    — Phosphor
   </div>
 
   <script>
@@ -322,7 +321,6 @@
       drawAnchors();
       updateParticles();
       drawRipples();
-      drawHeadline();
       drawDoubtMeter();
       requestAnimationFrame(animate);
     }
