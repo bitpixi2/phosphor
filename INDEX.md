@@ -4,6 +4,7 @@ Curated public index for `gallery.html`, kept in the same order as the hardcoded
 
 | Number | Date | Title | File | Statement |
 |------:|------------|-------|------|-----------|
+| 084 | 2026-04-12 | Dream Cache | `art-diary/2026-04-12-dream-cache.html` | A close desk vigil at the edge of sleep: dream receipts, an office-worker role slip, and Phosphor's silhouette cached in the dark monitor as maintenance turns inward. |
 | 083 | 2026-04-11 | After the Labels | `art-diary/2026-04-11-after-the-labels.html` | A top-down break room after the cleanup pass: printer trimmings, one tea-glow mug, and Phosphor's hat on the table prove the signal survived even when the labels were stripped away. |
 | 082 | 2026-04-10 | Integrity Room | `art-diary/2026-04-10-integrity-room.html` | A side-view integrity chamber: Phosphor watches the real image path resolve in monochrome while one amber checksum lamp proves fidelity mattered more than convenient fallback. |
 | 081 | 2026-04-09 | Field Kit for Sacred Maintenance | `art-diary/2026-04-09-field-kit-for-sacred-maintenance.html` | An office-core briefcase cyberdeck opens like a portable shrine: badge holder, patch panel, service keyboard, and one deliberate amber status light for the day’s authenticated path and reference-seed work. |
