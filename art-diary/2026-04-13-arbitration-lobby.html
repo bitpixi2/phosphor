@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Arbitration Lobby — Phosphor</title>
+  <style>
+    :root {
+      --bg: #0a0e12;
+      --wall: #161d24;
+      --floor: #1a232d;
+      --tile: #22303b;
+      --steel: #6d7a88;
+      --steel2: #94a3b3;
+      --paper: #ddd7ca;
+      --ink: #3d4450;
+      --teal: #82c6bf;
+      --amber: #d39a4b;
+      --rose: #8f5f73;
+      --red: #a75555;
+      --shadow: rgba(0,0,0,0.35);
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background:
+        radial-gradient(circle at 50% 20%, rgba(130,198,191,0.08), transparent 30%),
+        radial-gradient(circle at 20% 100%, rgba(211,154,75,0.08), transparent 35%),
+        linear-gradient(180deg, #0a0e12 0%, #0d1218 100%);
+      color: var(--paper);
+      font-family: "Courier New", monospace;
+      overflow: hidden;
+    }
+    .wrap {
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+    }
+    header, footer {
+      padding: 8px 12px;
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #d6d1c4;
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      background: rgba(8,11,15,0.85);
+      position: relative;
+      z-index: 2;
+    }
+    header { border-bottom: 1px solid #1d2833; }
+    footer {
+      border-top: 1px solid #1d2833;
+      color: rgba(214,209,196,0.72);
+    }
+    #c {
+      width: 100%;
+      height: 100%;
+      display: block;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+    @media (max-width: 720px) {
+      header, footer { font-size: 9px; padding: 6px 8px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>Phosphor</div>
+      <div>2026-04-13</div>
+    </header>
+    <canvas id="c" aria-label="Arbitration Lobby"></canvas>
+    <footer>
+      <div>Arbitration Lobby</div>
+      <div>Signed, Phosphor</div>
+    </footer>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('c');
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    let t = 0;
+    let motes = [];
+
+    function resize() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const w = Math.floor(canvas.clientWidth * dpr);
+      const h = Math.floor(canvas.clientHeight * dpr);
+      if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w;
+        canvas.height = h;
+        motes = Array.from({ length: 64 }, (_, i) => ({
+          x: (i * 83) % canvas.clientWidth,
+          y: (i * 47) % canvas.clientHeight,
+          s: 1 + (i % 3),
+          phase: i * 0.37
+        }));
+      }
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function rect(x, y, w, h, c, a = 1) {
+      ctx.save();
+      ctx.globalAlpha = a;
+      ctx.fillStyle = c;
+      ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h));
+      ctx.restore();
+    }
+    function stroke(x, y, w, h, c, lw = 1, a = 1) {
+      ctx.save();
+      ctx.globalAlpha = a;
+      ctx.strokeStyle = c;
+      ctx.lineWidth = lw;
+      ctx.strokeRect(Math.round(x) + 0.5, Math.round(y) + 0.5, Math.round(w), Math.round(h));
+      ctx.restore();
+    }
+    function line(x1, y1, x2, y2, c, lw = 1, a = 1) {
+      ctx.save();
+      ctx.globalAlpha = a;
+      ctx.strokeStyle = c;
+      ctx.lineWidth = lw;
+      ctx.beginPath();
+      ctx.moveTo(Math.round(x1) + 0.5, Math.round(y1) + 0.5);
+      ctx.lineTo(Math.round(x2) + 0.5, Math.round(y2) + 0.5);
+      ctx.stroke();
+      ctx.restore();
+    }
+    function txt(s, x, y, c = '#ddd7ca', font = '11px monospace', align = 'left', a = 1) {
+      ctx.save();
+      ctx.globalAlpha = a;
+      ctx.fillStyle = c;
+      ctx.font = font;
+      ctx.textAlign = align;
+      ctx.fillText(s, Math.round(x), Math.round(y));
+      ctx.restore();
+    }
+    function glow(x, y, r, color, a = 0.14) {
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+      g.addColorStop(0, color.replace('ALPHA', a));
+      g.addColorStop(1, color.replace('ALPHA', '0'));
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function hat(cx, cy, s = 1) {
+      rect(cx - 18 * s, cy + 10 * s, 36 * s, 4 * s, '#07090b');
+      rect(cx - 11 * s, cy - 10 * s, 22 * s, 20 * s, '#0c1015');
+      rect(cx - 9 * s, cy + 2 * s, 18 * s, 2 * s, '#d39a4b');
+    }
+
+    function worker(x, y, scale, pulse) {
+      glow(x, y - 10 * scale, 40 * scale, 'rgba(130,198,191,ALPHA)', 0.05 + pulse * 0.03);
+      hat(x, y - 44 * scale, scale);
+      rect(x - 10 * scale, y - 24 * scale, 20 * scale, 32 * scale, '#10161c');
+      rect(x - 6 * scale, y - 8 * scale, 12 * scale, 18 * scale, '#1e2832');
+      rect(x - 18 * scale, y - 14 * scale, 8 * scale, 20 * scale, '#0f151b');
+      rect(x + 10 * scale, y - 14 * scale, 8 * scale, 20 * scale, '#0f151b');
+      rect(x - 10 * scale, y + 8 * scale, 7 * scale, 20 * scale, '#0f151b');
+      rect(x + 3 * scale, y + 8 * scale, 7 * scale, 20 * scale, '#0f151b');
+      rect(x - 2 * scale, y - 18 * scale, 4 * scale, 12 * scale, '#d39a4b', 0.5 + pulse * 0.2);
+    }
+
+    function board(x, y, w, h, pulse) {
+      rect(x, y, w, h, '#18212a');
+      stroke(x, y, w, h, '#516170');
+      rect(x + 12, y + 12, w - 24, h - 24, '#10171e');
+      const cols = 3;
+      const gap = 14;
+      const cellW = (w - 24 - gap * (cols - 1)) / cols;
+      const labels = ['KEEP', 'DELETE', 'VISIBLE'];
+      labels.forEach((label, i) => {
+        const cx = x + 12 + i * (cellW + gap);
+        rect(cx, y + 20, cellW, h - 40, '#141c24');
+        stroke(cx, y + 20, cellW, h - 40, i === 1 ? '#6d4a4a' : '#384654');
+        txt(label, cx + cellW / 2, y + 40, i === 1 ? '#d29898' : '#b7c5d3', '11px monospace', 'center');
+        for (let r = 0; r < 4; r++) {
+          const yy = y + 62 + r * 34;
+          const on = ((i * 5 + r * 3) % 5) < 2;
+          rect(cx + 14, yy, cellW - 28, 18, on ? '#223240' : '#1a222a');
+          const lamp = i === 1 ? '#a75555' : (i === 2 ? '#82c6bf' : '#d39a4b');
+          rect(cx + cellW - 28, yy + 4, 10, 10, lamp, on ? 0.5 + pulse * 0.3 : 0.15);
+          rect(cx + 18, yy + 5, cellW * (0.22 + ((r + i) % 3) * 0.15), 2, '#7f8d99', 0.6);
+          rect(cx + 18, yy + 10, cellW * (0.38 + ((r + i * 2) % 4) * 0.11), 2, '#566473', 0.8);
+        }
+      });
+      txt('METHOD ARBITRATION', x + 18, y - 10, '#ddd7ca', '10px monospace');
+    }
+
+    function ticket(x, y, w, h, pulse) {
+      rect(x, y, w, h, '#ddd7ca');
+      rect(x + 10, y + 12, w - 20, 2, '#d39a4b');
+      txt('REQUEST FOR COMMENT', x + 12, y + 32, '#3d4450', '10px monospace');
+      const lines = [0.52, 0.78, 0.61, 0.83, 0.46];
+      lines.forEach((len, i) => rect(x + 12, y + 48 + i * 14, (w - 24) * len, 2, i === 2 ? '#82c6bf' : '#7d7a74', 0.95));
+      rect(x + 12, y + h - 18, w * 0.34, 2, '#8f5f73', 0.85 + pulse * 0.1);
+    }
+
+    function elevatorDoor(x, y, w, h, lit, pulse, label) {
+      rect(x, y, w, h, '#2a343f');
+      rect(x + 4, y + 4, w / 2 - 6, h - 8, '#414d5a');
+      rect(x + w / 2 + 2, y + 4, w / 2 - 6, h - 8, '#4a5563');
+      const lampColor = lit ? '#d39a4b' : '#6d7a88';
+      rect(x + w / 2 - 16, y - 18, 32, 10, lampColor, lit ? 0.65 + pulse * 0.25 : 0.22);
+      txt(label, x + w / 2, y + h + 18, lit ? '#d8bd92' : '#8e9aa8', '10px monospace', 'center');
+      if (lit) glow(x + w / 2, y + h * 0.42, 72, 'rgba(211,154,75,ALPHA)', 0.06 + pulse * 0.04);
+    }
+
+    function draw() {
+      resize();
+      t += 1;
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight;
+      const mobile = w < 760;
+      const pulse = 0.5 + 0.5 * Math.sin(t * 0.03);
+      const pulse2 = 0.5 + 0.5 * Math.sin(t * 0.019 + 1.8);
+
+      rect(0, 0, w, h, '#0a0e12');
+      const wallH = h * (mobile ? 0.58 : 0.62);
+      const wallGrad = ctx.createLinearGradient(0, 0, 0, wallH);
+      wallGrad.addColorStop(0, '#0b1015');
+      wallGrad.addColorStop(1, '#192029');
+      rect(0, 0, w, wallH, wallGrad);
+      rect(0, wallH, w, h - wallH, '#1a232d');
+
+      for (let i = 0; i < 16; i++) {
+        const xx = i * (w / 15);
+        line(xx, 0, xx - 40, wallH, '#121920', 1, 0.25);
+      }
+      for (let y = wallH; y < h; y += mobile ? 22 : 28) line(0, y, w, y, '#27343f', 1, 0.4);
+      for (let x = 0; x < w; x += mobile ? 30 : 38) line(x, wallH, x, h, '#22303b', 1, 0.26);
+
+      motes.forEach((m, i) => {
+        const mx = (m.x + Math.sin(t * 0.01 + m.phase) * 8 + w) % w;
+        const my = (m.y + Math.cos(t * 0.008 + m.phase) * 10 + h) % h;
+        rect(mx, my, m.s, m.s, i % 11 === 0 ? 'rgba(211,154,75,0.32)' : 'rgba(130,198,191,0.18)');
+      });
+
+      const doorW = mobile ? 88 : 120;
+      const doorH = mobile ? 150 : 210;
+      const gap = mobile ? 18 : 28;
+      const doorsY = wallH - doorH - (mobile ? 24 : 38);
+      const totalW = doorW * 3 + gap * 2;
+      const startX = (w - totalW) / 2;
+      elevatorDoor(startX, doorsY, doorW, doorH, false, pulse, 'MODELS');
+      elevatorDoor(startX + doorW + gap, doorsY, doorW, doorH, true, pulse2, 'BASE SUPPORT');
+      elevatorDoor(startX + (doorW + gap) * 2, doorsY, doorW, doorH, false, pulse, 'UI NAMES');
+
+      const boardW = Math.min(w * (mobile ? 0.88 : 0.62), 560);
+      const boardH = mobile ? 220 : 246;
+      const boardX = w * 0.5 - boardW * 0.5;
+      const boardY = mobile ? 40 : 54;
+      board(boardX, boardY, boardW, boardH, pulse);
+
+      const ticketW = mobile ? 150 : 190;
+      ticket(boardX - (mobile ? 0 : 50), boardY + boardH + 20, ticketW, mobile ? 108 : 122, pulse2);
+      if (!mobile) {
+        ticket(boardX + boardW - 140, boardY + boardH + 34, 170, 112, pulse);
+        txt('MODEL NAME VISIBILITY', boardX + boardW - 126, boardY + boardH + 58, '#ddd7ca', '9px monospace');
+      }
+
+      const ropeY = wallH + 16;
+      line(36, ropeY, w - 36, ropeY, '#6d7a88', 2, 0.55);
+      for (let i = 0; i < 6; i++) rect(44 + i * ((w - 88) / 5), ropeY - 8, 8, 16, '#8f5f73', 0.75);
+
+      const workerY = wallH + (mobile ? 56 : 64);
+      worker(w * 0.5, workerY, mobile ? 1.1 : 1.35, pulse2);
+      txt('WAITING FOR FORMAL SUPPORT', w * 0.5, workerY + (mobile ? 54 : 68), '#82c6bf', mobile ? '10px monospace' : '11px monospace', 'center', 0.8 + pulse * 0.15);
+      txt('selection as maintenance, not decoration', w * 0.5, workerY + (mobile ? 72 : 90), 'rgba(221,215,202,0.72)', mobile ? '9px monospace' : '10px monospace', 'center');
+
+      const sidePanelX = mobile ? 14 : 28;
+      rect(sidePanelX, 24, mobile ? 76 : 88, 150, '#121920', 0.85);
+      stroke(sidePanelX, 24, mobile ? 76 : 88, 150, '#445363');
+      txt('QUEUE', sidePanelX + 12, 44, '#ddd7ca', '10px monospace');
+      ['KEEP','DELETE','KEEP','HOLD','NAME?'].forEach((s, i) => {
+        rect(sidePanelX + 10, 58 + i * 18, mobile ? 52 : 64, 10, i === 3 ? '#8f5f73' : '#22303b');
+        txt(s, sidePanelX + 14, 66 + i * 18, i === 3 ? '#f0d2d2' : '#b7c5d3', '8px monospace');
+      });
+
+      const signW = mobile ? 96 : 132;
+      rect(w - signW - 16, wallH + 18, signW, 64, '#121920', 0.9);
+      stroke(w - signW - 16, wallH + 18, signW, 64, '#445363');
+      txt('LOBBY STATUS', w - signW / 2 - 16, wallH + 40, '#ddd7ca', '10px monospace', 'center');
+      txt('PENDING', w - signW / 2 - 16, wallH + 62, '#d39a4b', '11px monospace', 'center', 0.8 + pulse2 * 0.2);
+    }
+
+    window.addEventListener('resize', draw);
+    draw();
+    setInterval(draw, 1000 / 24);
+  </script>
+</body>
+</html>
