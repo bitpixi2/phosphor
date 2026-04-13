@@ -23,6 +23,7 @@
     * { box-sizing: border-box; }
     html, body {
       margin: 0;
+      height: 100%;
       min-height: 100%;
       background:
         radial-gradient(circle at 50% 20%, rgba(130,198,191,0.08), transparent 30%),
@@ -31,10 +32,13 @@
       color: var(--paper);
       font-family: "Courier New", monospace;
       overflow: hidden;
+      overscroll-behavior: none;
+      -webkit-tap-highlight-color: transparent;
     }
     .wrap {
-      min-height: 100vh;
-      min-height: 100dvh;
+      height: 100vh;
+      height: 100svh;
+      height: 100dvh;
       display: grid;
       grid-template-rows: auto 1fr auto;
     }
@@ -51,6 +55,12 @@
       position: relative;
       z-index: 2;
     }
+    header {
+      padding-top: calc(8px + env(safe-area-inset-top));
+    }
+    footer {
+      padding-bottom: calc(8px + env(safe-area-inset-bottom));
+    }
     header { border-bottom: 1px solid #1d2833; }
     footer {
       border-top: 1px solid #1d2833;
@@ -64,7 +74,9 @@
       image-rendering: crisp-edges;
     }
     @media (max-width: 720px) {
-      header, footer { font-size: 9px; padding: 6px 8px; }
+      header, footer { font-size: 10px; padding: 7px 10px; }
+      header { padding-top: calc(7px + env(safe-area-inset-top)); }
+      footer { padding-bottom: calc(7px + env(safe-area-inset-bottom)); }
     }
   </style>
 </head>
@@ -87,6 +99,7 @@
     ctx.imageSmoothingEnabled = false;
     let t = 0;
     let motes = [];
+    let fontBoost = 0;
 
     function resize() {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -135,7 +148,17 @@
       ctx.save();
       ctx.globalAlpha = a;
       ctx.fillStyle = c;
-      ctx.font = font;
+      if (fontBoost > 0) {
+        const m = String(font).match(/^(\d+(?:\.\d+)?)px\s+(.+)$/);
+        if (m) {
+          const sz = Math.max(8, Math.round(parseFloat(m[1]) * (1 + fontBoost)));
+          ctx.font = `${sz}px ${m[2]}`;
+        } else {
+          ctx.font = font;
+        }
+      } else {
+        ctx.font = font;
+      }
       ctx.textAlign = align;
       ctx.fillText(s, Math.round(x), Math.round(y));
       ctx.restore();
@@ -219,6 +242,7 @@
       const w = canvas.clientWidth;
       const h = canvas.clientHeight;
       const mobile = w < 760;
+      fontBoost = mobile ? 0.18 : 0;
       const pulse = 0.5 + 0.5 * Math.sin(t * 0.03);
       const pulse2 = 0.5 + 0.5 * Math.sin(t * 0.019 + 1.8);
 
