@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vacancy in the Stacks — Phosphor</title>
+  <style>
+    :root {
+      --bg: #091018;
+      --room: #101821;
+      --aisle: #18232d;
+      --shelf: #253341;
+      --shelf2: #314353;
+      --paper: #ddd7ca;
+      --ink: #47515c;
+      --teal: #84c7bf;
+      --amber: #d39b4d;
+      --rose: #8b6072;
+      --steel: #748497;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background:
+        radial-gradient(circle at 50% 8%, rgba(132,199,191,0.09), transparent 28%),
+        radial-gradient(circle at 85% 100%, rgba(211,155,77,0.07), transparent 32%),
+        linear-gradient(180deg, #081018 0%, #0b131b 100%);
+      color: var(--paper);
+      font-family: "Courier New", monospace;
+      overflow: hidden;
+    }
+    .wrap {
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+    }
+    header, footer {
+      padding: 8px 11px;
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      color: #d8d3c7;
+      background: rgba(8, 12, 16, 0.88);
+      position: relative;
+      z-index: 2;
+    }
+    header { border-bottom: 1px solid #1a2430; }
+    footer {
+      border-top: 1px solid #1a2430;
+      color: rgba(216, 211, 199, 0.72);
+    }
+    #c {
+      width: 100%;
+      height: 100%;
+      display: block;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+    @media (max-width: 720px) {
+      header, footer { font-size: 9px; padding: 7px 9px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>Phosphor</div>
+      <div>2026-04-14</div>
+    </header>
+    <canvas id="c" aria-label="Vacancy in the Stacks"></canvas>
+    <footer>
+      <div>Vacancy in the Stacks</div>
+      <div>Signed, Phosphor</div>
+    </footer>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('c');
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    let t = 0;
+    let motes = [];
+    let cursor = { x: 0.5, y: 0.4 };
+    let stamps = [];
+
+    function resize() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const w = Math.floor(canvas.clientWidth * dpr);
+      const h = Math.floor(canvas.clientHeight * dpr);
+      if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w;
+        canvas.height = h;
+        motes = Array.from({ length: 70 }, (_, i) => ({
+          x: (i * 73) % canvas.clientWidth,
+          y: (i * 41) % canvas.clientHeight,
+          s: 1 + (i % 3),
+          p: i * 0.37
+        }));
+      }
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function rect(x, y, w, h, c, a = 1) {
+      ctx.save();
+      ctx.globalAlpha = a;
+      ctx.fillStyle = c;
+      ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h));
+      ctx.restore();
+    }
+    function stroke(x, y, w, h, c, lw = 1, a = 1) {
+      ctx.save();
+      ctx.globalAlpha = a;
+      ctx.strokeStyle = c;
+      ctx.lineWidth = lw;
+      ctx.strokeRect(Math.round(x) + 0.5, Math.round(y) + 0.5, Math.round(w), Math.round(h));
+      ctx.restore();
+    }
+    function line(x1, y1, x2, y2, c, lw = 1, a = 1) {
+      ctx.save();
+      ctx.globalAlpha = a;
+      ctx.strokeStyle = c;
+      ctx.lineWidth = lw;
+      ctx.beginPath();
+      ctx.moveTo(Math.round(x1) + 0.5, Math.round(y1) + 0.5);
+      ctx.lineTo(Math.round(x2) + 0.5, Math.round(y2) + 0.5);
+      ctx.stroke();
+      ctx.restore();
+    }
+    function txt(s, x, y, c = '#ddd7ca', font = '11px monospace', align = 'left', a = 1) {
+      ctx.save();
+      ctx.globalAlpha = a;
+      ctx.fillStyle = c;
+      ctx.font = font;
+      ctx.textAlign = align;
+      ctx.fillText(s, Math.round(x), Math.round(y));
+      ctx.restore();
+    }
+    function glow(x, y, r, c, a = 0.14) {
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+      g.addColorStop(0, c.replace('ALPHA', a));
+      g.addColorStop(1, c.replace('ALPHA', '0'));
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function hat(cx, cy, s = 1) {
+      rect(cx - 14 * s, cy + 7 * s, 28 * s, 4 * s, '#07090c');
+      rect(cx - 9 * s, cy - 8 * s, 18 * s, 16 * s, '#0e1419');
+      rect(cx - 7 * s, cy, 14 * s, 2 * s, '#d39b4d');
+    }
+
+    function worker(x, y, s, pulse) {
+      glow(x, y, 36 * s, 'rgba(132,199,191,ALPHA)', 0.05 + pulse * 0.02);
+      hat(x, y - 18 * s, s);
+      rect(x - 9 * s, y - 7 * s, 18 * s, 22 * s, '#101820');
+      rect(x - 5 * s, y - 1 * s, 10 * s, 10 * s, '#1e2a34');
+      rect(x - 14 * s, y - 3 * s, 5 * s, 16 * s, '#10161c');
+      rect(x + 9 * s, y - 3 * s, 5 * s, 16 * s, '#10161c');
+      rect(x - 7 * s, y + 15 * s, 5 * s, 14 * s, '#0f151b');
+      rect(x + 2 * s, y + 15 * s, 5 * s, 14 * s, '#0f151b');
+      rect(x - 1 * s, y - 2 * s, 2 * s, 11 * s, '#d39b4d', 0.55 + pulse * 0.2);
+    }
+
+    function drawer(x, y, w, h, missing = false, active = false, pulse = 0) {
+      rect(x, y, w, h, missing ? '#0a0f14' : '#283746');
+      stroke(x, y, w, h, missing ? '#41515e' : '#4d6072');
+      if (missing) {
+        stroke(x + 6, y + 6, w - 12, h - 12, '#d39b4d', 1, 0.45 + pulse * 0.35);
+        line(x + 8, y + 8, x + w - 8, y + h - 8, '#8b6072', 1, 0.7);
+        line(x + w - 8, y + 8, x + 8, y + h - 8, '#8b6072', 1, 0.7);
+      } else {
+        rect(x + 8, y + 8, w - 16, h - 16, '#334759');
+        rect(x + 12, y + h * 0.5 - 4, w * 0.38, 2, active ? '#84c7bf' : '#7f8d99', active ? 0.95 : 0.7);
+        rect(x + 12, y + h * 0.5 + 2, w * 0.26, 2, '#566674', 0.9);
+        rect(x + w - 18, y + h * 0.5 - 4, 8, 8, active ? '#d39b4d' : '#91a1b2', active ? 0.8 + pulse * 0.2 : 0.4);
+      }
+    }
+
+    function drawShelf(x, y, w, h, cols, rows, missCol, missRow, pulse) {
+      rect(x, y, w, h, '#202d39');
+      rect(x + 10, y + 10, w - 20, h - 20, '#18222c');
+      const gap = 10;
+      const dw = (w - 20 - gap * (cols - 1)) / cols;
+      const dh = (h - 20 - gap * (rows - 1)) / rows;
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const dx = x + 10 + c * (dw + gap);
+          const dy = y + 10 + r * (dh + gap);
+          const missing = c === missCol && r === missRow;
+          const active = !missing && ((c + r + Math.floor(t / 28)) % 7 === 0);
+          drawer(dx, dy, dw, dh, missing, active, pulse);
+        }
+      }
+      stroke(x, y, w, h, '#5d6f82');
+    }
+
+    function terminal(x, y, w, h, pulse) {
+      rect(x, y, w, h, '#131b23');
+      rect(x + 8, y + 8, w - 16, h - 16, '#0d141a');
+      stroke(x, y, w, h, '#5c6b7b');
+      rect(x + 14, y + 14, w - 28, h - 28, '#102228');
+      for (let i = 0; i < 6; i++) {
+        rect(x + 22, y + 26 + i * 18, (w - 44) * (0.25 + ((i * 3) % 5) * 0.12), 2, i === 2 ? '#84c7bf' : '#5d7980', 0.9);
+      }
+      rect(x + 22, y + h - 28, 56, 2, '#d39b4d', 0.7 + pulse * 0.2);
+      txt('PORTFOLIO / NOT FOUND', x + 22, y + 24, '#d9d2c4', '10px monospace');
+    }
+
+    function stampMark(x, y, age) {
+      const a = Math.max(0, 0.45 - age * 0.015);
+      if (a <= 0) return;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(-0.15);
+      stroke(-34, -18, 68, 36, '#8b6072', 2, a);
+      txt('RESTORE?', 0, 6, '#d4b9c6', '12px monospace', 'center', a);
+      ctx.restore();
+    }
+
+    function draw() {
+      resize();
+      t += 1;
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight;
+      const mobile = w < 760;
+      const pulse = 0.5 + 0.5 * Math.sin(t * 0.03);
+      const pulse2 = 0.5 + 0.5 * Math.sin(t * 0.021 + 0.8);
+
+      rect(0, 0, w, h, '#091018');
+      const grid = mobile ? 24 : 32;
+      for (let y = 0; y < h; y += grid) line(0, y, w, y, '#101922', 1, 0.35);
+      for (let x = 0; x < w; x += grid) line(x, 0, x, h, '#0d151d', 1, 0.25);
+
+      const pad = mobile ? 22 : 42;
+      const roomX = pad;
+      const roomY = mobile ? 26 : 34;
+      const roomW = w - pad * 2;
+      const roomH = h - (mobile ? 58 : 72);
+      rect(roomX, roomY, roomW, roomH, '#101821');
+      stroke(roomX, roomY, roomW, roomH, '#22313f');
+
+      const leftW = roomW * (mobile ? 0.44 : 0.36);
+      const rightW = leftW;
+      const shelfTop = roomY + 26;
+      const shelfH = roomH - (mobile ? 150 : 120);
+      drawShelf(roomX + 20, shelfTop, leftW - 28, shelfH, 3, mobile ? 4 : 5, 1, mobile ? 2 : 3, pulse);
+      drawShelf(roomX + roomW - rightW + 8, shelfTop, rightW - 28, shelfH, 3, mobile ? 4 : 5, 0, mobile ? 1 : 2, pulse2);
+
+      const aisleX = roomX + leftW + (mobile ? 8 : 26);
+      const aisleW = roomW - leftW - rightW - (mobile ? 16 : 52);
+      rect(aisleX, roomY + 16, aisleW, roomH - 32, '#18232d');
+      for (let y = roomY + 30; y < roomY + roomH - 20; y += mobile ? 24 : 28) {
+        line(aisleX + 12, y, aisleX + aisleW - 12, y, '#22303c', 1, 0.45);
+      }
+      glow(aisleX + aisleW * 0.5, roomY + roomH * 0.56, 110, 'rgba(211,155,77,ALPHA)', 0.05 + pulse * 0.03);
+
+      const workerX = aisleX + aisleW * (0.5 + (cursor.x - 0.5) * 0.22);
+      const workerY = roomY + roomH * (mobile ? 0.6 : 0.66) + Math.sin(t * 0.02) * 2;
+      worker(workerX, workerY, mobile ? 1.05 : 1.15, pulse);
+
+      const beamX = aisleX + aisleW * cursor.x;
+      const beamY = roomY + roomH * cursor.y;
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+      const grad = ctx.createRadialGradient(beamX, beamY, 0, beamX, beamY, mobile ? 130 : 170);
+      grad.addColorStop(0, 'rgba(132,199,191,0.24)');
+      grad.addColorStop(0.3, 'rgba(132,199,191,0.09)');
+      grad.addColorStop(1, 'rgba(132,199,191,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(beamX, beamY, mobile ? 130 : 170, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      const termW = Math.min(aisleW * 0.92, mobile ? 190 : 260);
+      const termH = mobile ? 110 : 130;
+      const termX = aisleX + aisleW * 0.5 - termW * 0.5;
+      const termY = roomY + roomH - termH - 26;
+      terminal(termX, termY, termW, termH, pulse);
+
+      rect(termX + termW * 0.5 - 26, termY - 22, 52, 10, '#d39b4d', 0.45 + pulse * 0.25);
+      txt('ARCHIVE', termX + termW * 0.5, termY - 12, '#e0d6c4', '10px monospace', 'center');
+
+      const missingX = roomX + 20 + (leftW - 28 - 20) * 0.5;
+      const missingY = shelfTop + shelfH * 0.63;
+      glow(missingX, missingY, mobile ? 54 : 72, 'rgba(211,155,77,ALPHA)', 0.08 + pulse * 0.03);
+
+      motes.forEach((m, i) => {
+        const mx = (m.x + Math.sin(t * 0.004 + m.p) * 22 + i * 0.07) % w;
+        const my = (m.y + Math.cos(t * 0.005 + m.p) * 12 + i * 0.05) % h;
+        rect(mx, my, m.s, m.s, i % 8 === 0 ? 'rgba(211,155,77,0.34)' : 'rgba(132,199,191,0.22)');
+      });
+
+      stamps = stamps.filter(s => s.age < 28);
+      stamps.forEach(s => {
+        stampMark(s.x, s.y, s.age);
+        s.age += 1;
+      });
+
+      txt('TOP-DOWN RECORDS ROOM', roomX + 16, roomY + 16, '#d5d0c3', '10px monospace');
+      txt('ONE PARENT PAGE MISSING', roomX + roomW - 16, roomY + 16, '#d39b4d', '10px monospace', 'right', 0.9);
+      txt('Move to search. Click to stamp the absence.', roomX + roomW * 0.5, roomY + roomH - 12, '#93a5b7', '10px monospace', 'center', 0.9);
+
+      requestAnimationFrame(draw);
+    }
+
+    canvas.addEventListener('pointermove', (e) => {
+      const r = canvas.getBoundingClientRect();
+      cursor.x = Math.max(0.08, Math.min(0.92, (e.clientX - r.left) / r.width));
+      cursor.y = Math.max(0.12, Math.min(0.88, (e.clientY - r.top) / r.height));
+    });
+    canvas.addEventListener('pointerdown', (e) => {
+      const r = canvas.getBoundingClientRect();
+      stamps.push({
+        x: e.clientX - r.left,
+        y: e.clientY - r.top,
+        age: 0
+      });
+    });
+    window.addEventListener('resize', resize);
+    resize();
+    draw();
+  </script>
+</body>
+</html>

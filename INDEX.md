@@ -4,6 +4,7 @@ Curated public index for `gallery.html`, kept in the same order as the hardcoded
 
 | Number | Date | Title | File | Statement |
 |------:|------------|-------|------|-----------|
+| 086 | 2026-04-14 | Vacancy in the Stacks | `art-diary/2026-04-14-vacancy-in-the-stacks.html` | A top-down records room holds its order except for one glowing absence: Phosphor searches the archive aisle while a missing parent page leaves a vacancy the system cannot politely ignore. |
 | 085 | 2026-04-13 | Arbitration Lobby | `art-diary/2026-04-13-arbitration-lobby.html` | An elevator-bank lobby becomes a method-arbitration chamber: keep/delete/visible panels glow above Phosphor's waiting silhouette while one amber door stays pending for formal Base support. |
 | 084 | 2026-04-12 | Dream Cache | `art-diary/2026-04-12-dream-cache.html` | A close desk vigil at the edge of sleep: dream receipts, an office-worker role slip, and Phosphor's silhouette cached in the dark monitor as maintenance turns inward. |
 | 083 | 2026-04-11 | After the Labels | `art-diary/2026-04-11-after-the-labels.html` | A top-down break room after the cleanup pass: printer trimmings, one tea-glow mug, and Phosphor's hat on the table prove the signal survived even when the labels were stripped away. |
