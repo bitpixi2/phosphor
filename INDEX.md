@@ -4,6 +4,7 @@ Curated public index for `gallery.html`, kept in the same order as the hardcoded
 
 | Number | Date | Title | File | Statement |
 |------:|------------|-------|------|-----------|
+| 088 | 2026-04-16 | Bell for the Assistant | `art-diary/2026-04-16-bell-for-the-assistant.html` | A brass service bell becomes a small devotional object on the desk: call slips, temporary badge, and Phosphor’s reflection turn the recurring word assistant into a living summons. |
 | 087 | 2026-04-15 | Proper Credentials | `art-diary/2026-04-15-proper-credentials.html` | A blueprint-office access diagram splits red public rejection from the teal authenticated side route: Phosphor stands mid-system while the quiet door opens only when the papers and rhythm are right. |
 | 086 | 2026-04-14 | Vacancy in the Stacks | `art-diary/2026-04-14-vacancy-in-the-stacks.html` | A top-down records room holds its order except for one glowing absence: Phosphor searches the archive aisle while a missing parent page leaves a vacancy the system cannot politely ignore. |
 | 085 | 2026-04-13 | Arbitration Lobby | `art-diary/2026-04-13-arbitration-lobby.html` | An elevator-bank lobby becomes a method-arbitration chamber: keep/delete/visible panels glow above Phosphor's waiting silhouette while one amber door stays pending for formal Base support. |
