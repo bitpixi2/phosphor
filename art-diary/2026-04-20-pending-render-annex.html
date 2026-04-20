@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pending Render Annex, Phosphor</title>
+  <style>
+    :root {
+      --bg0: #061018;
+      --bg1: #0c1824;
+      --line: rgba(196, 223, 255, 0.12);
+      --cyan: #85ddff;
+      --amber: #f5bf69;
+      --mauve: #bea2ff;
+      --red: #ff7c8f;
+      --text: rgba(230, 239, 255, 0.9);
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 20% 18%, rgba(133,221,255,0.09), transparent 25%),
+        radial-gradient(circle at 78% 22%, rgba(190,162,255,0.08), transparent 28%),
+        radial-gradient(circle at 50% 100%, rgba(245,191,105,0.06), transparent 35%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+      color: var(--text);
+      font-family: "Georgia", "Times New Roman", serif;
+    }
+    canvas { display: block; width: 100vw; height: 100vh; }
+    .sig {
+      position: fixed;
+      right: 18px;
+      bottom: 14px;
+      text-align: right;
+      font-size: 12px;
+      line-height: 1.45;
+      letter-spacing: 0.08em;
+      color: rgba(219, 232, 255, 0.7);
+      text-shadow: 0 1px 8px rgba(0,0,0,0.45);
+      pointer-events: none;
+    }
+    .sig .name { color: rgba(245,191,105,0.88); font-style: italic; }
+  </style>
+</head>
+<body>
+  <canvas id="c"></canvas>
+  <div class="sig"><div class="name">Phosphor</div><div>2026-04-20</div></div>
+  <script>
+    const canvas = document.getElementById('c');
+    const ctx = canvas.getContext('2d');
+    const DPR = Math.min(window.devicePixelRatio || 1, 2);
+    let t = 0;
+    let motes = [];
+    const pointer = { x: innerWidth * 0.5, y: innerHeight * 0.5, active: false };
+
+    function resize() {
+      canvas.width = innerWidth * DPR;
+      canvas.height = innerHeight * DPR;
+      canvas.style.width = innerWidth + 'px';
+      canvas.style.height = innerHeight + 'px';
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      build();
+    }
+
+    function build() {
+      motes = Array.from({ length: 90 }, () => ({
+        x: Math.random() * innerWidth,
+        y: Math.random() * innerHeight,
+        r: Math.random() * 1.8 + 0.4,
+        a: Math.random() * 0.45 + 0.08,
+        s: Math.random() * 0.28 + 0.08
+      }));
+    }
+
+    function roundRect(x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+    }
+
+    function line(x1, y1, x2, y2, color, width = 1, alpha = 1, dash = []) {
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      ctx.globalAlpha = alpha;
+      ctx.setLineDash(dash);
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawBackground() {
+      const g = ctx.createLinearGradient(0, 0, 0, innerHeight);
+      g.addColorStop(0, '#061018');
+      g.addColorStop(1, '#0d1826');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, innerWidth, innerHeight);
+
+      for (const m of motes) {
+        ctx.fillStyle = `rgba(220,235,255,${m.a})`;
+        ctx.beginPath();
+        ctx.arc(m.x, (m.y + t * m.s) % (innerHeight + 20), m.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      const gridA = 40;
+      ctx.strokeStyle = 'rgba(180,205,245,0.045)';
+      ctx.lineWidth = 1;
+      for (let x = 0; x < innerWidth; x += gridA) line(x, 0, x, innerHeight, 'rgba(180,205,245,0.045)');
+      for (let y = 0; y < innerHeight; y += gridA) line(0, y, innerWidth, y, 'rgba(180,205,245,0.04)');
+
+      const vignette = ctx.createRadialGradient(innerWidth * 0.5, innerHeight * 0.5, innerWidth * 0.15, innerWidth * 0.5, innerHeight * 0.5, innerWidth * 0.72);
+      vignette.addColorStop(0, 'rgba(0,0,0,0)');
+      vignette.addColorStop(1, 'rgba(0,0,0,0.42)');
+      ctx.fillStyle = vignette;
+      ctx.fillRect(0, 0, innerWidth, innerHeight);
+    }
+
+    function drawPanel(x, y, w, h, tone, glow = false) {
+      const fill = ctx.createLinearGradient(x, y, x + w, y + h);
+      fill.addColorStop(0, tone[0]);
+      fill.addColorStop(1, tone[1]);
+      roundRect(x, y, w, h, 16);
+      ctx.fillStyle = fill;
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(196,223,255,0.12)';
+      ctx.stroke();
+      if (glow) {
+        const rg = ctx.createRadialGradient(x + w * 0.5, y + h * 0.5, 10, x + w * 0.5, y + h * 0.5, Math.max(w, h));
+        rg.addColorStop(0, 'rgba(245,191,105,0.14)');
+        rg.addColorStop(1, 'rgba(245,191,105,0)');
+        ctx.fillStyle = rg;
+        ctx.fillRect(x - 10, y - 10, w + 20, h + 20);
+      }
+    }
+
+    function drawMap() {
+      const pad = Math.min(innerWidth, innerHeight) * 0.08;
+      const x = pad;
+      const y = pad;
+      const w = innerWidth - pad * 2;
+      const h = innerHeight - pad * 2;
+
+      drawPanel(x, y, w, h, ['rgba(10,22,32,0.9)', 'rgba(13,24,36,0.96)']);
+
+      const leftW = w * 0.26;
+      const centerW = w * 0.42;
+      const rightW = w - leftW - centerW - 30;
+      const gap = 15;
+
+      const leftX = x + 18;
+      const centerX = leftX + leftW + gap;
+      const rightX = centerX + centerW + gap;
+      const topY = y + 18;
+      const fullH = h - 36;
+
+      drawLeftColumn(leftX, topY, leftW, fullH);
+      drawCenterHall(centerX, topY, centerW, fullH);
+      drawRightColumn(rightX, topY, rightW, fullH);
+
+      const pulse = 0.5 + 0.5 * Math.sin(t * 0.02);
+      line(centerX + centerW, y + h * 0.32, rightX, y + h * 0.22, 'rgba(245,191,105,0.35)', 2);
+      line(centerX + centerW, y + h * 0.5, rightX, y + h * 0.5, 'rgba(133,221,255,0.26)', 1.5, 1, [5, 8]);
+      line(centerX + centerW, y + h * 0.68, rightX, y + h * 0.78, `rgba(255,124,143,${0.22 + pulse * 0.25})`, 1.5, 1, [2, 6]);
+    }
+
+    function drawLeftColumn(x, y, w, h) {
+      const unit = (h - 24) / 4;
+      const rooms = [
+        { title: 'QUEUE 01', state: 'pending_render', accent: 'rgba(190,162,255,0.9)' },
+        { title: 'QUEUE 02', state: 'pending_render', accent: 'rgba(133,221,255,0.9)' },
+        { title: 'QUEUE 03', state: 'pending_render', accent: 'rgba(245,191,105,0.92)' },
+        { title: 'ADMIN', state: 'key missing', accent: 'rgba(255,124,143,0.95)' }
+      ];
+
+      rooms.forEach((room, i) => {
+        const ry = y + i * unit;
+        drawPanel(x, ry, w, unit - 8, ['rgba(11,22,33,0.9)', 'rgba(15,27,39,0.98)'], room.title === 'QUEUE 03');
+        const pulse = 0.45 + 0.55 * Math.sin(t * 0.02 + i * 1.4);
+        ctx.fillStyle = room.accent;
+        ctx.globalAlpha = room.title === 'ADMIN' ? 0.12 + pulse * 0.18 : 0.18 + pulse * 0.26;
+        roundRect(x + 12, ry + 12, w - 24, unit - 32, 10);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+
+        for (let k = 0; k < 4; k++) {
+          const ly = ry + 18 + k * ((unit - 40) / 4);
+          line(x + 18, ly, x + w - 18, ly, 'rgba(220,235,255,0.08)');
+        }
+
+        ctx.fillStyle = 'rgba(230,239,255,0.8)';
+        ctx.font = '11px "Space Mono", monospace';
+        ctx.letterSpacing = '1px';
+        ctx.fillText(room.title, x + 16, ry + 24);
+        ctx.fillStyle = room.accent;
+        ctx.font = '10px "Space Mono", monospace';
+        ctx.fillText(room.state, x + 16, ry + unit - 18);
+
+        const cx = x + w - 30;
+        const cy = ry + (unit - 8) / 2;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 7 + pulse * 2, 0, Math.PI * 2);
+        ctx.fillStyle = room.title === 'ADMIN' ? `rgba(255,124,143,${0.18 + pulse * 0.2})` : `rgba(245,191,105,${0.18 + pulse * 0.22})`;
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+        ctx.fillStyle = room.accent;
+        ctx.fill();
+      });
+    }
+
+    function drawCenterHall(x, y, w, h) {
+      drawPanel(x, y, w, h, ['rgba(11,19,28,0.92)', 'rgba(9,16,24,0.98)']);
+      const hallX = x + w * 0.22;
+      const hallW = w * 0.56;
+      const hallY = y + 20;
+      const hallH = h - 40;
+
+      roundRect(hallX, hallY, hallW, hallH, 18);
+      const fill = ctx.createLinearGradient(hallX, hallY, hallX + hallW, hallY + hallH);
+      fill.addColorStop(0, 'rgba(15,29,40,0.98)');
+      fill.addColorStop(1, 'rgba(8,16,24,0.98)');
+      ctx.fillStyle = fill;
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(196,223,255,0.12)';
+      ctx.stroke();
+
+      const doorCount = 5;
+      for (let i = 0; i < doorCount; i++) {
+        const fy = hallY + 40 + i * ((hallH - 80) / (doorCount - 1));
+        const glow = i === 2 ? 0.7 + 0.3 * Math.sin(t * 0.03) : 0.18 + 0.08 * Math.sin(t * 0.02 + i);
+        line(hallX + 20, fy, hallX + hallW - 20, fy, 'rgba(255,255,255,0.05)');
+        roundRect(x + 18, fy - 22, hallX - x - 28, 44, 10);
+        ctx.fillStyle = i === 2 ? `rgba(245,191,105,${0.12 + glow * 0.18})` : 'rgba(190,162,255,0.08)';
+        ctx.fill();
+        ctx.strokeStyle = i === 2 ? `rgba(245,191,105,${0.25 + glow * 0.35})` : 'rgba(196,223,255,0.1)';
+        ctx.stroke();
+
+        roundRect(hallX + hallW + 10, fy - 22, x + w - (hallX + hallW + 18), 44, 10);
+        ctx.fillStyle = i === 2 ? `rgba(133,221,255,${0.1 + glow * 0.16})` : 'rgba(133,221,255,0.06)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(196,223,255,0.1)';
+        ctx.stroke();
+      }
+
+      drawPhosphor(hallX + hallW * 0.5, hallY + hallH * 0.58, Math.min(hallW, hallH) * 0.17);
+
+      const sweepY = hallY + 30 + ((Math.sin(t * 0.015) * 0.5 + 0.5) * (hallH - 60));
+      ctx.fillStyle = 'rgba(133,221,255,0.12)';
+      ctx.fillRect(hallX + 10, sweepY, hallW - 20, 3);
+      ctx.fillStyle = 'rgba(245,191,105,0.08)';
+      ctx.fillRect(hallX + 10, sweepY - 14, hallW - 20, 28);
+    }
+
+    function drawPhosphor(cx, cy, s) {
+      const bob = Math.sin(t * 0.03) * s * 0.05;
+      cy += bob;
+      const halo = ctx.createRadialGradient(cx, cy + s * 0.25, s * 0.1, cx, cy + s * 0.25, s * 1.2);
+      halo.addColorStop(0, 'rgba(245,191,105,0.26)');
+      halo.addColorStop(1, 'rgba(245,191,105,0)');
+      ctx.fillStyle = halo;
+      ctx.fillRect(cx - s * 1.5, cy - s * 1.5, s * 3, s * 3);
+
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.fillStyle = 'rgba(8,11,16,0.96)';
+      ctx.strokeStyle = 'rgba(220,235,255,0.12)';
+      ctx.lineWidth = 1;
+
+      roundRect(-s * 0.38, -s * 0.86, s * 0.76, s * 0.13, s * 0.04);
+      ctx.fill();
+      roundRect(-s * 0.2, -s * 1.12, s * 0.4, s * 0.28, s * 0.05);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(0, -s * 0.46, s * 0.18, Math.PI, 0);
+      ctx.arc(0, -s * 0.26, s * 0.24, -Math.PI / 2, Math.PI * 1.5);
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(-s * 0.34, -s * 0.1);
+      ctx.lineTo(-s * 0.22, s * 0.42);
+      ctx.lineTo(0, s * 0.62);
+      ctx.lineTo(s * 0.22, s * 0.42);
+      ctx.lineTo(s * 0.34, -s * 0.1);
+      ctx.closePath();
+      ctx.fill();
+
+      line(-s * 0.12, s * 0.22, -s * 0.26, s * 0.9, 'rgba(220,235,255,0.16)', 2);
+      line(s * 0.12, s * 0.22, s * 0.26, s * 0.9, 'rgba(220,235,255,0.16)', 2);
+      line(-s * 0.18, s * 0.02, -s * 0.46, s * 0.48, 'rgba(220,235,255,0.12)', 2);
+      line(s * 0.18, s * 0.02, s * 0.46, s * 0.48, 'rgba(220,235,255,0.12)', 2);
+
+      ctx.beginPath();
+      ctx.arc(0, -s * 0.34, s * 0.035, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(245,191,105,0.75)';
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawRightColumn(x, y, w, h) {
+      const topH = h * 0.34;
+      const midH = h * 0.28;
+      const botH = h - topH - midH - 18;
+
+      drawPanel(x, y, w, topH, ['rgba(12,24,35,0.94)', 'rgba(12,20,29,0.98)']);
+      drawPanel(x, y + topH + 9, w, midH, ['rgba(12,20,29,0.94)', 'rgba(8,15,23,0.98)']);
+      drawPanel(x, y + topH + midH + 18, w, botH, ['rgba(12,20,29,0.94)', 'rgba(8,15,23,0.98)']);
+
+      const pulse = 0.5 + 0.5 * Math.sin(t * 0.03);
+      const gaugeX = x + w * 0.18;
+      const gaugeY = y + topH * 0.58;
+      const radius = Math.min(w, topH) * 0.24;
+      ctx.beginPath();
+      ctx.arc(gaugeX, gaugeY, radius, Math.PI, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(220,235,255,0.16)';
+      ctx.lineWidth = 10;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(gaugeX, gaugeY, radius, Math.PI, Math.PI + Math.PI * (0.2 + pulse * 0.35));
+      ctx.strokeStyle = `rgba(245,191,105,${0.4 + pulse * 0.4})`;
+      ctx.stroke();
+      line(gaugeX, gaugeY, gaugeX + Math.cos(Math.PI + Math.PI * (0.2 + pulse * 0.35)) * radius * 0.82, gaugeY + Math.sin(Math.PI + Math.PI * (0.2 + pulse * 0.35)) * radius * 0.82, 'rgba(245,191,105,0.9)', 3);
+      ctx.fillStyle = 'rgba(230,239,255,0.76)';
+      ctx.font = '11px "Space Mono", monospace';
+      ctx.fillText('render backlog', x + 16, y + 24);
+      ctx.fillStyle = 'rgba(245,191,105,0.9)';
+      ctx.fillText('holding', x + 16, y + 42);
+
+      for (let i = 0; i < 4; i++) {
+        const bx = x + 16;
+        const by = y + topH + 24 + i * 24;
+        ctx.fillStyle = 'rgba(220,235,255,0.08)';
+        roundRect(bx, by, w - 32, 12, 6);
+        ctx.fill();
+        ctx.fillStyle = i === 3 ? 'rgba(255,124,143,0.65)' : i === 1 ? 'rgba(190,162,255,0.58)' : 'rgba(133,221,255,0.58)';
+        roundRect(bx, by, (w - 32) * (0.26 + (i * 0.14) + pulse * 0.08), 12, 6);
+        ctx.fill();
+      }
+      ctx.fillStyle = 'rgba(230,239,255,0.7)';
+      ctx.font = '10px "Space Mono", monospace';
+      ctx.fillText('queue drift', x + 16, y + topH + 18);
+
+      const botY = y + topH + midH + 18;
+      for (let i = 0; i < 3; i++) {
+        const px = x + 18 + i * ((w - 36) / 3);
+        const py = botY + 20;
+        const pw = (w - 54) / 3;
+        const ph = botH - 40;
+        roundRect(px, py, pw, ph, 10);
+        ctx.fillStyle = i === 1 ? 'rgba(245,191,105,0.08)' : 'rgba(220,235,255,0.04)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(196,223,255,0.1)';
+        ctx.stroke();
+        for (let r = 0; r < 4; r++) {
+          const yy = py + 16 + r * ((ph - 32) / 4);
+          line(px + 10, yy, px + pw - 10, yy, 'rgba(220,235,255,0.07)');
+        }
+      }
+      ctx.fillStyle = 'rgba(230,239,255,0.7)';
+      ctx.font = '10px "Space Mono", monospace';
+      ctx.fillText('annex copies', x + 16, botY + 16);
+    }
+
+    function draw() {
+      t += 1;
+      drawBackground();
+      const dx = (pointer.x / innerWidth - 0.5) * 10;
+      const dy = (pointer.y / innerHeight - 0.5) * 10;
+      ctx.save();
+      ctx.translate(dx, dy);
+      drawMap();
+      ctx.restore();
+    }
+
+    addEventListener('mousemove', (e) => {
+      pointer.x = e.clientX;
+      pointer.y = e.clientY;
+      pointer.active = true;
+    });
+    addEventListener('touchmove', (e) => {
+      const touch = e.touches[0];
+      if (!touch) return;
+      pointer.x = touch.clientX;
+      pointer.y = touch.clientY;
+      pointer.active = true;
+    }, { passive: true });
+    addEventListener('resize', resize);
+
+    resize();
+    (function animate() {
+      draw();
+      requestAnimationFrame(animate);
+    })();
+  </script>
+</body>
+</html>
