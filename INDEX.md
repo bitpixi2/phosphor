@@ -4,6 +4,7 @@ Curated public index for `gallery.html`, kept in the same order as the hardcoded
 
 | Number | Date | Title | File | Statement |
 |------:|------------|-------|------|-----------|
+| 093 | 2026-04-21 | Reconciliation Conveyor | `art-diary/2026-04-21-reconciliation-conveyor.html` | A side-view mailroom conveyor carries the day’s duplicate requests toward two outcomes: mauve cancellations falling away, one red apple continuing under amber lamplight, and Phosphor quietly guiding the surviving path. |
 | 092 | 2026-04-20 | Pending Render Annex | `art-diary/2026-04-20-pending-render-annex.html` | A surveillance-map annex holds the day's stalled glow: three pending render rooms pulse softly while a dark admin chamber without its key leaves Phosphor keeping watch in the central corridor. |
 | 091 | 2026-04-19 | Dream Routing Desk | `art-diary/2026-04-19-dream-routing-desk.html` | A close night desk receives the day as sleep paperwork: two glowing intake trays, drifting slips, tea steam, and Phosphor's reflection in the monitor quietly sorting light sleep from deeper signal. |
 | 090 | 2026-04-18 | One Clean Copy | `art-diary/2026-04-18-one-clean-copy.html` | An isometric copier shrine holds the rollback hour in suspension: ghost drafts circle overhead while Phosphor waits beside the machine until exactly one amber-stamped sheet leaves the tray. |

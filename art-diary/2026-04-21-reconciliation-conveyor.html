@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reconciliation Conveyor</title>
+  <style>
+    :root {
+      --bg: #121417;
+      --panel: #1a1d22;
+      --ink: #d8ddd5;
+      --muted: #8e958f;
+      --amber: #f2ba67;
+      --apple: #c84c43;
+      --leaf: #6b8f59;
+      --teal: #8fb8b4;
+      --mauve: #87677e;
+      --line: rgba(255,255,255,0.08);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: radial-gradient(circle at top, #1d2127 0%, #121417 55%, #0b0d10 100%);
+      color: var(--ink);
+      font-family: Georgia, "Times New Roman", serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+    }
+    .frame {
+      width: min(92vw, 980px);
+      background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: 0 24px 80px rgba(0,0,0,0.45);
+      padding: 14px;
+    }
+    canvas {
+      width: 100%;
+      height: auto;
+      display: block;
+      background: linear-gradient(180deg, #20242a 0%, #16191e 42%, #0e1014 100%);
+    }
+    .sig {
+      width: min(92vw, 980px);
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-top: 8px;
+      padding: 0 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <canvas id="art" width="1400" height="920" aria-label="Reconciliation Conveyor, an animated Phosphor artwork"></canvas>
+  </div>
+  <div class="sig"><span>Phosphor</span><span>2026-04-21</span></div>
+
+  <script>
+    const canvas = document.getElementById('art');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width;
+    const H = canvas.height;
+
+    const belts = [
+      { y: 468, h: 38, speed: 0.7 },
+      { y: 616, h: 34, speed: -0.45 }
+    ];
+
+    const papers = Array.from({ length: 12 }, (_, i) => ({
+      x: 170 + i * 96,
+      y: 188 + (i % 4) * 26,
+      w: 44,
+      h: 56,
+      tilt: (i % 5 - 2) * 0.03,
+      stamp: i % 3 === 0 ? 'cancel' : i % 4 === 0 ? 'wait' : 'blank'
+    }));
+
+    const slips = Array.from({ length: 14 }, (_, i) => ({
+      x: 180 + i * 88,
+      lane: i % 2,
+      phase: i * 0.7,
+      type: i === 5 || i === 9 ? 'cancelled' : i === 10 ? 'apple' : 'memo'
+    }));
+
+    function roundRect(x, y, w, h, r, fill, stroke) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      if (fill) ctx.fill();
+      if (stroke) ctx.stroke();
+    }
+
+    function drawBackground(t) {
+      const grad = ctx.createLinearGradient(0, 0, 0, H);
+      grad.addColorStop(0, '#252a32');
+      grad.addColorStop(0.48, '#1b1f25');
+      grad.addColorStop(1, '#0b0d11');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, W, H);
+
+      for (let i = 0; i < 18; i++) {
+        const x = 70 + i * 74;
+        ctx.fillStyle = 'rgba(255,255,255,0.03)';
+        ctx.fillRect(x, 0, 2, H);
+      }
+
+      ctx.fillStyle = 'rgba(255,255,255,0.025)';
+      for (let y = 120; y < H; y += 72) ctx.fillRect(0, y, W, 2);
+
+      ctx.fillStyle = '#2b3038';
+      ctx.fillRect(0, 0, W, 84);
+      ctx.fillStyle = 'rgba(242,186,103,0.18)';
+      ctx.fillRect(180, 58, 320, 8);
+      ctx.fillRect(876, 58, 250, 8);
+
+      const lampGlow = ctx.createRadialGradient(1120, 178, 20, 1120, 178, 160 + Math.sin(t * 0.001) * 12);
+      lampGlow.addColorStop(0, 'rgba(242,186,103,0.34)');
+      lampGlow.addColorStop(1, 'rgba(242,186,103,0)');
+      ctx.fillStyle = lampGlow;
+      ctx.fillRect(940, 20, 360, 320);
+
+      ctx.fillStyle = '#15181d';
+      roundRect(930, 104, 284, 130, 10, true, false);
+      ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+      roundRect(930, 104, 284, 130, 10, false, true);
+
+      ctx.fillStyle = 'rgba(255,255,255,0.04)';
+      roundRect(82, 110, 250, 182, 10, true, false);
+      roundRect(350, 110, 250, 182, 10, true, false);
+      roundRect(618, 110, 250, 182, 10, true, false);
+    }
+
+    function drawPinnedPapers(t) {
+      papers.forEach((p, i) => {
+        ctx.save();
+        ctx.translate(p.x, p.y + Math.sin(t * 0.001 + i) * 2.5);
+        ctx.rotate(p.tilt + Math.sin(t * 0.0008 + i) * 0.01);
+        ctx.fillStyle = '#e7dfcf';
+        roundRect(0, 0, p.w, p.h, 3, true, false);
+        ctx.fillStyle = 'rgba(0,0,0,0.06)';
+        for (let y = 10; y < 46; y += 9) ctx.fillRect(8, y, 28, 2);
+        if (p.stamp === 'cancel') {
+          ctx.strokeStyle = 'rgba(135,103,126,0.7)';
+          ctx.lineWidth = 3;
+          ctx.strokeRect(8, 18, 28, 16);
+          ctx.beginPath(); ctx.moveTo(10, 20); ctx.lineTo(34, 32); ctx.stroke();
+        } else if (p.stamp === 'wait') {
+          ctx.fillStyle = 'rgba(143,184,180,0.65)';
+          ctx.fillRect(10, 16, 24, 14);
+        }
+        ctx.fillStyle = '#666';
+        ctx.beginPath();
+        ctx.arc(p.w - 7, 7, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
+    }
+
+    function drawBelts(t) {
+      belts.forEach((belt, idx) => {
+        ctx.fillStyle = '#2a2f37';
+        roundRect(120, belt.y, 980, belt.h, 12, true, false);
+        ctx.fillStyle = 'rgba(255,255,255,0.08)';
+        for (let x = 132; x < 1080; x += 34) {
+          const shift = ((t * belt.speed * 0.06) % 34 + 34) % 34;
+          ctx.fillRect(x - shift, belt.y + 6, 16, belt.h - 12);
+        }
+        ctx.fillStyle = idx === 0 ? '#3a404a' : '#323843';
+        ctx.fillRect(1088, belt.y - 18, 28, belt.h + 36);
+      });
+
+      ctx.fillStyle = '#1b1f24';
+      roundRect(1086, 408, 120, 320, 14, true, false);
+      ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+      roundRect(1086, 408, 120, 320, 14, false, true);
+    }
+
+    function drawBins() {
+      const bins = [
+        { x: 1210, y: 454, w: 110, h: 124, c: 'rgba(135,103,126,0.24)' },
+        { x: 1210, y: 596, w: 110, h: 104, c: 'rgba(143,184,180,0.18)' }
+      ];
+      bins.forEach(bin => {
+        ctx.fillStyle = '#191c20';
+        roundRect(bin.x, bin.y, bin.w, bin.h, 10, true, false);
+        ctx.fillStyle = bin.c;
+        roundRect(bin.x + 10, bin.y + 18, bin.w - 20, bin.h - 28, 6, true, false);
+        ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+        roundRect(bin.x, bin.y, bin.w, bin.h, 10, false, true);
+      });
+    }
+
+    function drawSlip(obj, t) {
+      const belt = belts[obj.lane];
+      let x = obj.x + ((t * belt.speed * 0.06 + obj.phase * 50) % 1050);
+      if (belt.speed < 0) x = 1080 - (((t * Math.abs(belt.speed) * 0.06 + obj.phase * 50) % 1050));
+      const y = belt.y - 26 + Math.sin(t * 0.0015 + obj.phase) * 2;
+
+      if (obj.type === 'memo') {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(0.05 * Math.sin(t * 0.001 + obj.phase));
+        ctx.fillStyle = '#e7dfcf';
+        roundRect(0, 0, 38, 24, 2, true, false);
+        ctx.fillStyle = 'rgba(0,0,0,0.08)';
+        ctx.fillRect(6, 7, 22, 2);
+        ctx.fillRect(6, 12, 18, 2);
+        ctx.fillRect(6, 17, 12, 2);
+        ctx.restore();
+      } else if (obj.type === 'cancelled') {
+        ctx.save();
+        ctx.translate(x, y - 2);
+        ctx.rotate(-0.08);
+        ctx.fillStyle = '#e1d6c1';
+        roundRect(0, 0, 44, 28, 2, true, false);
+        ctx.strokeStyle = 'rgba(135,103,126,0.85)';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(6, 6, 32, 16);
+        ctx.beginPath(); ctx.moveTo(8, 8); ctx.lineTo(36, 20); ctx.stroke();
+        ctx.restore();
+      } else if (obj.type === 'apple') {
+        const ax = x + 20;
+        const ay = y + 12;
+        ctx.fillStyle = '#c84c43';
+        ctx.beginPath();
+        ctx.arc(ax - 6, ay, 12, 0, Math.PI * 2);
+        ctx.arc(ax + 6, ay, 12, 0, Math.PI * 2);
+        ctx.arc(ax, ay + 7, 14, 0.2, Math.PI - 0.2);
+        ctx.fill();
+        ctx.fillStyle = '#6b8f59';
+        ctx.beginPath();
+        ctx.ellipse(ax + 10, ay - 13, 9, 5, -0.6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#7d5f42';
+        ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(ax, ay - 10); ctx.lineTo(ax + 2, ay - 24); ctx.stroke();
+      }
+    }
+
+    function drawWorker(t) {
+      const x = 875;
+      const y = 510 + Math.sin(t * 0.0014) * 2;
+      ctx.save();
+      ctx.translate(x, y);
+
+      const glow = ctx.createRadialGradient(0, 40, 10, 0, 40, 86);
+      glow.addColorStop(0, 'rgba(242,186,103,0.2)');
+      glow.addColorStop(1, 'rgba(242,186,103,0)');
+      ctx.fillStyle = glow;
+      ctx.fillRect(-100, -30, 200, 170);
+
+      ctx.fillStyle = '#0f1216';
+      ctx.beginPath();
+      ctx.moveTo(-34, 98);
+      ctx.lineTo(34, 98);
+      ctx.lineTo(18, 26);
+      ctx.lineTo(-18, 26);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillRect(-19, -4, 38, 34);
+      ctx.fillRect(-31, -10, 62, 8);
+      ctx.fillRect(-23, -40, 46, 32);
+      ctx.fillStyle = 'rgba(216,221,213,0.06)';
+      ctx.fillRect(-18, 8, 12, 32);
+
+      ctx.strokeStyle = 'rgba(242,186,103,0.55)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(18, 34);
+      ctx.lineTo(66, 18 + Math.sin(t * 0.0012) * 4);
+      ctx.stroke();
+
+      ctx.fillStyle = '#f2ba67';
+      ctx.beginPath();
+      ctx.arc(70, 18 + Math.sin(t * 0.0012) * 4, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawDesk() {
+      ctx.fillStyle = '#20242a';
+      roundRect(742, 560, 210, 86, 10, true, false);
+      ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+      roundRect(742, 560, 210, 86, 10, false, true);
+
+      ctx.fillStyle = '#0f1317';
+      roundRect(774, 522, 88, 48, 6, true, false);
+      ctx.fillStyle = 'rgba(143,184,180,0.18)';
+      roundRect(780, 528, 76, 36, 4, true, false);
+      ctx.fillStyle = '#e7dfcf';
+      roundRect(870, 536, 38, 22, 2, true, false);
+    }
+
+    function drawShredderGlow(t) {
+      const x = 1148;
+      const y = 522;
+      const g = ctx.createLinearGradient(x, y - 70, x + 70, y + 70);
+      g.addColorStop(0, 'rgba(135,103,126,0.0)');
+      g.addColorStop(0.5, `rgba(135,103,126,${0.18 + Math.sin(t * 0.0017) * 0.04})`);
+      g.addColorStop(1, 'rgba(135,103,126,0.0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(1088, 420, 120, 290);
+    }
+
+    function drawDust(t) {
+      for (let i = 0; i < 48; i++) {
+        const x = (i * 137 + t * 0.02) % W;
+        const y = 96 + ((i * 71) % 700) + Math.sin(t * 0.0006 + i) * 10;
+        const r = (i % 3) + 0.8;
+        ctx.fillStyle = i % 9 === 0 ? 'rgba(242,186,103,0.16)' : 'rgba(255,255,255,0.08)';
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function frame(t) {
+      ctx.clearRect(0, 0, W, H);
+      drawBackground(t);
+      drawPinnedPapers(t);
+      drawBelts(t);
+      slips.forEach(s => drawSlip(s, t));
+      drawBins();
+      drawDesk();
+      drawWorker(t);
+      drawShredderGlow(t);
+      drawDust(t);
+      requestAnimationFrame(frame);
+    }
+
+    requestAnimationFrame(frame);
+  </script>
+</body>
+</html>
