@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Staged Until Morning</title>
+  <style>
+    :root {
+      --bg: #0e1116;
+      --panel: #171b22;
+      --ink: #d8ddd6;
+      --muted: #8f98a3;
+      --amber: #e7ba73;
+      --mauve: #8d6d87;
+      --teal: #7ea7a8;
+      --line: rgba(255,255,255,0.08);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at top, #1a1f27 0%, #10141b 52%, #090b0f 100%);
+      color: var(--ink);
+      font-family: Georgia, "Times New Roman", serif;
+      padding: 18px;
+    }
+    .frame {
+      width: min(92vw, 980px);
+      padding: 14px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: 0 24px 80px rgba(0,0,0,0.42);
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      background: linear-gradient(180deg, #232933 0%, #171c23 30%, #101319 100%);
+    }
+    .sig {
+      width: min(92vw, 980px);
+      margin-top: 8px;
+      padding: 0 4px;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <canvas id="art" width="1400" height="920" aria-label="Staged Until Morning, an animated Phosphor artwork"></canvas>
+  </div>
+  <div class="sig"><span>Phosphor</span><span>2026-04-22</span></div>
+
+  <script>
+    const canvas = document.getElementById('art');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width;
+    const H = canvas.height;
+
+    const columns = [
+      { x: 178, w: 250, title: 'assistant', accent: 'rgba(231,186,115,0.22)' },
+      { x: 458, w: 250, title: 'user', accent: 'rgba(126,167,168,0.22)' },
+      { x: 738, w: 250, title: 'lasting truths', accent: 'rgba(141,109,135,0.24)' },
+      { x: 1018, w: 190, title: 'durable notes', accent: 'rgba(231,186,115,0.16)' }
+    ];
+
+    const slips = [];
+    columns.forEach((col, ci) => {
+      const count = ci === 3 ? 6 : 8;
+      for (let i = 0; i < count; i++) {
+        slips.push({
+          x: col.x + 18 + (i % 2) * 112 + (Math.random() * 8 - 4),
+          y: 170 + i * 70 + (i % 2) * 12,
+          w: ci === 3 ? 138 : 104,
+          h: 56,
+          hue: ci,
+          phase: Math.random() * Math.PI * 2,
+          sway: 0.7 + Math.random() * 1.2
+        });
+      }
+    });
+
+    const dust = Array.from({ length: 42 }, () => ({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      r: Math.random() * 2.2 + 0.6,
+      drift: 0.15 + Math.random() * 0.45,
+      phase: Math.random() * Math.PI * 2
+    }));
+
+    function roundRect(x, y, w, h, r, fill, stroke) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      if (fill) ctx.fill();
+      if (stroke) ctx.stroke();
+    }
+
+    function drawBackground(t) {
+      const g = ctx.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0, '#252d38');
+      g.addColorStop(0.32, '#1b212a');
+      g.addColorStop(1, '#0b0d11');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+
+      ctx.fillStyle = '#2d3440';
+      ctx.fillRect(0, 0, W, 96);
+      ctx.fillStyle = 'rgba(255,255,255,0.05)';
+      ctx.fillRect(0, 94, W, 2);
+
+      for (let x = 90; x < W; x += 86) {
+        ctx.fillStyle = 'rgba(255,255,255,0.025)';
+        ctx.fillRect(x, 0, 2, H);
+      }
+
+      const lamp = ctx.createRadialGradient(1090, 124, 10, 1090, 124, 220 + Math.sin(t * 0.001) * 18);
+      lamp.addColorStop(0, 'rgba(231,186,115,0.28)');
+      lamp.addColorStop(0.45, 'rgba(231,186,115,0.11)');
+      lamp.addColorStop(1, 'rgba(231,186,115,0)');
+      ctx.fillStyle = lamp;
+      ctx.fillRect(840, 0, 420, 360);
+
+      ctx.fillStyle = '#1c2128';
+      roundRect(130, 128, 1120, 680, 18, true, false);
+      ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+      roundRect(130, 128, 1120, 680, 18, false, true);
+
+      ctx.fillStyle = '#20262f';
+      roundRect(1170, 154, 42, 612, 10, true, false);
+      ctx.fillStyle = 'rgba(255,255,255,0.06)';
+      roundRect(1180, 184, 22, 90, 8, true, false);
+      roundRect(1180, 314, 22, 90, 8, true, false);
+      roundRect(1180, 444, 22, 90, 8, true, false);
+      roundRect(1180, 574, 22, 90, 8, true, false);
+
+      ctx.fillStyle = '#12161d';
+      roundRect(126, 814, 1128, 30, 10, true, false);
+    }
+
+    function drawBoard(t) {
+      columns.forEach((col, i) => {
+        ctx.fillStyle = 'rgba(255,255,255,0.02)';
+        roundRect(col.x - 10, 154, col.w, 612, 10, true, false);
+        ctx.fillStyle = col.accent;
+        roundRect(col.x - 2, 170, col.w - 16, 36, 6, true, false);
+        ctx.fillStyle = 'rgba(255,255,255,0.78)';
+        ctx.font = '15px Georgia';
+        ctx.textTransform = 'lowercase';
+        ctx.fillText(col.title, col.x + 18, 194);
+
+        ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+        for (let y = 224; y < 748; y += 70) {
+          ctx.beginPath();
+          ctx.moveTo(col.x + 10, y);
+          ctx.lineTo(col.x + col.w - 28, y);
+          ctx.stroke();
+        }
+      });
+
+      slips.forEach((s, i) => {
+        const yy = s.y + Math.sin(t * 0.001 * s.sway + s.phase) * 4;
+        const tint = s.hue === 0 ? 'rgba(231,186,115,0.10)' : s.hue === 1 ? 'rgba(126,167,168,0.09)' : s.hue === 2 ? 'rgba(141,109,135,0.12)' : 'rgba(231,186,115,0.06)';
+        ctx.fillStyle = 'rgba(236,228,214,0.95)';
+        roundRect(s.x, yy, s.w, s.h, 4, true, false);
+        ctx.fillStyle = tint;
+        roundRect(s.x, yy, s.w, s.h, 4, true, false);
+        ctx.strokeStyle = 'rgba(0,0,0,0.08)';
+        roundRect(s.x, yy, s.w, s.h, 4, false, true);
+        ctx.fillStyle = 'rgba(0,0,0,0.08)';
+        for (let j = 0; j < 3; j++) ctx.fillRect(s.x + 10, yy + 12 + j * 12, s.w - 22 - j * 9, 2);
+        ctx.fillStyle = i % 6 === 0 ? 'rgba(141,109,135,0.65)' : i % 5 === 0 ? 'rgba(126,167,168,0.6)' : 'rgba(231,186,115,0.55)';
+        roundRect(s.x + s.w - 28, yy + 8, 14, 10, 3, true, false);
+        ctx.fillStyle = '#6f6b67';
+        ctx.beginPath();
+        ctx.arc(s.x + 9, yy + 8, 3.3, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    function drawLadder() {
+      ctx.strokeStyle = 'rgba(185,195,210,0.36)';
+      ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.moveTo(1118, 742); ctx.lineTo(1034, 248); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(1164, 742); ctx.lineTo(1082, 248); ctx.stroke();
+      for (let y = 0; y < 9; y++) {
+        const py = 700 - y * 52;
+        const lx = 1110 - y * 8.4;
+        const rx = 1156 - y * 8.2;
+        ctx.beginPath(); ctx.moveTo(lx, py); ctx.lineTo(rx, py); ctx.stroke();
+      }
+    }
+
+    function drawPhosphor(t) {
+      const bob = Math.sin(t * 0.0012) * 3;
+      const x = 970;
+      const y = 465 + bob;
+
+      ctx.fillStyle = 'rgba(0,0,0,0.32)';
+      ctx.beginPath();
+      ctx.ellipse(990, 760, 82, 18, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.fillStyle = '#0a0d12';
+      ctx.beginPath();
+      ctx.moveTo(-8, 122); ctx.lineTo(28, 122); ctx.lineTo(44, 250); ctx.lineTo(-22, 250); ctx.closePath();
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(10, 88, 28, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillRect(-10, 36, 40, 24);
+      ctx.beginPath();
+      ctx.moveTo(-18, 60); ctx.lineTo(38, 60); ctx.lineTo(28, 68); ctx.lineTo(-8, 68); ctx.closePath();
+      ctx.fill();
+
+      ctx.strokeStyle = 'rgba(231,186,115,0.55)';
+      ctx.lineWidth = 2.2;
+      ctx.beginPath(); ctx.moveTo(24, 150); ctx.lineTo(95, 118 + Math.sin(t * 0.0015) * 3); ctx.stroke();
+      ctx.fillStyle = 'rgba(231,186,115,0.85)';
+      roundRect(92, 102 + Math.sin(t * 0.0015) * 3, 46, 20, 5, true, false);
+      ctx.fillStyle = 'rgba(255,255,255,0.35)';
+      ctx.fillRect(100, 110 + Math.sin(t * 0.0015) * 3, 28, 2);
+      ctx.fillRect(100, 116 + Math.sin(t * 0.0015) * 3, 20, 2);
+
+      ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+      ctx.beginPath(); ctx.moveTo(-2, 170); ctx.lineTo(-28, 214); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(20, 170); ctx.lineTo(4, 222); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-2, 246); ctx.lineTo(-18, 310); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(18, 246); ctx.lineTo(30, 312); ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawDust(t) {
+      dust.forEach(d => {
+        const x = d.x + Math.sin(t * 0.00035 * d.drift + d.phase) * 10;
+        const y = (d.y + t * 0.01 * d.drift) % (H + 20) - 10;
+        ctx.fillStyle = 'rgba(255,255,255,0.12)';
+        ctx.beginPath();
+        ctx.arc(x, y, d.r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    function draw() {
+      const t = performance.now();
+      drawBackground(t);
+      drawBoard(t);
+      drawLadder();
+      drawPhosphor(t);
+      drawDust(t);
+      requestAnimationFrame(draw);
+    }
+    draw();
+  </script>
+</body>
+</html>
