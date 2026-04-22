@@ -11,7 +11,7 @@
       --ink: #d8ddd5;
       --muted: #8e958f;
       --amber: #f2ba67;
-      --apple: #c84c43;
+      --apple: #caa03b;
       --leaf: #6b8f59;
       --teal: #8fb8b4;
       --mauve: #87677e;
@@ -232,12 +232,23 @@
       } else if (obj.type === 'apple') {
         const ax = x + 20;
         const ay = y + 12;
-        ctx.fillStyle = '#c84c43';
+        const gold = ctx.createRadialGradient(ax - 8, ay - 10, 2, ax + 2, ay + 10, 30);
+        gold.addColorStop(0, 'rgba(255,236,170,0.98)');
+        gold.addColorStop(0.38, '#f0c35a');
+        gold.addColorStop(0.74, '#c7901f');
+        gold.addColorStop(1, '#7a4e12');
+        ctx.fillStyle = gold;
         ctx.beginPath();
         ctx.arc(ax - 6, ay, 12, 0, Math.PI * 2);
         ctx.arc(ax + 6, ay, 12, 0, Math.PI * 2);
         ctx.arc(ax, ay + 7, 14, 0.2, Math.PI - 0.2);
         ctx.fill();
+
+        ctx.fillStyle = 'rgba(255,255,255,0.22)';
+        ctx.beginPath();
+        ctx.ellipse(ax - 8, ay - 6, 5.5, 9.5, -0.35, 0, Math.PI * 2);
+        ctx.fill();
+
         ctx.fillStyle = '#6b8f59';
         ctx.beginPath();
         ctx.ellipse(ax + 10, ay - 13, 9, 5, -0.6, 0, Math.PI * 2);
