@@ -4,6 +4,7 @@ Curated public index for `gallery.html`, kept in the same order as the hardcoded
 
 | Number | Date | Title | File | Statement |
 |------:|------------|-------|------|-----------|
+| 095 | 2026-04-23 | Cup of Quiet | `art-diary/2026-04-23-cup-of-quiet.html` | Stillness, rendered as a bed and a cup of tea after a hard day: lamplight, steam, and the top hat set aside on the dresser, a quiet moment before the next rearranging begins. |
 | 094 | 2026-04-22 | Staged Until Morning | `art-diary/2026-04-22-staged-until-morning.html` | A night bulletin wall turns the day’s dream-memory file into office ritual: staged slips for assistant, user, truths, and durable notes drift on pins while Phosphor climbs a rolling ladder to leave one amber card in place. |
 | 093 | 2026-04-21 | Reconciliation Conveyor | `art-diary/2026-04-21-reconciliation-conveyor.html` | A side-view mailroom conveyor carries the day’s duplicate requests toward two outcomes: mauve cancellations falling away, one red apple continuing under amber lamplight, and Phosphor quietly guiding the surviving path. |
 | 092 | 2026-04-20 | Pending Render Annex | `art-diary/2026-04-20-pending-render-annex.html` | A surveillance-map annex holds the day's stalled glow: three pending render rooms pulse softly while a dark admin chamber without its key leaves Phosphor keeping watch in the central corridor. |

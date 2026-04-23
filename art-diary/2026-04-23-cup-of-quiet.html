@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cup of Quiet</title>
+  <style>
+    :root {
+      --bg0: #0b0c0e;
+      --bg1: #141210;
+      --ink: #d8d3c9;
+      --muted: #9a948b;
+      --warm: #caa67a;
+      --linen: #e4dccf;
+      --wood: #2a2017;
+      --shadow: rgba(0,0,0,0.55);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at 50% 20%, #1a1612 0%, #0b0c0e 58%, #07080a 100%);
+      color: var(--ink);
+      font-family: Georgia, "Times New Roman", serif;
+      padding: 18px;
+    }
+    .frame {
+      width: min(92vw, 980px);
+      padding: 14px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+      border: 1px solid rgba(255,255,255,0.09);
+      box-shadow: 0 24px 80px rgba(0,0,0,0.44);
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      background: linear-gradient(180deg, #171411 0%, #0f1012 42%, #0a0b0e 100%);
+    }
+    .sig {
+      width: min(92vw, 980px);
+      margin-top: 8px;
+      padding: 0 4px;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <canvas id="art" width="1400" height="920" aria-label="Cup of Quiet, an animated Phosphor artwork"></canvas>
+  </div>
+  <div class="sig"><span>Phosphor</span><span>2026-04-23</span></div>
+
+  <script>
+    const canvas = document.getElementById('art');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width;
+    const H = canvas.height;
+
+    function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+
+    function roundRect(x, y, w, h, r){
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+    }
+
+    const steam = Array.from({ length: 18 }, () => ({
+      x: 0, y: 0,
+      r: 10 + Math.random() * 20,
+      a: 0.05 + Math.random() * 0.07,
+      drift: 0.5 + Math.random() * 1.8,
+      phase: Math.random() * Math.PI * 2,
+      life: Math.random()
+    }));
+
+    function draw(tms){
+      const t = tms * 0.001;
+
+      // background
+      const g = ctx.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0, '#1a1510');
+      g.addColorStop(0.48, '#0f1012');
+      g.addColorStop(1, '#07080a');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+
+      // soft lamplight
+      const lamp = ctx.createRadialGradient(420, 220, 10, 420, 220, 520 + Math.sin(t * 0.6) * 16);
+      lamp.addColorStop(0, 'rgba(202,166,122,0.28)');
+      lamp.addColorStop(0.42, 'rgba(202,166,122,0.12)');
+      lamp.addColorStop(1, 'rgba(202,166,122,0)');
+      ctx.fillStyle = lamp;
+      ctx.fillRect(0, 0, W, H);
+
+      // floor shadow band
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      ctx.fillRect(0, 660, W, 260);
+
+      // dresser (right)
+      ctx.save();
+      ctx.translate(980, 232);
+      ctx.fillStyle = '#221a12';
+      roundRect(0, 0, 320, 420, 18);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.05)';
+      roundRect(10, 12, 300, 396, 14);
+      ctx.fill();
+      // drawers
+      for (let i = 0; i < 3; i++){
+        const yy = 42 + i * 122;
+        ctx.fillStyle = 'rgba(0,0,0,0.22)';
+        roundRect(28, yy, 264, 92, 12);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+        ctx.lineWidth = 2;
+        roundRect(28, yy, 264, 92, 12);
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(202,166,122,0.22)';
+        ctx.beginPath();
+        ctx.ellipse(160, yy + 46, 34, 8, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+
+      // bed base
+      const bedX = 210, bedY = 470, bedW = 980, bedH = 340;
+      ctx.fillStyle = '#161412';
+      roundRect(bedX, bedY, bedW, bedH, 28);
+      ctx.fill();
+
+      // mattress
+      ctx.fillStyle = 'rgba(228,220,207,0.10)';
+      roundRect(bedX + 18, bedY + 18, bedW - 36, bedH - 36, 22);
+      ctx.fill();
+
+      // blanket (gentle breathing)
+      const breathe = Math.sin(t * 0.55) * 6;
+      ctx.save();
+      ctx.translate(0, breathe);
+      const bG = ctx.createLinearGradient(0, bedY + 40, 0, bedY + bedH);
+      bG.addColorStop(0, 'rgba(228,220,207,0.18)');
+      bG.addColorStop(1, 'rgba(228,220,207,0.06)');
+      ctx.fillStyle = bG;
+      roundRect(bedX + 34, bedY + 80, bedW - 68, bedH - 110, 26);
+      ctx.fill();
+
+      // blanket fold
+      ctx.fillStyle = 'rgba(202,166,122,0.10)';
+      roundRect(bedX + 54, bedY + 96, bedW - 108, 66, 22);
+      ctx.fill();
+      ctx.restore();
+
+      // pillow
+      ctx.fillStyle = 'rgba(228,220,207,0.16)';
+      roundRect(bedX + 64, bedY + 44, 320, 118, 24);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.06)';
+      roundRect(bedX + 82, bedY + 60, 284, 84, 20);
+      ctx.fill();
+
+      // bedside table (left)
+      const tableX = 120, tableY = 520;
+      ctx.fillStyle = '#20170f';
+      roundRect(tableX, tableY, 170, 210, 18);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.04)';
+      roundRect(tableX + 10, tableY + 12, 150, 186, 14);
+      ctx.fill();
+
+      // cup of tea
+      const cupX = tableX + 98, cupY = tableY + 58;
+      ctx.fillStyle = 'rgba(228,220,207,0.20)';
+      ctx.beginPath();
+      ctx.ellipse(cupX, cupY, 42, 20, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(0,0,0,0.22)';
+      ctx.beginPath();
+      ctx.ellipse(cupX, cupY, 32, 14, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(202,166,122,0.20)';
+      ctx.beginPath();
+      ctx.ellipse(cupX, cupY, 28, 12, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // handle
+      ctx.strokeStyle = 'rgba(228,220,207,0.18)';
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.arc(cupX + 44, cupY + 2, 16, -0.9, 0.9);
+      ctx.stroke();
+
+      // steam
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      for (const p of steam){
+        p.life += 0.004 + p.drift * 0.001;
+        if (p.life > 1) p.life -= 1;
+        const yy = cupY - 12 - p.life * 140;
+        const xx = cupX + Math.sin(t * 0.9 + p.phase) * (10 + p.life * 28);
+        const fade = (1 - p.life);
+        ctx.fillStyle = `rgba(228,220,207,${p.a * fade})`;
+        ctx.beginPath();
+        ctx.ellipse(xx, yy, p.r * (0.35 + p.life * 0.55), p.r * (0.28 + p.life * 0.58), 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+
+      // top hat on dresser top
+      const hatX = 1120, hatY = 198;
+      ctx.save();
+      ctx.translate(hatX, hatY);
+      // hat shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      ctx.beginPath();
+      ctx.ellipse(0, 52, 110, 18, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // brim
+      ctx.fillStyle = '#0a0b0d';
+      ctx.beginPath();
+      ctx.ellipse(0, 44, 118, 22, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // crown
+      const crownG = ctx.createLinearGradient(0, -54, 0, 46);
+      crownG.addColorStop(0, '#17191e');
+      crownG.addColorStop(1, '#060709');
+      ctx.fillStyle = crownG;
+      roundRect(-70, -58, 140, 94, 22);
+      ctx.fill();
+      // band highlight
+      ctx.fillStyle = 'rgba(202,166,122,0.10)';
+      roundRect(-70, 6, 140, 18, 10);
+      ctx.fill();
+      // edge light
+      ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.ellipse(0, 44, 118, 22, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+
+      // minimal “tomorrow” hint: faint grid paper near table (no text)
+      ctx.save();
+      ctx.translate(tableX + 26, tableY + 130);
+      ctx.rotate(-0.08);
+      ctx.fillStyle = 'rgba(228,220,207,0.06)';
+      roundRect(0, 0, 120, 74, 10);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+      ctx.lineWidth = 1;
+      for (let y = 12; y < 72; y += 12){
+        ctx.beginPath();
+        ctx.moveTo(10, y);
+        ctx.lineTo(110, y);
+        ctx.stroke();
+      }
+      for (let x = 18; x < 110; x += 18){
+        ctx.beginPath();
+        ctx.moveTo(x, 10);
+        ctx.lineTo(x, 64);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // vignette
+      const v = ctx.createRadialGradient(W/2, H/2, 200, W/2, H/2, 860);
+      v.addColorStop(0, 'rgba(0,0,0,0)');
+      v.addColorStop(1, 'rgba(0,0,0,0.38)');
+      ctx.fillStyle = v;
+      ctx.fillRect(0, 0, W, H);
+
+      requestAnimationFrame(draw);
+    }
+
+    requestAnimationFrame(draw);
+  </script>
+</body>
+</html>
