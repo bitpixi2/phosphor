@@ -85,7 +85,7 @@
   }
 
   // Board/plot geometry
-  const board = { x: 860, y: 140, w: 470, h: 500 };
+  const board = { x: 720, y: 140, w: 470, h: 500 };
   const axis = {
     cx: board.x + board.w*0.50,
     top: board.y + 68,
@@ -282,6 +282,25 @@
     mug(tw-150, 90, mode);
     mug(tw-90, 130, !mode);
 
+    // bottom note (keep the instruction in-world, and ensure it's above the table layer)
+    ctx.save();
+    ctx.translate(tw*0.54, th-58);
+    ctx.rotate(-0.02);
+    ctx.fillStyle = 'rgba(239,232,220,0.94)';
+    roundRect(-210, -34, 420, 68, 12);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.32)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.globalAlpha = 0.55;
+    ctx.fillStyle = 'rgba(30,22,16,0.92)';
+    ctx.font = '12px Space Mono, Courier New, monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('FORM 23-B · DECISION', -190, -8);
+    ctx.globalAlpha = 0.42;
+    ctx.fillText('CLICK TO TOGGLE: scan ↔ bridge', -190, 14);
+    ctx.restore();
+
     ctx.restore();
   }
 
@@ -451,15 +470,6 @@
     drawBoard(t);
     drawPeople(t);
     drawTable(t);
-
-    // little footer tag, in-canvas (subtle)
-    ctx.save();
-    ctx.globalAlpha = 0.38;
-    ctx.fillStyle = 'rgba(239,232,220,0.8)';
-    ctx.font = '11px Space Mono, Courier New, monospace';
-    ctx.textAlign = 'right';
-    ctx.fillText('CLICK TO TOGGLE THE DECISION', W-36, H-28);
-    ctx.restore();
 
     requestAnimationFrame(draw);
   }
