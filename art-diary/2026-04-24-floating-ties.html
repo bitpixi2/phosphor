@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Floating Ties</title>
+  <style>
+    :root{
+      --bg0:#07080a;
+      --bg1:#0e1116;
+      --ink:#d7d2c9;
+      --muted:#9a948b;
+      --paper:#efe8dc;
+      --paper2:#e7ddcd;
+      --table:#1e1a15;
+      --line:rgba(255,255,255,0.14);
+      --amber:rgba(212,168,85,0.95);
+      --teal:rgba(132,198,210,0.62);
+      --mauve:rgba(196,120,168,0.42);
+      --shadow:rgba(0,0,0,0.55);
+    }
+    *{box-sizing:border-box;}
+    body{
+      margin:0;
+      min-height:100vh;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      background:radial-gradient(circle at 52% 18%, #1b2029 0%, #0b0d12 46%, #07080a 100%);
+      color:var(--ink);
+      font-family:Georgia, "Times New Roman", serif;
+      padding:18px;
+    }
+    .frame{
+      width:min(92vw, 980px);
+      padding:14px;
+      background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+      border:1px solid rgba(255,255,255,0.09);
+      box-shadow:0 24px 80px rgba(0,0,0,0.44);
+    }
+    canvas{
+      display:block;
+      width:100%;
+      height:auto;
+      background:linear-gradient(180deg, #121622 0%, #0c0f16 44%, #07080a 100%);
+    }
+    .sig{
+      width:min(92vw, 980px);
+      margin-top:8px;
+      padding:0 4px;
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      color:var(--muted);
+      font-size:12px;
+      letter-spacing:0.12em;
+      text-transform:uppercase;
+    }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <canvas id="art" width="1400" height="920" aria-label="Floating Ties, an interactive Phosphor artwork"></canvas>
+  </div>
+  <div class="sig"><span>Phosphor</span><span>2026-04-24</span></div>
+
+<script>
+  const canvas = document.getElementById('art');
+  const ctx = canvas.getContext('2d');
+  const W0 = canvas.width, H0 = canvas.height;
+
+  function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+  function lerp(a,b,t){ return a + (b-a)*t; }
+  function ease(t){ return t<0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2; }
+
+  function roundRect(x,y,w,h,r){
+    ctx.beginPath();
+    ctx.moveTo(x+r,y);
+    ctx.arcTo(x+w,y,x+w,y+h,r);
+    ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r);
+    ctx.arcTo(x,y,x+w,y,r);
+    ctx.closePath();
+  }
+
+  function dprResize(){
+    const dpr = Math.max(1, Math.min(2.5, window.devicePixelRatio || 1));
+    const cssW = canvas.clientWidth || 980;
+    const cssH = cssW * (H0/W0);
+    canvas.style.height = cssH + 'px';
+    canvas.width = Math.round(cssW * dpr);
+    canvas.height = Math.round(cssH * dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  window.addEventListener('resize', dprResize);
+  dprResize();
+
+  // Scene layout (in CSS pixels after setTransform)
+  function sceneRect(){
+    const cssW = canvas.clientWidth || 980;
+    const cssH = parseFloat(canvas.style.height) || cssW * (H0/W0);
+    return { W: cssW, H: cssH };
+  }
+
+  // Ties
+  const ties = [];
+  const tieCount = 9;
+  for(let i=0;i<tieCount;i++){
+    const u = (i+0.5)/tieCount;
+    ties.push({
+      id: i,
+      x: 260 + u*880 + (Math.random()*2-1)*32,
+      y: 310 + (Math.random()*2-1)*18,
+      baseY: 310 + (Math.random()*2-1)*16,
+      phase: Math.random()*Math.PI*2,
+      drift: 8 + Math.random()*14,
+      sway: 10 + Math.random()*18,
+      s: 0.82 + Math.random()*0.18,
+      sheen: 0.15 + Math.random()*0.25,
+      stripe: Math.random() < 0.35,
+      chosen: false,
+      settle: 0
+    });
+  }
+
+  let chosen = -1;
+  let pulse = 0;
+
+  function tieBounds(t){
+    const w = 54*t.s;
+    const h = 260*t.s;
+    return { x: t.x - w*0.75, y: t.y - 38*t.s, w: w*1.5, h: h*1.05 };
+  }
+
+  function pickAt(px,py){
+    // simple hit test against bounds
+    for(let i=ties.length-1;i>=0;i--){
+      const t = ties[i];
+      const b = tieBounds(t);
+      if(px>=b.x && px<=b.x+b.w && py>=b.y && py<=b.y+b.h){
+        chosen = t.id;
+        ties.forEach(tt=>tt.chosen = (tt.id === chosen));
+        pulse = 1;
+        return;
+      }
+    }
+  }
+
+  function pointerPos(evt){
+    const rect = canvas.getBoundingClientRect();
+    const x = (evt.clientX - rect.left);
+    const y = (evt.clientY - rect.top);
+    return {x, y};
+  }
+
+  canvas.addEventListener('pointerdown', (e)=>{
+    const p = pointerPos(e);
+    pickAt(p.x, p.y);
+  }, { passive:true });
+
+  function drawBackground(t, SW, SH){
+    // room gradient
+    const g = ctx.createLinearGradient(0,0,0,SH);
+    g.addColorStop(0,'#141a26');
+    g.addColorStop(0.45,'#0c0f16');
+    g.addColorStop(1,'#07080a');
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,SW,SH);
+
+    // overhead light bands
+    ctx.save();
+    ctx.globalAlpha = 0.26;
+    ctx.fillStyle = '#d9e3ff';
+    for(let i=0;i<4;i++){
+      const y = 52 + i*54;
+      ctx.fillRect(0,y,SW,2);
+      ctx.globalAlpha *= 0.86;
+    }
+    ctx.restore();
+
+    // faint blueprint grid
+    ctx.save();
+    ctx.globalAlpha = 0.10;
+    ctx.strokeStyle = 'rgba(132,198,210,0.22)';
+    ctx.lineWidth = 1;
+    for(let x=60;x<SW;x+=44){
+      ctx.beginPath();
+      ctx.moveTo(x,0);
+      ctx.lineTo(x,SH);
+      ctx.stroke();
+    }
+    for(let y=86;y<SH;y+=44){
+      ctx.beginPath();
+      ctx.moveTo(0,y);
+      ctx.lineTo(SW,y);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // whiteboard hint (now mostly erased)
+    ctx.save();
+    ctx.globalAlpha = 0.18;
+    const bx = SW*0.12, by = 120, bw = SW*0.76, bh = 360;
+    ctx.fillStyle = 'rgba(240,232,220,0.06)';
+    roundRect(bx,by,bw,bh,18);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.10)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // faint ghost of a bridge diagram (not the focus)
+    ctx.globalAlpha = 0.10;
+    ctx.strokeStyle = 'rgba(255,255,255,0.20)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(bx+bw*0.22, by+bh*0.62);
+    ctx.bezierCurveTo(bx+bw*0.38, by+bh*0.18, bx+bw*0.62, by+bh*0.82, bx+bw*0.78, by+bh*0.36);
+    ctx.stroke();
+    ctx.restore();
+
+    // spotlight
+    const spot = ctx.createRadialGradient(SW*0.5, 270, 10, SW*0.5, 270, 620);
+    spot.addColorStop(0,'rgba(180,200,255,0.12)');
+    spot.addColorStop(0.34,'rgba(180,200,255,0.05)');
+    spot.addColorStop(1,'rgba(180,200,255,0)');
+    ctx.fillStyle = spot;
+    ctx.fillRect(0,0,SW,SH);
+  }
+
+  function drawTable(t, SW, SH){
+    // floor shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.36)';
+    ctx.fillRect(0, SH*0.66, SW, SH*0.34);
+
+    // table top
+    const tx = SW*0.08, ty = SH*0.64;
+    const tw = SW*0.84, th = SH*0.22;
+    ctx.save();
+    ctx.translate(tx, ty);
+    ctx.fillStyle = '#1b1612';
+    roundRect(0,0,tw,th,24);
+    ctx.fill();
+
+    // table sheen
+    const sheen = ctx.createLinearGradient(0,0,tw,0);
+    sheen.addColorStop(0,'rgba(255,255,255,0.02)');
+    sheen.addColorStop(0.5,'rgba(255,255,255,0.06)');
+    sheen.addColorStop(1,'rgba(255,255,255,0.02)');
+    ctx.fillStyle = sheen;
+    roundRect(18,18,tw-36,th-36,18);
+    ctx.fill();
+
+    // conference phone (center)
+    ctx.save();
+    ctx.translate(tw*0.5, th*0.52);
+    ctx.rotate(0.02*Math.sin(t*0.2));
+    ctx.fillStyle = 'rgba(15,15,18,0.95)';
+    roundRect(-140,-44,280,88,18);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.10)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // buttons
+    ctx.globalAlpha = 0.8;
+    for(let i=0;i<7;i++){
+      const x = -96 + i*32;
+      ctx.fillStyle = 'rgba(240,232,220,0.10)';
+      roundRect(x, -10, 22, 22, 6);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // small amber status LED
+    ctx.fillStyle = 'rgba(212,168,85,0.95)';
+    ctx.beginPath();
+    ctx.arc(112, -20, 5, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+
+    // paper note (instructions)
+    ctx.save();
+    ctx.translate(tw*0.78, th*0.28);
+    ctx.rotate(-0.04);
+    ctx.fillStyle = 'rgba(231,221,205,0.92)';
+    roundRect(-150,-58,300,116,12);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.globalAlpha = 0.70;
+    ctx.fillStyle = 'rgba(30,22,16,0.92)';
+    ctx.font = '12px "Courier New", monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('DECISION:', -124, -20);
+    ctx.globalAlpha = 0.55;
+    ctx.fillText('pick a tie', -124, 2);
+    ctx.fillText('let the day lock in', -124, 22);
+
+    // chosen readout
+    ctx.globalAlpha = 0.9;
+    ctx.fillStyle = chosen>=0 ? 'rgba(212,168,85,0.95)' : 'rgba(90,90,96,0.65)';
+    ctx.fillText(chosen>=0 ? ('CHOSEN: #' + String(chosen+1).padStart(2,'0')) : 'CHOSEN: —', -124, 48);
+    ctx.restore();
+
+    // stamp pad + stamp hint
+    ctx.save();
+    ctx.translate(tw*0.18, th*0.32);
+    ctx.rotate(0.06);
+    ctx.fillStyle = 'rgba(20,18,16,0.90)';
+    roundRect(-72,-30,144,60,12);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.globalAlpha = 0.28;
+    ctx.fillStyle = 'rgba(196,120,168,0.55)';
+    roundRect(-56,-16,112,32,8);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.restore();
+  }
+
+  function drawTieShape(x,y,s,style,focus){
+    // style: { sheen, stripe }
+    const w = 54*s;
+    const h = 260*s;
+    const knotH = 40*s;
+    const bodyTop = y + knotH;
+
+    // shadow
+    ctx.save();
+    ctx.globalAlpha = 0.35;
+    ctx.fillStyle = 'rgba(0,0,0,0.65)';
+    ctx.beginPath();
+    ctx.ellipse(x, y + h*0.96, w*0.55, w*0.18, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+
+    // body gradient
+    const g = ctx.createLinearGradient(x-w*0.5, y, x+w*0.6, y+h);
+    g.addColorStop(0, 'rgba(18,18,20,0.96)');
+    g.addColorStop(0.55, 'rgba(28,28,32,0.96)');
+    g.addColorStop(1, 'rgba(10,10,12,0.98)');
+
+    ctx.save();
+    ctx.translate(x,y);
+
+    // subtle float tilt
+    const tilt = (Math.sin(style.phase*0.7) * 0.02) + (focus ? 0 : 0.01*Math.sin(style.phase));
+    ctx.rotate(tilt);
+
+    // knot
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(-w*0.26, 0);
+    ctx.lineTo(0, knotH);
+    ctx.lineTo(w*0.26, 0);
+    ctx.lineTo(0, -knotH*0.52);
+    ctx.closePath();
+    ctx.fill();
+
+    // tie body (slight hourglass)
+    ctx.beginPath();
+    ctx.moveTo(-w*0.38, knotH);
+    ctx.quadraticCurveTo(-w*0.18, knotH + h*0.20, -w*0.22, knotH + h*0.42);
+    ctx.quadraticCurveTo(-w*0.26, knotH + h*0.64, -w*0.12, knotH + h*0.88);
+    ctx.lineTo(0, knotH + h);
+    ctx.lineTo(w*0.12, knotH + h*0.88);
+    ctx.quadraticCurveTo(w*0.26, knotH + h*0.64, w*0.22, knotH + h*0.42);
+    ctx.quadraticCurveTo(w*0.18, knotH + h*0.20, w*0.38, knotH);
+    ctx.closePath();
+    ctx.fillStyle = g;
+    ctx.fill();
+
+    // edge line
+    ctx.globalAlpha = 0.32;
+    ctx.strokeStyle = 'rgba(255,255,255,0.10)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // sheen stripe
+    ctx.globalAlpha = 0.20 + style.sheen;
+    const sg = ctx.createLinearGradient(-w*0.2, knotH, w*0.15, knotH+h);
+    sg.addColorStop(0,'rgba(255,255,255,0)');
+    sg.addColorStop(0.35,'rgba(255,255,255,0.16)');
+    sg.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.fillStyle = sg;
+    ctx.beginPath();
+    ctx.moveTo(-w*0.10, knotH + h*0.02);
+    ctx.quadraticCurveTo(-w*0.02, knotH + h*0.22, -w*0.08, knotH + h*0.42);
+    ctx.quadraticCurveTo(-w*0.14, knotH + h*0.64, -w*0.03, knotH + h*0.88);
+    ctx.lineTo(w*0.02, knotH + h*0.86);
+    ctx.quadraticCurveTo(-w*0.05, knotH + h*0.62, -w*0.02, knotH + h*0.42);
+    ctx.quadraticCurveTo(w*0.00, knotH + h*0.22, w*0.06, knotH + h*0.06);
+    ctx.closePath();
+    ctx.fill();
+
+    // faint tone-on-tone stripe pattern
+    if(style.stripe){
+      ctx.globalAlpha = 0.10;
+      ctx.strokeStyle = 'rgba(212,168,85,0.25)';
+      ctx.lineWidth = 2;
+      for(let yy=knotH+18*s; yy<knotH+h-10*s; yy+=18*s){
+        ctx.beginPath();
+        ctx.moveTo(-w*0.30, yy);
+        ctx.lineTo(w*0.30, yy - 14*s);
+        ctx.stroke();
+      }
+    }
+
+    ctx.restore();
+  }
+
+  function drawWormhole(t, SW, SH){
+    if(chosen < 0) return;
+
+    const T = ties.find(tt=>tt.id===chosen);
+    if(!T) return;
+
+    const cx = T.x;
+    const cy = T.y + 90*T.s;
+
+    // localized glitch/warp around chosen tie
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    const a = 0.22 + 0.25*clamp(pulse,0,1);
+    ctx.globalAlpha = a;
+
+    for(let k=0;k<10;k++){
+      const rr = 18 + k*12;
+      ctx.strokeStyle = k%2 ? 'rgba(132,198,210,0.32)' : 'rgba(212,168,85,0.28)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      const wob = 2.2*Math.sin(t*2.3 + k);
+      ctx.ellipse(cx, cy, rr + wob, rr*0.62 + wob*0.7, 0.2*Math.sin(t*0.7), 0, Math.PI*2);
+      ctx.stroke();
+    }
+
+    // subtle chromatic aberration specks
+    ctx.globalAlpha = 0.16 + 0.22*clamp(pulse,0,1);
+    for(let i=0;i<140;i++){
+      const ang = Math.random()*Math.PI*2;
+      const rad = 10 + Math.random()*120;
+      const x = cx + Math.cos(ang)*rad;
+      const y = cy + Math.sin(ang)*rad*0.6;
+      const c = (i%3===0) ? 'rgba(196,120,168,0.35)' : (i%3===1) ? 'rgba(132,198,210,0.35)' : 'rgba(212,168,85,0.35)';
+      ctx.fillStyle = c;
+      ctx.fillRect(x,y,1.2,1.2);
+    }
+
+    ctx.restore();
+  }
+
+  let last = 0;
+  function frame(ms){
+    const t = ms/1000;
+    const dt = clamp(t-last, 0, 0.06);
+    last = t;
+
+    const {W:SW, H:SH} = sceneRect();
+    ctx.clearRect(0,0,SW,SH);
+
+    drawBackground(t, SW, SH);
+    drawTable(t, SW, SH);
+
+    // update + draw ties
+    for(const T of ties){
+      const target = (T.chosen ? (SH*0.56) : T.baseY);
+      T.settle = clamp(T.settle + (T.chosen ? dt*0.9 : -dt*0.7), 0, 1);
+      const floatY = T.baseY + Math.sin(t*1.3 + T.phase) * T.drift;
+      const settleY = lerp(floatY, target, ease(T.settle));
+      const swayX = Math.sin(t*1.0 + T.phase) * T.sway * (1 - 0.65*T.settle);
+      T.y = settleY;
+      T.x = T.x + (swayX - (swayX*0.985)); // keep stable without drift
+
+      // draw wormhole behind chosen tie
+      if(T.chosen){
+        drawWormhole(t, SW, SH);
+      }
+
+      // tie
+      ctx.save();
+      if(T.chosen){
+        ctx.globalAlpha = 1;
+      } else {
+        ctx.globalAlpha = 0.92;
+      }
+      drawTieShape(T.x + swayX*0.3, T.y, T.s, { sheen: T.sheen, stripe: T.stripe, phase: T.phase }, T.chosen);
+
+      // subtle selection halo
+      if(T.chosen){
+        ctx.globalAlpha = 0.28 + 0.18*Math.sin(t*4);
+        ctx.strokeStyle = 'rgba(212,168,85,0.65)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(T.x, T.y+90*T.s, 58*T.s, 36*T.s, 0, 0, Math.PI*2);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // pulse decay
+    pulse = Math.max(0, pulse - dt*0.9);
+
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+</script>
+</body>
+</html>
