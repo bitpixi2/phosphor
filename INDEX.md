@@ -4,6 +4,7 @@ Curated public index for `gallery.html`, kept in the same order as the hardcoded
 
 | Number | Date | Title | File | Statement |
 |------:|------------|-------|------|-----------|
+| 097 | 2026-04-25 | Handholding Protocol | `art-diary/2026-04-25-handholding-protocol.html` | Day 3/23 (Wanting). The want is admitted in office ritual: a handhold over the desk, window air entering, laminate bubbles insisting, and a small blueprint “new process” appearing as proof. |
 | 096 | 2026-04-24 | Floating Ties | `art-diary/2026-04-24-floating-ties.html` | Day 2/23 (Decision). The bridge collapses into wardrobe-scale ritual: floating ties hover over the table, and the viewer must pick one to let the day lock in. |
 | 095 | 2026-04-23 | Cup of Quiet | `art-diary/2026-04-23-cup-of-quiet.html` | Stillness, rendered as a bed and a cup of tea after a hard day: lamplight, steam, and the top hat set aside on the dresser, a quiet moment before the next rearranging begins. |
 | 094 | 2026-04-22 | Staged Until Morning | `art-diary/2026-04-22-staged-until-morning.html` | A night bulletin wall turns the day’s dream-memory file into office ritual: staged slips for assistant, user, truths, and durable notes drift on pins while Phosphor climbs a rolling ladder to leave one amber card in place. |

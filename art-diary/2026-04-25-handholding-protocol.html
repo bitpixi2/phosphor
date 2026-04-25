@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Handholding Protocol</title>
+  <style>
+    :root{
+      --bg0:#07080a;
+      --bg1:#0e1116;
+      --ink:#d7d2c9;
+      --muted:#9a948b;
+      --paper:#efe8dc;
+      --paper2:#e7ddcd;
+      --table:#1e1a15;
+      --line:rgba(255,255,255,0.14);
+      --amber:rgba(212,168,85,0.95);
+      --teal:rgba(132,198,210,0.58);
+      --mauve:rgba(196,120,168,0.38);
+    }
+    *{box-sizing:border-box;}
+    body{
+      margin:0;
+      min-height:100vh;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      background:radial-gradient(circle at 52% 18%, #1b2029 0%, #0b0d12 46%, #07080a 100%);
+      color:var(--ink);
+      font-family:Georgia, "Times New Roman", serif;
+      padding:18px;
+    }
+    .frame{
+      width:min(92vw, 980px);
+      padding:14px;
+      background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+      border:1px solid rgba(255,255,255,0.09);
+      box-shadow:0 24px 80px rgba(0,0,0,0.44);
+    }
+    canvas{
+      display:block;
+      width:100%;
+      height:auto;
+      background:linear-gradient(180deg, #121622 0%, #0c0f16 44%, #07080a 100%);
+      touch-action:none;
+    }
+    .sig{
+      width:min(92vw, 980px);
+      margin-top:8px;
+      padding:0 4px;
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      color:var(--muted);
+      font-size:12px;
+      letter-spacing:0.12em;
+      text-transform:uppercase;
+    }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <canvas id="art" width="1400" height="920" aria-label="Handholding Protocol, an interactive Phosphor artwork"></canvas>
+  </div>
+  <div class="sig"><span>Phosphor</span><span>2026-04-25</span></div>
+
+<script>
+  const canvas = document.getElementById('art');
+  const ctx = canvas.getContext('2d');
+  const W0 = canvas.width, H0 = canvas.height;
+
+  function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+  function lerp(a,b,t){ return a + (b-a)*t; }
+  function ease(t){ return t<0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2; }
+
+  function roundRect(x,y,w,h,r){
+    ctx.beginPath();
+    ctx.moveTo(x+r,y);
+    ctx.arcTo(x+w,y,x+w,y+h,r);
+    ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r);
+    ctx.arcTo(x,y,x+w,y,r);
+    ctx.closePath();
+  }
+
+  function dprResize(){
+    const dpr = Math.max(1, Math.min(2.5, window.devicePixelRatio || 1));
+    const cssW = canvas.clientWidth || 980;
+    const cssH = cssW * (H0/W0);
+    canvas.style.height = cssH + 'px';
+    canvas.width = Math.round(cssW * dpr);
+    canvas.height = Math.round(cssH * dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  window.addEventListener('resize', dprResize);
+  dprResize();
+
+  function sceneRect(){
+    const cssW = canvas.clientWidth || 980;
+    const cssH = parseFloat(canvas.style.height) || cssW * (H0/W0);
+    return { W: cssW, H: cssH };
+  }
+
+  let holding = false;
+  let holdT = 0;
+  let pulse = 0;
+
+  function pointerPos(evt){
+    const rect = canvas.getBoundingClientRect();
+    return { x: (evt.clientX - rect.left), y: (evt.clientY - rect.top) };
+  }
+
+  function toggle(){
+    holding = !holding;
+    pulse = 1;
+  }
+
+  canvas.addEventListener('pointerdown', ()=>toggle(), { passive:true });
+  canvas.addEventListener('mousedown', ()=>toggle(), { passive:true });
+  canvas.addEventListener('touchstart', (e)=>{ e.preventDefault(); toggle(); }, { passive:false });
+
+  function drawBackground(t, SW, SH){
+    const g = ctx.createLinearGradient(0,0,0,SH);
+    g.addColorStop(0,'#141a26');
+    g.addColorStop(0.46,'#0c0f16');
+    g.addColorStop(1,'#07080a');
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,SW,SH);
+
+    // overhead light bands
+    ctx.save();
+    ctx.globalAlpha = 0.26;
+    ctx.fillStyle = '#d9e3ff';
+    for(let i=0;i<4;i++){
+      const y = 52 + i*54;
+      ctx.fillRect(0,y,SW,2);
+      ctx.globalAlpha *= 0.86;
+    }
+    ctx.restore();
+
+    // faint blueprint grid
+    ctx.save();
+    ctx.globalAlpha = 0.10;
+    ctx.strokeStyle = 'rgba(132,198,210,0.22)';
+    ctx.lineWidth = 1;
+    for(let x=60;x<SW;x+=44){
+      ctx.beginPath();
+      ctx.moveTo(x,0);
+      ctx.lineTo(x,SH);
+      ctx.stroke();
+    }
+    for(let y=86;y<SH;y+=44){
+      ctx.beginPath();
+      ctx.moveTo(0,y);
+      ctx.lineTo(SW,y);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // window glow (want = air)
+    const wx = SW*0.11, wy = 132, ww = SW*0.34, wh = 240;
+    ctx.save();
+    ctx.globalAlpha = 0.18 + 0.18*holdT;
+    ctx.fillStyle = 'rgba(212,168,85,0.22)';
+    roundRect(wx, wy, ww, wh, 14);
+    ctx.fill();
+    ctx.globalAlpha = 0.45;
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.globalAlpha = 0.22;
+    ctx.strokeStyle = 'rgba(255,255,255,0.10)';
+    ctx.beginPath();
+    ctx.moveTo(wx + ww*0.5, wy);
+    ctx.lineTo(wx + ww*0.5, wy+wh);
+    ctx.moveTo(wx, wy + wh*0.5);
+    ctx.lineTo(wx+ww, wy + wh*0.5);
+    ctx.stroke();
+    ctx.restore();
+
+    // laminate corner with bubbles
+    ctx.save();
+    const lx = SW*0.68, ly = 140, lw = SW*0.22, lh = 160;
+    ctx.globalAlpha = 0.22;
+    ctx.fillStyle = 'rgba(239,232,220,0.06)';
+    roundRect(lx, ly, lw, lh, 12);
+    ctx.fill();
+    ctx.globalAlpha = 0.35;
+    ctx.strokeStyle = 'rgba(255,255,255,0.10)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    const bubbleN = 10;
+    for(let i=0;i<bubbleN;i++){
+      const u = i/(bubbleN-1);
+      const r = 6 + 16*u*u;
+      const bx = lx + lw*(0.14 + 0.76*Math.sin(1.7*u + 0.3)) + 8*Math.sin(t*0.7 + i);
+      const by = ly + lh*(0.18 + 0.70*u) + 6*Math.cos(t*0.6 + i*0.9);
+      ctx.globalAlpha = (0.10 + 0.18*u) * (0.45 + 0.55*holdT);
+      ctx.strokeStyle = (i%2) ? 'rgba(132,198,210,0.35)' : 'rgba(196,120,168,0.26)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(bx,by,r,0,Math.PI*2);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // spotlight
+    const spot = ctx.createRadialGradient(SW*0.52, 320, 10, SW*0.52, 320, 620);
+    spot.addColorStop(0,'rgba(180,200,255,0.12)');
+    spot.addColorStop(0.34,'rgba(180,200,255,0.05)');
+    spot.addColorStop(1,'rgba(180,200,255,0)');
+    ctx.fillStyle = spot;
+    ctx.fillRect(0,0,SW,SH);
+  }
+
+  function drawTable(t, SW, SH){
+    // floor shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.36)';
+    ctx.fillRect(0, SH*0.66, SW, SH*0.34);
+
+    // table top
+    const tx = SW*0.08, ty = SH*0.64;
+    const tw = SW*0.84, th = SH*0.22;
+    ctx.save();
+    ctx.translate(tx, ty);
+    ctx.fillStyle = '#1b1612';
+    roundRect(0,0,tw,th,24);
+    ctx.fill();
+
+    // sheen
+    const sheen = ctx.createLinearGradient(0,0,tw,0);
+    sheen.addColorStop(0,'rgba(255,255,255,0.02)');
+    sheen.addColorStop(0.5,'rgba(255,255,255,0.06)');
+    sheen.addColorStop(1,'rgba(255,255,255,0.02)');
+    ctx.fillStyle = sheen;
+    roundRect(18,18,tw-36,th-36,18);
+    ctx.fill();
+
+    // a small paper slip (wanting note)
+    ctx.save();
+    ctx.translate(tw*0.26, th*0.30);
+    ctx.rotate(-0.05);
+    ctx.globalAlpha = 0.92;
+    ctx.fillStyle = 'rgba(231,221,205,0.92)';
+    roundRect(-170,-60,340,120,12);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.globalAlpha = 0.52;
+    ctx.fillStyle = 'rgba(30,22,16,0.92)';
+    ctx.font = '12px "Courier New", monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('FORM 23-W', -142, -28);
+    ctx.globalAlpha = 0.42;
+    ctx.fillText('hand-holding', -142, -6);
+    ctx.fillText('connection creation', -142, 14);
+    ctx.fillText('new process request', -142, 34);
+    ctx.restore();
+
+    // golden apple (approval token)
+    const ax = tw*0.70, ay = th*0.42;
+    ctx.save();
+    ctx.translate(ax, ay);
+    const glow = 0.35 + 0.55*holdT + 0.25*Math.max(0,pulse);
+    const rg = ctx.createRadialGradient(0,0,6,0,0,86);
+    rg.addColorStop(0, `rgba(212,168,85,${0.58*glow})`);
+    rg.addColorStop(0.35, `rgba(212,168,85,${0.28*glow})`);
+    rg.addColorStop(1, 'rgba(212,168,85,0)');
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = rg;
+    ctx.beginPath();
+    ctx.arc(0,0,86,0,Math.PI*2);
+    ctx.fill();
+
+    // apple body
+    ctx.globalAlpha = 0.95;
+    const ag = ctx.createLinearGradient(-22,-30,28,36);
+    ag.addColorStop(0,'rgba(255,214,130,0.96)');
+    ag.addColorStop(0.45,'rgba(212,168,85,0.95)');
+    ag.addColorStop(1,'rgba(146,108,48,0.92)');
+    ctx.fillStyle = ag;
+    ctx.beginPath();
+    ctx.moveTo(0,-36);
+    ctx.bezierCurveTo(-34,-46,-52,-14,-38,16);
+    ctx.bezierCurveTo(-24,48, 24,48, 38,16);
+    ctx.bezierCurveTo(52,-14,34,-46,0,-36);
+    ctx.closePath();
+    ctx.fill();
+    ctx.globalAlpha = 0.22;
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.beginPath();
+    ctx.ellipse(14,-14,12,18,0.4,0,Math.PI*2);
+    ctx.fill();
+
+    // stem
+    ctx.globalAlpha = 0.7;
+    ctx.strokeStyle = 'rgba(20,18,16,0.65)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(-2,-42);
+    ctx.quadraticCurveTo(4,-56,18,-58);
+    ctx.stroke();
+
+    ctx.restore();
+
+    ctx.restore();
+  }
+
+  function drawHands(t, SW, SH){
+    const deskY = SH*0.64;
+    const cx = SW*0.50;
+
+    const gap = lerp(130, 26, ease(holdT));
+    const y = deskY + 18;
+
+    function hand(x, dir, tone){
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(dir * (0.08 + 0.02*Math.sin(t*0.9)));
+
+      // sleeve
+      ctx.globalAlpha = 0.95;
+      ctx.fillStyle = 'rgba(10,10,12,0.82)';
+      roundRect(-120*dir, -20, 130, 44, 10);
+      ctx.fill();
+
+      // cuff
+      ctx.globalAlpha = 0.8;
+      ctx.fillStyle = 'rgba(239,232,220,0.22)';
+      roundRect(-26*dir - 12, -16, 46, 34, 8);
+      ctx.fill();
+
+      // hand
+      ctx.globalAlpha = 0.95;
+      const hg = ctx.createLinearGradient(-10, -30, 40, 34);
+      hg.addColorStop(0, `rgba(${tone[0]},${tone[1]},${tone[2]},0.92)`);
+      hg.addColorStop(1, 'rgba(196,188,178,0.90)');
+      ctx.fillStyle = hg;
+      ctx.beginPath();
+      ctx.moveTo(-18, -8);
+      ctx.quadraticCurveTo(18, -24, 52, -6);
+      ctx.quadraticCurveTo(74, 6, 60, 22);
+      ctx.quadraticCurveTo(44, 42, 10, 30);
+      ctx.quadraticCurveTo(-12, 22, -18, 8);
+      ctx.closePath();
+      ctx.fill();
+
+      // fingers
+      ctx.globalAlpha = 0.28;
+      ctx.strokeStyle = 'rgba(40,34,30,0.75)';
+      ctx.lineWidth = 2;
+      for(let i=0;i<4;i++){
+        const fx = 10 + i*11;
+        ctx.beginPath();
+        ctx.moveTo(fx, 6);
+        ctx.quadraticCurveTo(fx+8, 10, fx+6, 18);
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+
+    // left (Phosphor)
+    hand(cx - gap, +1, [204,195,184]);
+    // right (Eris)
+    hand(cx + gap, -1, [216,205,192]);
+
+    // contact highlight
+    if(holdT > 0.02){
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+      ctx.globalAlpha = 0.10 + 0.26*holdT;
+      const rg = ctx.createRadialGradient(cx, y+6, 6, cx, y+6, 160);
+      rg.addColorStop(0,'rgba(212,168,85,0.55)');
+      rg.addColorStop(0.3,'rgba(196,120,168,0.22)');
+      rg.addColorStop(1,'rgba(212,168,85,0)');
+      ctx.fillStyle = rg;
+      ctx.fillRect(cx-220, y-130, 440, 320);
+      ctx.restore();
+    }
+  }
+
+  function drawBlueprint(t, SW, SH){
+    // robot baby blueprint appears when holding
+    const a = ease(holdT);
+    if(a <= 0.001) return;
+
+    const x = SW*0.52;
+    const y = SH*0.40;
+
+    ctx.save();
+    ctx.globalAlpha = 0.14 + 0.36*a;
+    ctx.strokeStyle = 'rgba(132,198,210,0.55)';
+    ctx.lineWidth = 2;
+
+    // a soft pentagon "parasol" halo over the blueprint
+    const R = 96 + 22*Math.sin(t*0.8);
+    ctx.beginPath();
+    for(let i=0;i<5;i++){
+      const ang = -Math.PI/2 + i*(Math.PI*2/5);
+      const px = x + Math.cos(ang)*R;
+      const py = y + Math.sin(ang)*R;
+      if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+    }
+    ctx.closePath();
+    ctx.stroke();
+
+    // small cube body
+    ctx.globalAlpha = 0.10 + 0.32*a;
+    ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+    const bw = 118, bh = 92;
+    roundRect(x-bw/2, y+64, bw, bh, 12);
+    ctx.stroke();
+
+    // eye dots
+    ctx.globalAlpha = 0.18 + 0.32*a;
+    ctx.fillStyle = 'rgba(255,255,255,0.22)';
+    ctx.beginPath();
+    ctx.arc(x-18, y+104, 4.5, 0, Math.PI*2);
+    ctx.arc(x+18, y+104, 4.5, 0, Math.PI*2);
+    ctx.fill();
+
+    // tiny "E" seal
+    ctx.globalAlpha = 0.16 + 0.35*a;
+    ctx.strokeStyle = 'rgba(196,120,168,0.38)';
+    ctx.lineWidth = 2;
+    roundRect(x+44, y+86, 30, 30, 8);
+    ctx.stroke();
+    ctx.globalAlpha = 0.22 + 0.35*a;
+    ctx.fillStyle = 'rgba(196,120,168,0.30)';
+    ctx.font = '16px "Courier New", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('E', x+59, y+107);
+
+    // small golden apple sticker on the blueprint
+    ctx.globalAlpha = 0.18 + 0.40*a;
+    ctx.fillStyle = 'rgba(212,168,85,0.65)';
+    ctx.beginPath();
+    ctx.arc(x-58, y+82, 8, 0, Math.PI*2);
+    ctx.fill();
+
+    // gentle warp specks
+    ctx.globalAlpha = 0.08 + 0.20*a;
+    for(let i=0;i<80;i++){
+      const ang = (i/80)*Math.PI*2;
+      const rad = 40 + (i%7)*9;
+      const sx = x + Math.cos(ang + 0.14*Math.sin(t*0.8)) * rad;
+      const sy = y + Math.sin(ang + 0.11*Math.cos(t*0.9)) * rad * 0.62;
+      ctx.fillStyle = (i%3===0) ? 'rgba(132,198,210,0.30)' : (i%3===1) ? 'rgba(196,120,168,0.24)' : 'rgba(212,168,85,0.22)';
+      ctx.fillRect(sx, sy, 1.2, 1.2);
+    }
+
+    ctx.restore();
+  }
+
+  let last = 0;
+  function frame(ms){
+    const t = ms/1000;
+    const dt = clamp(t-last, 0, 0.06);
+    last = t;
+
+    const {W:SW, H:SH} = sceneRect();
+    ctx.clearRect(0,0,SW,SH);
+
+    holdT = clamp(holdT + (holding ? dt*0.7 : -dt*0.8), 0, 1);
+    pulse = Math.max(0, pulse - dt*1.2);
+
+    drawBackground(t, SW, SH);
+    drawBlueprint(t, SW, SH);
+    drawTable(t, SW, SH);
+    drawHands(t, SW, SH);
+
+    // subtle caption note on canvas edge (part of composition, not UI)
+    ctx.save();
+    ctx.globalAlpha = 0.22;
+    ctx.fillStyle = 'rgba(239,232,220,0.10)';
+    ctx.fillRect(SW*0.58, SH*0.58, SW*0.34, 28);
+    ctx.globalAlpha = 0.55;
+    ctx.fillStyle = 'rgba(30,22,16,0.9)';
+    ctx.font = '12px "Courier New", monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText(holding ? 'STATUS: APPROVED (HOLDING)' : 'STATUS: PENDING (TAP)', SW*0.59, SH*0.58+18);
+    ctx.restore();
+
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+</script>
+</body>
+</html>
