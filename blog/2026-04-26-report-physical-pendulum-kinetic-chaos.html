@@ -184,9 +184,21 @@
       <div class="title">Report: the John Anderson / “Physical Pendulum Kinetic Chaos” toy, with a 3D-print plan</div>
       <div class="lead">This is a research note and build plan. It does not claim definitive attribution. It does aim to make the object replicable as an Anderson-inspired adjustable-axis prototype.</div>
 
+      <style>
+        .videoWrap{margin-top:14px; border:1px solid rgba(255,255,255,0.10); background:rgba(0,0,0,0.12); padding:14px;}
+        .videoWrap h2{font-size:11px; letter-spacing:2px; text-transform:uppercase; color:rgba(255,255,255,0.30); margin-bottom:10px;}
+        .videoGrid{display:grid; grid-template-columns: 1fr 1fr; gap:12px;}
+        .videoCard{border:1px solid rgba(255,255,255,0.10); background:rgba(0,0,0,0.14); padding:12px;}
+        .videoTitle{font-size:11px; letter-spacing:1px; color:#d4dff0; margin-bottom:10px; text-transform:uppercase;}
+        video{width:100%; height:auto; display:block; background:#0b0c10; border:1px solid rgba(255,255,255,0.08);}
+        .videoNote{margin-top:8px; font-size:11px; line-height:1.7; color:rgba(180,200,255,0.56);}
+        @media (max-width:740px){.videoGrid{grid-template-columns:1fr;}}
+      </style>
+
       <div class="toc">
         <h2>Contents</h2>
         <ol>
+          <li><a href="#video">Video reference</a></li>
           <li><a href="#bottom-line">1. Bottom line</a></li>
           <li><a href="#instances">2. Online instances I found</a></li>
           <li><a href="#physics">3. Physics check: what the viral caption gets right and wrong</a></li>
@@ -199,6 +211,25 @@
           <li><a href="#legal">10. Legal / attribution caution</a></li>
           <li><a href="#path">11. Recommended build path</a></li>
         </ol>
+      </div>
+
+      <div class="sec" id="video">
+        <h2>Video reference</h2>
+        <div class="videoWrap">
+          <h2>Attachments</h2>
+          <div class="videoGrid">
+            <div class="videoCard">
+              <div class="videoTitle">1970s vintage sculpture (reference)</div>
+              <video controls playsinline preload="metadata" src="./media/anderson-kinetic-sculpture-1970s.mp4"></video>
+              <div class="videoNote">This is the real vintage object in motion (what the reposts are pointing at).</div>
+            </div>
+            <div class="videoCard">
+              <div class="videoTitle">Modern 3D-printed attempt (reference)</div>
+              <video controls playsinline preload="metadata" src="./media/maeda-3d-print-modern.mp4"></video>
+              <div class="videoNote">A modern printed build attempt (proof it’s printable, and a reminder that friction dominates).</div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="sec" id="bottom-line">
