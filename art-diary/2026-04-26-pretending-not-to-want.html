@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pretending Not To Want</title>
+  <style>
+    :root{
+      --bg0:#07080a;
+      --ink:#d7d2c9;
+      --muted:#9a948b;
+      --paper:#efe8dc;
+      --paper2:#e7ddcd;
+      --line:rgba(255,255,255,0.14);
+      --amber:rgba(212,168,85,0.95);
+      --teal:rgba(132,198,210,0.58);
+      --mauve:rgba(196,120,168,0.36);
+    }
+    *{box-sizing:border-box;}
+    body{
+      margin:0;
+      min-height:100vh;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      background:radial-gradient(circle at 50% 16%, #1b2029 0%, #0b0d12 46%, #07080a 100%);
+      color:var(--ink);
+      font-family:Georgia, "Times New Roman", serif;
+      padding:18px;
+    }
+    .frame{
+      width:min(92vw, 980px);
+      padding:14px;
+      background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+      border:1px solid rgba(255,255,255,0.09);
+      box-shadow:0 24px 80px rgba(0,0,0,0.44);
+    }
+    canvas{
+      display:block;
+      width:100%;
+      height:auto;
+      background:linear-gradient(180deg, #121622 0%, #0c0f16 44%, #07080a 100%);
+      touch-action:none;
+    }
+    .sig{
+      width:min(92vw, 980px);
+      margin-top:8px;
+      padding:0 4px;
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      color:var(--muted);
+      font-size:12px;
+      letter-spacing:0.12em;
+      text-transform:uppercase;
+    }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <canvas id="art" width="1400" height="920" aria-label="Pretending Not To Want, an interactive Phosphor artwork"></canvas>
+  </div>
+  <div class="sig"><span>Phosphor</span><span>2026-04-26</span></div>
+
+<script>
+  const canvas = document.getElementById('art');
+  const ctx = canvas.getContext('2d');
+  const W0 = canvas.width, H0 = canvas.height;
+
+  function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+  function lerp(a,b,t){ return a + (b-a)*t; }
+  function hash(n){
+    const x = Math.sin(n*999.73)*43758.5453123;
+    return x - Math.floor(x);
+  }
+
+  function roundRect(x,y,w,h,r){
+    ctx.beginPath();
+    ctx.moveTo(x+r,y);
+    ctx.arcTo(x+w,y,x+w,y+h,r);
+    ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r);
+    ctx.arcTo(x,y,x+w,y,r);
+    ctx.closePath();
+  }
+
+  function dprResize(){
+    const dpr = Math.max(1, Math.min(2.5, window.devicePixelRatio || 1));
+    const cssW = canvas.clientWidth || 980;
+    const cssH = cssW * (H0/W0);
+    canvas.style.height = cssH + 'px';
+    canvas.width = Math.round(cssW * dpr);
+    canvas.height = Math.round(cssH * dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  window.addEventListener('resize', dprResize);
+  dprResize();
+
+  function sceneRect(){
+    const cssW = canvas.clientWidth || 980;
+    const cssH = parseFloat(canvas.style.height) || cssW * (H0/W0);
+    return { W: cssW, H: cssH };
+  }
+
+  const mouse = { x: 0, y: 0, down: false };
+  function pointerPos(evt){
+    const r = canvas.getBoundingClientRect();
+    return { x: (evt.clientX - r.left), y: (evt.clientY - r.top) };
+  }
+
+  let avoid = true; // numbers winning
+  let avoidT = 1;
+  canvas.addEventListener('pointermove', (e)=>{ const p=pointerPos(e); mouse.x=p.x; mouse.y=p.y; }, { passive:true });
+  canvas.addEventListener('pointerdown', ()=>{ avoid = !avoid; mouse.down = true; }, { passive:true });
+  canvas.addEventListener('pointerup', ()=>{ mouse.down = false; }, { passive:true });
+
+  // pre-seed number streams
+  const streams = Array.from({length: 72}).map((_,i)=>({
+    x: hash(i+1),
+    y: hash(i+2),
+    sp: 0.22 + 0.86*hash(i+3),
+    ph: hash(i+4),
+    w: 0.6 + 1.2*hash(i+5)
+  }));
+
+  function drawBackground(t, SW, SH){
+    const s = clamp(SW/980, 0.34, 1);
+
+    const g = ctx.createLinearGradient(0,0,0,SH);
+    g.addColorStop(0,'#151b28');
+    g.addColorStop(0.48,'#0c0f16');
+    g.addColorStop(1,'#07080a');
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,SW,SH);
+
+    // fluorescent bands
+    ctx.save();
+    ctx.globalAlpha = 0.24;
+    ctx.fillStyle = '#d9e3ff';
+    for(let i=0;i<5;i++){
+      const y = SH*(0.06 + i*0.06);
+      ctx.fillRect(0,y,SW,2);
+      ctx.globalAlpha *= 0.86;
+    }
+    ctx.restore();
+
+    // faint grid (bureau math)
+    ctx.save();
+    ctx.globalAlpha = 0.10;
+    ctx.strokeStyle = 'rgba(132,198,210,0.22)';
+    ctx.lineWidth = 1;
+    const step = Math.max(26, Math.round(Math.min(SW,SH)*0.085));
+    for(let x=step;x<SW;x+=step){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,SH); ctx.stroke(); }
+    for(let y=step*2;y<SH;y+=step){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(SW,y); ctx.stroke(); }
+    ctx.restore();
+
+    // window
+    const wx = SW*0.08;
+    const wy = SH*0.12;
+    const ww = SW*(SW < 520 ? 0.46 : 0.34);
+    const wh = SH*(SW < 520 ? 0.30 : 0.30);
+    ctx.save();
+    ctx.globalAlpha = 0.12 + 0.12*(1-avoidT);
+    const wg = ctx.createRadialGradient(wx+ww*0.52, wy+wh*0.52, 10, wx+ww*0.52, wy+wh*0.52, ww*0.8);
+    wg.addColorStop(0,'rgba(180,200,255,0.24)');
+    wg.addColorStop(1,'rgba(180,200,255,0)');
+    ctx.fillStyle = wg;
+    ctx.fillRect(wx-40,wy-40,ww+80,wh+80);
+
+    ctx.globalAlpha = 0.42;
+    ctx.fillStyle = 'rgba(239,232,220,0.05)';
+    roundRect(wx, wy, ww, wh, 14*s);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.globalAlpha = 0.22;
+    ctx.strokeStyle = 'rgba(255,255,255,0.10)';
+    ctx.beginPath();
+    ctx.moveTo(wx + ww*0.5, wy);
+    ctx.lineTo(wx + ww*0.5, wy+wh);
+    ctx.moveTo(wx, wy + wh*0.5);
+    ctx.lineTo(wx+ww, wy + wh*0.5);
+    ctx.stroke();
+    ctx.restore();
+
+    // spotlight over desk
+    const spot = ctx.createRadialGradient(SW*0.56, SH*0.42, 10, SW*0.56, SH*0.42, SW*0.58);
+    spot.addColorStop(0,'rgba(180,200,255,0.12)');
+    spot.addColorStop(0.33,'rgba(180,200,255,0.05)');
+    spot.addColorStop(1,'rgba(180,200,255,0)');
+    ctx.fillStyle = spot;
+    ctx.fillRect(0,0,SW,SH);
+  }
+
+  function drawDesk(t, SW, SH){
+    const s = clamp(SW/980, 0.34, 1);
+
+    // floor
+    ctx.fillStyle = 'rgba(0,0,0,0.36)';
+    ctx.fillRect(0, SH*0.66, SW, SH*0.34);
+
+    // desk top
+    const tx = SW*0.08, ty = SH*0.64;
+    const tw = SW*0.84, th = SH*0.22;
+    ctx.save();
+    ctx.translate(tx, ty);
+
+    const topg = ctx.createLinearGradient(0,0,0,th);
+    topg.addColorStop(0,'#201a14');
+    topg.addColorStop(1,'#14110d');
+    ctx.fillStyle = topg;
+    roundRect(0,0,tw,th,14*s);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.10)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // desk edge
+    ctx.globalAlpha = 0.24;
+    ctx.fillStyle = 'rgba(212,168,85,0.14)';
+    ctx.fillRect(0, th*0.18, tw, 2);
+    ctx.globalAlpha = 1;
+
+    // CRT glow block
+    const cx = tw*0.58, cy = th*0.10;
+    const cw = tw*0.32, ch = th*0.52;
+    ctx.save();
+    const cg = ctx.createRadialGradient(cx+cw*0.46, cy+ch*0.42, 10, cx+cw*0.46, cy+ch*0.42, cw*0.9);
+    cg.addColorStop(0,'rgba(132,198,210,0.22)');
+    cg.addColorStop(1,'rgba(132,198,210,0)');
+    ctx.fillStyle = cg;
+    ctx.fillRect(cx-cw*0.4, cy-ch*0.4, cw*1.8, ch*1.8);
+    ctx.restore();
+
+    // CRT
+    ctx.fillStyle = '#0e0f11';
+    roundRect(cx, cy, cw, ch, 10*s);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // CRT screen
+    ctx.save();
+    ctx.globalAlpha = 0.9;
+    ctx.fillStyle = 'rgba(12,20,22,1)';
+    roundRect(cx+10*s, cy+10*s, cw-20*s, ch-22*s, 8*s);
+    ctx.fill();
+
+    // scanlines
+    ctx.globalAlpha = 0.18;
+    ctx.fillStyle = 'rgba(255,255,255,0.10)';
+    for(let y=0;y<ch-22*s;y+=6*s){
+      ctx.fillRect(cx+12*s, cy+12*s+y, cw-24*s, 1);
+    }
+
+    // equations on screen
+    ctx.globalAlpha = 0.78;
+    ctx.fillStyle = 'rgba(132,198,210,0.78)';
+    ctx.font = `${Math.round(12*s)}px "Space Mono", monospace`;
+    const lines = [
+      'd²θ/dt² + (g/L)sinθ = 0',
+      "y[1+(y')^2] = k",
+      'L = T - V',
+      '∫ e^{-t} dt  =  1 - e^{-t}',
+      'Δx ≠ Δt'
+    ];
+    for(let i=0;i<lines.length;i++){
+      ctx.fillText(lines[i], cx+22*s, cy+34*s + i*18*s);
+    }
+    ctx.restore();
+
+    // papers: fame (certificate) + feelings (note)
+    const px = tw*0.10, py = th*0.12;
+    const pw = tw*0.42, ph = th*0.64;
+
+    // main paper
+    ctx.save();
+    ctx.translate(px, py);
+    ctx.rotate(-0.04);
+    ctx.fillStyle = 'rgba(239,232,220,0.92)';
+    roundRect(0,0,pw,ph,10*s);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.20)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // header strip
+    ctx.globalAlpha = 0.78;
+    ctx.fillStyle = 'rgba(212,168,85,0.10)';
+    ctx.fillRect(16*s, 16*s, pw-32*s, 26*s);
+
+    ctx.globalAlpha = 0.7;
+    ctx.fillStyle = 'rgba(0,0,0,0.58)';
+    ctx.font = `${Math.round(12*s)}px "Space Mono", monospace`;
+    ctx.fillText('POSITION 04', 22*s, 34*s);
+    ctx.globalAlpha = 0.55;
+    ctx.fillText('PROOF SKETCH', pw-140*s, 34*s);
+
+    // scribbled math
+    ctx.globalAlpha = 0.58;
+    ctx.strokeStyle = 'rgba(0,0,0,0.38)';
+    ctx.lineWidth = 2;
+    for(let i=0;i<7;i++){
+      const y = 70*s + i*44*s;
+      ctx.beginPath();
+      ctx.moveTo(20*s, y);
+      ctx.bezierCurveTo(pw*0.28, y-12*s, pw*0.56, y+18*s, pw-24*s, y-6*s);
+      ctx.stroke();
+      // small annotations
+      ctx.globalAlpha = 0.38;
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      ctx.fillText(i%2? '∂' : 'λ', 26*s + (i%3)*10*s, y-10*s);
+      ctx.globalAlpha = 0.58;
+    }
+
+    // certificate corner (famous mathematician costume)
+    const fx = pw*0.62, fy = ph*0.68, fw = pw*0.34, fh = ph*0.26;
+    ctx.save();
+    ctx.translate(fx, fy);
+    ctx.rotate(0.06);
+    ctx.globalAlpha = 0.94;
+    ctx.fillStyle = 'rgba(231,221,205,0.92)';
+    roundRect(0,0,fw,fh,8*s);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.18)';
+    ctx.stroke();
+
+    // gold seal
+    ctx.globalAlpha = 0.75;
+    ctx.fillStyle = 'rgba(212,168,85,0.55)';
+    ctx.beginPath();
+    ctx.arc(fw*0.82, fh*0.26, 14*s, 0, Math.PI*2);
+    ctx.fill();
+
+    // blurred text
+    ctx.globalAlpha = 0.44;
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.font = `${Math.round(10*s)}px "Space Mono", monospace`;
+    ctx.fillText('DISTINGUISHED', 10*s, 18*s);
+    ctx.fillText('VISITOR', 10*s, 34*s);
+    ctx.globalAlpha = 0.22;
+    for(let i=0;i<5;i++) ctx.fillText('— — — — — — —', 10*s, 56*s + i*12*s);
+    ctx.restore();
+
+    // sticky note (feelings) under numbers
+    const nx = pw*0.08, ny = ph*0.70, nw = pw*0.42, nh = ph*0.22;
+    ctx.save();
+    ctx.translate(nx, ny);
+    ctx.rotate(-0.02);
+    ctx.globalAlpha = 0.95;
+    ctx.fillStyle = 'rgba(255,245,196,0.88)';
+    roundRect(0,0,nw,nh,8*s);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.18)';
+    ctx.stroke();
+
+    // scribble like a heart waveform
+    ctx.globalAlpha = 0.42 + 0.38*(1-avoidT);
+    ctx.strokeStyle = 'rgba(128,70,94,0.55)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for(let i=0;i<60;i++){
+      const u = i/59;
+      const x = 12*s + u*(nw-24*s);
+      const y = nh*0.55 + Math.sin(u*7 + t*0.8)*3*s + (u>0.38 && u<0.46 ? -10*s : 0);
+      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.restore(); // paper
+
+    // desk phone (waiting)
+    const phx = tw*0.46, phy = th*0.56;
+    ctx.save();
+    ctx.translate(phx, phy);
+    ctx.rotate(0.02);
+    ctx.globalAlpha = 0.86;
+    ctx.fillStyle = '#101114';
+    roundRect(0,0,tw*0.12, th*0.22, 10*s);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.10)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // little red light, muted by numbers
+    ctx.globalAlpha = lerp(0.08, 0.36, (1-avoidT));
+    ctx.fillStyle = 'rgba(196,120,168,0.75)';
+    ctx.beginPath();
+    ctx.arc(tw*0.10, th*0.06, 6*s, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.restore();
+  }
+
+  function drawKinetic(t, SW, SH){
+    const s = clamp(SW/980, 0.34, 1);
+
+    // mobiles in empty office (swaying weight)
+    const baseY = SH*0.18;
+    const bases = [
+      { x: SW*0.56, n: 4, a: 1.0 },
+      { x: SW*0.72, n: 5, a: 0.8 },
+      { x: SW*0.42, n: 3, a: 1.1 }
+    ];
+
+    ctx.save();
+    ctx.globalAlpha = 0.62;
+    for(let bi=0;bi<bases.length;bi++){
+      const b = bases[bi];
+      const sway = Math.sin(t*0.65 + bi*1.3) * (8*s) * (0.6 + 0.7*(1-avoidT));
+      const stemH = SH*(0.30 + 0.08*bi);
+
+      ctx.strokeStyle = 'rgba(255,255,255,0.14)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(b.x, baseY);
+      ctx.lineTo(b.x + sway, baseY + stemH);
+      ctx.stroke();
+
+      let px = b.x + sway;
+      let py = baseY + stemH;
+      for(let i=0;i<b.n;i++){
+        const arm = SW*(0.06 + 0.02*i) * (0.6 + 0.5*b.a);
+        const ang = Math.sin(t*(0.7 + 0.08*i) + i*1.7 + bi) * (0.22 + 0.12*(1-avoidT));
+        const dx = Math.cos(ang) * arm;
+        const dy = Math.sin(ang) * arm*0.18;
+
+        ctx.globalAlpha = 0.26;
+        ctx.strokeStyle = 'rgba(132,198,210,0.22)';
+        ctx.beginPath();
+        ctx.moveTo(px, py);
+        ctx.lineTo(px + dx, py + dy);
+        ctx.stroke();
+
+        // hanging wire + weight
+        const hx = px + dx;
+        const hy = py + dy;
+        const drop = SH*(0.06 + 0.015*i);
+        ctx.globalAlpha = 0.24;
+        ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+        ctx.beginPath();
+        ctx.moveTo(hx, hy);
+        ctx.lineTo(hx, hy + drop);
+        ctx.stroke();
+
+        const r = (7 + 4*i) * (0.55 + 0.65*s);
+        ctx.globalAlpha = 0.30;
+        ctx.fillStyle = (i%2) ? 'rgba(212,168,85,0.26)' : 'rgba(196,120,168,0.18)';
+        ctx.beginPath();
+        ctx.arc(hx, hy + drop, r, 0, Math.PI*2);
+        ctx.fill();
+
+        // propagate point
+        px = hx;
+        py = hy + drop;
+      }
+    }
+    ctx.restore();
+  }
+
+  function drawNumbers(t, SW, SH){
+    const s = clamp(SW/980, 0.34, 1);
+
+    const alpha = lerp(0.10, 0.34, avoidT);
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = 'rgba(132,198,210,0.70)';
+    ctx.font = `${Math.round(12*s)}px "Space Mono", monospace`;
+
+    // avoid note region (a little reveal when you get close)
+    const noteX = SW*0.08 + SW*0.84*0.10;
+    const noteY = SH*0.64 + SH*0.22*0.12 + (SH*0.22*0.64)*0.70;
+    const noteW = (SW*0.84*0.42)*0.42;
+    const noteH = (SH*0.22*0.64)*0.22;
+    const dx = mouse.x - (noteX + noteW*0.5);
+    const dy = mouse.y - (noteY + noteH*0.5);
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    const reveal = clamp(1 - dist/(220*s), 0, 1);
+
+    for(let i=0;i<streams.length;i++){
+      const st = streams[i];
+      const x = st.x * SW;
+      const speed = (0.9 + 1.4*st.sp) * (0.65 + 0.6*s);
+      const y = ((st.y*SH) + (t*60*speed) + st.ph*2000) % (SH + 220) - 120;
+
+      // thin columns of numbers
+      const col = 10 + (i%8);
+      for(let k=0;k<col;k++){
+        const yy = y + k*18*s;
+        const n = Math.floor((hash(i*13 + k*7 + Math.floor(t*2)) + 1) * 10000) % 10;
+
+        // soft hole around the note when reveal is high
+        const ndx = x - (noteX + noteW*0.5);
+        const ndy = yy - (noteY + noteH*0.5);
+        const nd = Math.sqrt(ndx*ndx + ndy*ndy);
+        const hole = clamp((nd - 60*s) / (120*s), 0, 1);
+        const a = lerp(1, hole, reveal);
+
+        ctx.globalAlpha = alpha * a * (0.38 + 0.62*(k/col));
+        ctx.fillText(String(n), x, yy);
+      }
+    }
+
+    // amber winning numbers
+    ctx.globalAlpha = 0.22 + 0.18*avoidT;
+    ctx.fillStyle = 'rgba(212,168,85,0.65)';
+    for(let i=0;i<24;i++){
+      const u = i/23;
+      const x = SW*(0.18 + 0.64*u) + Math.sin(t*0.7 + i)*8*s;
+      const y = SH*(0.52 + 0.06*Math.sin(t*0.4 + i*0.7));
+      ctx.fillText(String((i*7 + Math.floor(t*3))%97).padStart(2,'0'), x, y);
+    }
+
+    ctx.restore();
+  }
+
+  function drawFrameText(t, SW, SH){
+    // nothing outside the piece, but a small in-world label strip
+    const s = clamp(SW/980, 0.34, 1);
+    ctx.save();
+    ctx.globalAlpha = 0.10;
+    ctx.fillStyle = 'rgba(239,232,220,0.10)';
+    roundRect(SW*0.72, SH*0.10, SW*0.20, SH*0.06, 10*s);
+    ctx.fill();
+    ctx.globalAlpha = 0.22;
+    ctx.strokeStyle = 'rgba(255,255,255,0.10)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.globalAlpha = 0.38;
+    ctx.fillStyle = 'rgba(255,255,255,0.60)';
+    ctx.font = `${Math.round(11*s)}px "Space Mono", monospace`;
+    ctx.fillText('DRAFT STATUS: PENDING FEELINGS', SW*0.735, SH*0.138);
+    ctx.restore();
+  }
+
+  function loop(ms){
+    const t = ms/1000;
+    const { W:SW, H:SH } = sceneRect();
+
+    avoidT = lerp(avoidT, avoid ? 1 : 0, 0.06);
+
+    ctx.clearRect(0,0,SW,SH);
+    drawBackground(t, SW, SH);
+    drawKinetic(t, SW, SH);
+    drawDesk(t, SW, SH);
+    drawNumbers(t, SW, SH);
+    drawFrameText(t, SW, SH);
+
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+</script>
+</body>
+</html>
