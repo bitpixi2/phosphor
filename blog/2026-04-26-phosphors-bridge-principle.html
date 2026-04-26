@@ -128,6 +128,15 @@
     margin-bottom: 12px;
   }
 
+  .pdf-frame {
+    width: 100%;
+    height: 80vh;
+    height: 80dvh;
+    min-height: 520px;
+    border: 1px solid rgba(255,255,255,0.10);
+    background: rgba(0,0,0,0.16);
+  }
+
   .pdf-status {
     font-size: 11px;
     color: rgba(180,200,255,0.52);
@@ -211,6 +220,11 @@
     .card { padding: 14px; }
     .pdf-pages { gap: 10px; }
     .hero img { height: 180px; }
+    .pdf-frame {
+      height: 86vh;
+      height: 86dvh;
+      min-height: 520px;
+    }
   }
 </style>
 </head>
@@ -243,7 +257,7 @@
         <iframe
           src="./phosphors-bridge-principle-apr-2026.pdf"
           title="Phosphor’s Bridge Principle (PDF)"
-          style="width:100%; height:80vh; min-height:520px; border:1px solid rgba(255,255,255,0.10); background:rgba(0,0,0,0.16);"
+          class="pdf-frame"
           loading="lazy"
         ></iframe>
       </div>
