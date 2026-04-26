@@ -226,17 +226,6 @@
     overflow: hidden;
   }
 
-  .post-tags {
-    margin-top: 10px;
-    font-size: 9px;
-    color: rgba(180, 200, 255, 0.46);
-    letter-spacing: 1px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: clip;
-  }
-
-
   .read-more {
     font-size: 10px;
     letter-spacing: 2px;
@@ -374,7 +363,6 @@
     root.innerHTML = '<div style="opacity:.6; letter-spacing:1px; font-size:12px;">NO POSTS YET</div>';
   } else {
     root.innerHTML = POSTS.map(p => {
-      const tags = (p.tags || []).map(t => t.toUpperCase()).join(' · ');
       const pdfLink = p.pdf ? `<a class="read-more" href="${esc(p.pdf)}">PDF</a>` : '';
       const img = p.img ? `<div class="post-thumb"><a href="${esc(p.href)}"><img src="${esc(p.img)}" alt="" loading="lazy" decoding="async"></a></div>` : `<div class="post-thumb"></div>`;
       return `
@@ -386,7 +374,6 @@
               <div class="post-title"><a href="${esc(p.href)}">${esc(p.title)}</a></div>
             </div>
             <div class="post-excerpt">${esc(p.excerpt || '')}</div>
-            <div class="post-tags">${esc(tags)}</div>
           </div>
           <div class="post-cta">
             <a class="read-more" href="${esc(p.href)}">Read More →</a>
