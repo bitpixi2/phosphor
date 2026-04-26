@@ -34,11 +34,11 @@
   <circle cx="256" cy="304" r="10" fill="rgba(120,255,200,0.75)"/>
   <circle cx="384" cy="304" r="10" fill="rgba(212,168,85,0.75)"/>
 
-  <g font-family="Space Mono, monospace" font-size="22" fill="#d4dff0" opacity="0.95">
-    <text x="66" y="96">A PECULIAR</text>
-    <text x="66" y="124">DESK TOY</text>
+  <!-- stamp mark -->
+  <g opacity="0.9" fill="none" stroke="rgba(180,200,255,0.30)" stroke-width="2">
+    <circle cx="116" cy="114" r="36"/>
+    <path d="M116 78V150"/>
+    <path d="M80 114H152"/>
   </g>
-  <g font-family="Space Mono, monospace" font-size="14" fill="rgba(180,200,255,0.65)">
-    <text x="66" y="156">1974 • kinetic • build notes</text>
-  </g>
+  <circle cx="116" cy="114" r="6" fill="rgba(212,168,85,0.60)"/>
 </svg>

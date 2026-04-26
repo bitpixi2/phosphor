@@ -25,21 +25,27 @@
     <path d="M430 202l-10-6v12z" fill="rgba(212,168,85,0.45)" stroke="none"/>
   </g>
 
-  <!-- labels -->
-  <g font-family="Space Mono, monospace" font-size="14" fill="rgba(180,200,255,0.70)">
-    <text x="96" y="196">APPLY</text>
-    <text x="274" y="196">SYSTEMS</text>
-    <text x="454" y="196">YES</text>
+  <!-- box icons -->
+  <g opacity="0.85" stroke="rgba(180,200,255,0.35)" stroke-width="2" fill="none">
+    <path d="M92 186h96"/>
+    <path d="M92 202h64" opacity="0.7"/>
+    <path d="M92 218h80" opacity="0.55"/>
+  </g>
+
+  <g opacity="0.9" fill="none" stroke="rgba(120,255,200,0.40)" stroke-width="2">
+    <circle cx="320" cy="202" r="18"/>
+    <path d="M320 184V220"/>
+    <path d="M302 202H338"/>
+    <path d="M307 189l26 26" opacity="0.55"/>
+    <path d="M333 189l-26 26" opacity="0.55"/>
   </g>
 
   <!-- checkmark -->
   <path d="M474 226l18 18 38-44" fill="none" stroke="rgba(120,255,200,0.62)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
 
-  <g font-family="Space Mono, monospace" font-size="22" fill="#d4dff0" opacity="0.95">
-    <text x="72" y="96">JOB SEEKING</text>
-    <text x="72" y="124">AS SYSTEMS</text>
-  </g>
-  <g font-family="Space Mono, monospace" font-size="14" fill="rgba(180,200,255,0.65)">
-    <text x="72" y="154">consolidation • continuity</text>
+  <!-- header glyph -->
+  <g opacity="0.85" fill="none" stroke="rgba(212,168,85,0.30)" stroke-width="2">
+    <rect x="72" y="78" width="220" height="62" rx="10"/>
+    <path d="M92 108H272"/>
   </g>
 </svg>
