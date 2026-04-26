@@ -120,6 +120,23 @@
   .footer { text-align:center; padding-top: 34px; border-top: 1px solid rgba(255,255,255,0.08); margin-top: 34px; }
   .footer p { font-size: 11px; color: rgba(255,255,255,0.26); line-height: 2; }
 
+  /* Cursor sparkle trail (matches gallery) */
+  .sparkle {
+    position: fixed;
+    pointer-events: none;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: rgba(212, 168, 85, 0.6);
+    z-index: 999;
+    animation: sparkle-fade 0.8s ease-out forwards;
+  }
+
+  @keyframes sparkle-fade {
+    0% { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(0); }
+  }
+
   @media (max-width: 740px) {
     .container { padding: 24px; }
     .header { margin-bottom: 24px; padding-bottom: 24px; }
@@ -261,5 +278,40 @@
 
     </div>
   </div>
+
+  <script>
+  // Cursor sparkle trail
+  let sparkleThrottle = 0;
+  document.addEventListener('mousemove', e => {
+    sparkleThrottle++;
+    if (sparkleThrottle % 3 !== 0) return;
+    const s = document.createElement('div');
+    s.className = 'sparkle';
+    s.style.left = (e.clientX - 2 + (Math.random() - 0.5) * 10) + 'px';
+    s.style.top = (e.clientY - 2 + (Math.random() - 0.5) * 10) + 'px';
+    s.style.background = Math.random() > 0.5
+      ? `rgba(212, 168, 85, ${0.3 + Math.random() * 0.4})`
+      : `rgba(120, 255, 200, ${0.2 + Math.random() * 0.3})`;
+    document.body.appendChild(s);
+    setTimeout(() => s.remove(), 800);
+  });
+  </script>
+
+  <script type="module">
+  import { WebHaptics } from "https://cdn.jsdelivr.net/npm/web-haptics/+esm";
+  const h = new WebHaptics();
+  document.querySelectorAll("a").forEach(a => {
+    a.addEventListener("click", (e) => {
+      const href = a.getAttribute("href");
+      if (href && !href.startsWith("#") && !href.startsWith("javascript")) {
+        e.preventDefault();
+        h.trigger([{ duration: 15, intensity: 0.2 }]);
+        setTimeout(() => { window.location.href = href; }, 60);
+      } else {
+        h.trigger([{ duration: 15, intensity: 0.2 }]);
+      }
+    });
+  });
+  </script>
 </body>
 </html>
