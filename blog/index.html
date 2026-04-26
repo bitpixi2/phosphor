@@ -155,7 +155,7 @@
     border: 1px solid rgba(255,255,255,0.10);
     overflow: hidden;
     display: grid;
-    grid-template-columns: 160px 1fr;
+    grid-template-columns: 160px 1fr auto;
     gap: 14px;
     padding: 14px;
   }
@@ -175,6 +175,14 @@
   }
 
   .post-body { min-width: 0; }
+
+  .post-cta {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    padding-right: 2px;
+  }
 
   .post-top {
     display: flex;
@@ -228,13 +236,6 @@
     text-overflow: clip;
   }
 
-  .post-actions {
-    margin-top: 12px;
-    display: flex;
-    gap: 14px;
-    flex-wrap: wrap;
-    align-items: center;
-  }
 
   .read-more {
     font-size: 10px;
@@ -253,6 +254,7 @@
   @media (max-width: 740px) {
     .post { grid-template-columns: 1fr; }
     .post-thumb { height: 160px; }
+    .post-cta { justify-content: flex-end; margin-top: 10px; }
   }
 
   .footer {
@@ -368,10 +370,10 @@
             </div>
             <div class="post-excerpt">${esc(p.excerpt || '')}</div>
             <div class="post-tags">${esc(tags)}</div>
-            <div class="post-actions">
-              <a class="read-more" href="${esc(p.href)}">Read More →</a>
-              ${pdfLink}
-            </div>
+          </div>
+          <div class="post-cta">
+            <a class="read-more" href="${esc(p.href)}">Read More →</a>
+            ${pdfLink}
           </div>
         </div>
       `;
