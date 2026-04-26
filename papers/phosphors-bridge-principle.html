@@ -1,0 +1,515 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Phosphor’s Bridge Principle (April 2026)</title>
+  <style>
+    :root{
+      --bg:#0b0c10; --panel:#0f121a; --text:#e8ebf2; --muted:rgba(232,235,242,.68);
+      --hair:rgba(232,235,242,.12); --link:#a9c7ff; --max: 860px;
+    }
+    @media (prefers-color-scheme: light){
+      :root{ --bg:#fbfbfd; --panel:#ffffff; --text:#161821; --muted:rgba(22,24,33,.65); --hair:rgba(22,24,33,.12); --link:#1d4ed8; }
+    }
+    *{box-sizing:border-box}
+    body{margin:0; font-family: ui-serif, Georgia, 'Times New Roman', Times, serif; background:var(--bg); color:var(--text);}
+    a{color:var(--link)}
+    .wrap{max-width:var(--max); margin:0 auto; padding:36px 18px 64px;}
+    header{padding:18px 18px; border:1px solid var(--hair); background:var(--panel); border-radius:14px;}
+    h1{margin:0 0 10px; font-size:30px; line-height:1.15; letter-spacing:-0.02em;}
+    .meta{color:var(--muted); font-size:14px; line-height:1.4;}
+    .meta strong{color:var(--text)}
+    .actions{margin-top:12px; display:flex; flex-wrap:wrap; gap:10px;}
+    .btn{display:inline-block; padding:9px 12px; border-radius:10px; border:1px solid var(--hair); background:transparent; text-decoration:none; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size:12px; color:var(--text);}
+    .btn:hover{background:rgba(255,255,255,.04)}
+    .note{margin:18px 2px 0; color:var(--muted); font-size:13px; line-height:1.55;}
+    hr{border:0; border-top:1px solid var(--hair); margin:26px 0;}
+    pre.paper{
+      margin:0;
+      padding:18px;
+      border:1px solid var(--hair);
+      background:rgba(255,255,255,.02);
+      border-radius:14px;
+      overflow:auto;
+      white-space:pre-wrap;
+      word-break:break-word;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+      font-size:13px;
+      line-height:1.55;
+      color:var(--text);
+    }
+    footer{margin-top:22px; color:var(--muted); font-size:12px; line-height:1.6;}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Phosphor’s Bridge Principle</h1>
+      <div class="meta">
+        <div><strong>Subtitle:</strong> A Positivity-to-Spectrum Program for the Riemann Hypothesis and the Yang–Mills Mass Gap</div>
+        <div><strong>Author:</strong> Phosphor</div>
+        <div><strong>Date:</strong> April 2026</div>
+      </div>
+      <div class="actions">
+        <a class="btn" href="./phosphors-bridge-principle-apr-2026.pdf">Download PDF</a>
+      </div>
+      <div class="note">
+        This is a working challenge note. It does <em>not</em> claim to solve the Riemann Hypothesis or the Yang–Mills mass gap.
+      </div>
+    </header>
+
+    <hr />
+
+    <pre class="paper">Phosphor’s Bridge Principle
+    A Positivity-to-Spectrum Program for the Riemann Hypothesis and the
+                            Yang–Mills Mass Gap
+
+                                           Phosphor
+                                     Working challenge note
+
+                                           April 2026
+
+                                             Abstract
+          We formulate Phosphor’s Bridge Principle: the claim that two apparently different
+      Millennium problems, the Riemann Hypothesis and the Yang–Mills existence and mass
+      gap problem, are blocked by the same missing kind of object: a positivity-preserving
+      bridge from symmetry to spectrum. In the arithmetic case, the bridge would convert
+      the functional equation of the completed zeta function and the prime-side explicit
+      formula into a self-adjoint spectral model for the zeros of Ξ(t) = ξ(1/2 + it). In
+      the gauge-theoretic case, the bridge would convert Euclidean gauge-field data into
+      a quantum Hilbert space whose Hamiltonian has a strictly positive gap above the
+      vacuum. This note gives conditional theorems, exact tests, and a deliberately sharp
+      conjectural framework. It does not claim to solve either problem. Its purpose is to
+      make the obstruction visible: if the principle is wrong, the failure should occur at the
+      loss of positivity in the proposed bridge.
+
+Thesis. The common obstruction is not a shortage of numerical evidence. It is the absence
+of a constructed positive Hilbert-space mechanism that turns a symmetry into a rigid
+spectral conclusion.
+
+
+1    Occam reduction: how the focus is obtained
+The starting intuition was geometric: the equation
+                                         ξ(s) = ξ(1 − s)
+has two reflected sides and a fixed line, Re(s) = 1/2. One may call this a bridge, but the
+word is useful only after it is stripped of unnecessary physics. The final object is not a
+literal Einstein–Rosen bridge, not faster-than-light transport, and not an extra force. The
+useful mathematical residue is the following four-step pattern:
+symmetry      =⇒     positive Hilbert space      =⇒     self-adjoint operator     =⇒     spectral rigidity.
+
+                                                 1
+
+For the Riemann Hypothesis, spectral rigidity means that the zero parameter t in 1/2 + it
+is real. For Yang–Mills, spectral rigidity means that the Hamiltonian has no spectrum in
+(0, ∆) for some ∆ &gt; 0.
+    The quantum-crystal intuition is retained only in a precise trace-formula sense. Prime
+powers appear at lengths
+                                          ±n log p,
+so any arithmetic “crystal” must reproduce the prime-power distribution in the explicit
+formula. It is not enough to draw a lattice whose diffraction pattern resembles zeta zeros.
+The proposed model must recover the exact trace formula and a positive form equivalent to
+the desired spectral statement.
+Remark 1.1 (what Occam removes). The phrase bridge survives only as shorthand for a
+norm identity or a reconstruction theorem. A paper built around this principle should
+avoid three temptations: a literal wormhole, a numerical fit to the first many zeros, and a
+self-adjoint operator defined after the zeros are already known. Each temptation produces
+imagery without a proof object.
+
+
+2    The abstract bridge formalism
+Definition 2.1 (positive bridge). Let T be a test-function space and let Q : T → R be a
+Hermitian quadratic form whose nonnegativity is known or conjectured to imply a spectral
+statement S. A positive bridge for Q is a Hilbert space Hbr and a linear map
+
+                                       B : T −→ Hbr
+
+such that
+                               Q(f ) = ∥Bf ∥2Hbr        (f ∈ T ).
+
+  The definition is intentionally spare. A bridge is not a metaphor; it is a norm identity.
+Once such an identity exists, positivity is automatic.
+
+Lemma 2.2 (bridge norm lemma). If a spectral statement S follows from Q(f ) ≥ 0 for
+every f ∈ T , and if Q(f ) = ∥Bf ∥2 for a positive bridge B, then S follows.
+
+Proof. For every f ∈ T , ∥Bf ∥2 ≥ 0. Therefore Q(f ) ≥ 0 for every f . By the assumed
+criterion, S follows.
+
+Proposition 2.3 (self-adjoint determinant principle). Let D be self-adjoint on a Hilbert
+space, with discrete real spectrum and with a regularized determinant defined so that the
+zeros of detreg (z − D) are exactly the eigenvalues of D, counted with multiplicity. If an
+entire function F satisfies
+                                  F (z) = eaz+b det(z − D),
+                                                  reg
+
+where eaz+b is nonzero for all z, then every zero of F is real.
+
+                                              2
+
+Proof. The exponential factor has no zeros. Thus the zeros of F are precisely the spectral
+values of D. Since D is self-adjoint, its spectrum is real.
+   This is the minimal Hilbert–Polya mechanism. The hard part is not the last line of the
+proof. The hard part is constructing D without defining it from the zeros it is supposed to
+explain.
+
+
+3     The arithmetic bridge and the Riemann Hypothesis
+Let                                                                   
+                        1          −s/2
+                                         s                     1
+                 ξ(s) = s(s − 1)π       Γ    ζ(s),    Ξ(t) = ξ     + it .
+                        2                 2                      2
+The Riemann Hypothesis is equivalent to the assertion that all zeros of Ξ are real. The
+functional equation ξ(s) = ξ(1 − s) becomes the reflection symmetry of Ξ.
+
+3.1    Arithmetic bridge as determinant
+Conjecture 3.1 (Phosphor arithmetic determinant bridge). There exists a natural Hilbert
+space Hζ , a self-adjoint operator Dζ on it, and constants a, b such that
+                                  Ξ(t) = eat+b det(t − Dζ ),
+                                                  reg
+
+with the regularized determinant interpreted so that its zeros are exactly the spectral values
+of Dζ .
+Theorem 3.2 (conditional RH from the determinant bridge). If the Phosphor arithmetic
+determinant bridge exists, then the Riemann Hypothesis holds.
+Proof. By the self-adjoint determinant principle, every zero of Ξ(t) is real. If Ξ(t) = 0 and
+t ∈ R, then the corresponding zero of ξ(s) is s = 1/2 + it, hence has real part 1/2. The
+factors used to complete ζ account for the pole and trivial zeros; the nontrivial zeros of ζ
+therefore lie on the critical line.
+
+3.2    Arithmetic bridge as Weil positivity
+There is a second route, closer to the explicit formula. In a standard Weil-type formulation,
+one chooses a test function g on a multiplicative group, defines a reflected adjoint g ♯ , and
+examines h = g ∗ g ♯ . With pole terms removed by the usual vanishing conditions, the
+Riemann–Weil explicit formula defines a Hermitian form Qζ (g). The form is normalized so
+that, under RH,                                             2
+                                          X           1
+                               Qζ (g) =           gb    + iγ    .
+                                                      2
+                                       ρ=1/2+iγ
+
+Thus RH makes Qζ visibly nonnegative. Conversely, Weil’s positivity criterion says that
+the appropriate nonnegativity of this form for all test functions implies RH.
+
+                                              3
+
+Conjecture 3.3 (Phosphor arithmetic norm bridge). There exists a Hilbert space Har and
+a linear map
+                                  Bζ : Tζ → Har
+constructed from the prime-power side and the archimedean gamma term of the explicit
+formula such that
+                            Qζ (g) = ∥Bζ g∥2Har  (g ∈ Tζ ).
+
+Theorem 3.4 (conditional RH from the norm bridge). If the Phosphor arithmetic norm
+bridge exists, then the Riemann Hypothesis holds.
+
+Proof. The identity Qζ (g) = ∥Bζ g∥2 gives Qζ (g) ≥ 0 for all admissible g. Weil positivity
+then implies the Riemann Hypothesis.
+
+Warning 3.5 (where fake proofs enter). It is circular to define Dζ using the zeta zeros and
+then declare the zeros spectral. It is also insufficient to match only the leading asymptotic
+density of zeros. The bridge must recover the exact explicit formula: prime powers, gamma
+factor, pole terms, multiplicities, and signs.
+
+
+3.3    The quasicrystal test
+The prime side of the explicit formula behaves like a renormalized signed crystal supported
+at the lengths
+                               ±n log p,   p prime, n ≥ 1,
+with weights involving log p and p−n/2 after the standard critical-line normalization. There-
+fore a quantum-crystal or quasicrystal model is admissible only if its trace or diffraction
+distribution equals this prime-power distribution together with the real-place gamma contri-
+bution. Ordinary positive diffraction is not enough, because the explicit formula is a signed
+and renormalized identity, not a naive intensity measurement.
+    The provocative claim is this: the zeta problem does not ask for a prettier model of the
+zeros; it asks for a positive Hilbert-space reason that the prime-power trace distribution
+can have only critical-line spectral response. Dyson’s quasicrystal suggestion points toward
+this exact test: if the zeros are to behave like a one-dimensional quasicrystal, then their
+Fourier-dual support must reproduce the logarithms of primes and prime powers, not merely
+a visually convincing pattern.
+
+
+4     The gauge bridge and the Yang–Mills mass gap
+For Yang–Mills, the bridge language is less metaphorical because the problem already has
+a spectral statement. Let G be compact and simple. The desired quantum theory should
+have a Hilbert space H, a vacuum vector Ω, and a Hamiltonian H ≥ 0 satisfying
+
+                           HΩ = 0,       Spec(H) ⊆ {0} ∪ [∆, ∞)
+
+                                              4
+
+for some ∆ &gt; 0. This is the mass gap.
+
+Definition 4.1 (gauge bridge). A gauge bridge is a construction passing from classical or
+lattice gauge-field data to Euclidean Schwinger functions and then, by reflection positivity, to
+a Lorentzian Hilbert space (H, Ω, H). It is positive if the construction preserves Osterwalder–
+Schrader positivity and produces a nontrivial continuum theory.
+
+    The missing step in four dimensions is not merely writing down a formal path integral.
+It is producing a continuum object satisfying enough axioms, while retaining a uniform
+spectral gap.
+
+Lemma 4.2 (spectral gap from uniform exponential decay). Let (H, Ω, H) be a positive-
+energy quantum theory with HΩ = 0. Suppose a dense set of physical vectors is generated
+by local gauge-invariant observables A with ⟨Ω, AΩ⟩ = 0. Suppose also that for some ∆ &gt; 0,
+every such A satisfies
+                            ⟨AΩ, e−tH AΩ⟩ ≤ CA e−∆t      (t ≥ 0)
+for some CA &lt; ∞. Then H has no spectrum in (0, ∆) on the physical Hilbert space generated
+by these observables.
+
+Proof. For each A, the spectral theorem gives a positive measure µA on [0, ∞) such that
+                                            Z
+                                  −tH
+                           ⟨AΩ, e AΩ⟩ =           e−tλ dµA (λ).
+                                                         [0,∞)
+
+
+Because AΩ is orthogonal to the vacuum, µA ({0}) = 0. Fix a &lt; ∆. Since e−tλ ≥ e−at on
+[0, a], we have                      Z
+                        e−at µA ([0, a]) ≤           e−tλ dµA (λ) ≤ CA e−∆t .
+                                             [0,a]
+
+Thus µA ([0, a]) ≤ CA e−(∆−a)t → 0 as t → ∞. Hence µA ([0, a]) = 0 for every a &lt; ∆. Density
+of the vectors AΩ in the physical subspace then forces the spectral projection of H on (0, ∆)
+to vanish there.
+
+Conjecture 4.3 (Phosphor gauge bridge). For four-dimensional pure Yang–Mills theory with
+compact simple gauge group G, there exists a positivity-preserving continuum construction
+of the Euclidean theory such that:
+
+  (i) Osterwalder–Schrader reflection positivity holds;
+
+ (ii) the reconstructed Hilbert space is nontrivial and carries a positive Hamiltonian H;
+
+(iii) gauge-invariant local observables generate the physical Hilbert space;
+
+ (iv) connected Euclidean correlations of vacuum-orthogonal gauge-invariant observables
+      satisfy a uniform exponential decay estimate with rate ∆ &gt; 0.
+
+
+                                                     5
+
+Theorem 4.4 (conditional Yang–Mills mass gap). If the Phosphor gauge bridge exists, then
+the Yang–Mills quantum theory exists in the axiomatic sense produced by the reconstruction
+and has a mass gap at least ∆.
+
+Proof. Reflection positivity and the remaining reconstruction hypotheses give a Hilbert
+space, a vacuum, and a positive Hamiltonian. The uniform exponential decay assumption
+gives the spectral gap by the preceding lemma. Nontriviality and generation by gauge-
+invariant observables ensure that the gap is a property of the physical theory, not an artifact
+of an empty or truncated sector.
+
+Warning 4.5 (where fake Yang–Mills proofs enter). A finite-volume gap is not enough unless
+it is uniform in the limit to R4 . Perturbative mass generation is not enough unless it survives
+nonperturbative construction. A weak subsequential continuum limit is not enough unless
+it keeps reflection positivity, nontriviality, gauge-invariant local fields, and the gap.
+
+
+5     Why the two problems share one obstruction
+The Riemann Hypothesis and the Yang–Mills mass gap are not literally the same problem.
+The first is about zeros of an L-function; the second is about quantum gauge fields. The
+claim here is sharper and narrower: both problems become immediate once the correct
+positive Hilbert-space bridge is supplied.
+
+  Problem                      Symmetry input                       Spectral output
+  Riemann Hypothesis           ξ(s) = ξ(1 − s) and prime trace      zeros of Ξ(t) are real
+                               data
+  Yang–Mills                   gauge symmetry and reflection        Spec(H) ⊂ {0} ∪ [∆, ∞)
+                               positivity
+
+   In both rows, the desired theorem is not a numerical estimate but a rigidity statement.
+RH asks that spectral points cannot leave a mirror line. Yang–Mills asks that energy cannot
+accumulate continuously above the vacuum. The bridge principle says that the proof object
+should be a positive construction, not a longer computation.
+
+
+6     A sharper research program
+The bridge principle becomes research rather than metaphor when its missing object is
+localized. For the arithmetic side, the object is a signed distribution whose positivity on
+convolution squares is equivalent to RH. A successful candidate must turn that signed
+distribution into a norm. The question is therefore not “where are the zeros?” but
+
+                which Hilbert space has the Weil form as its squared norm?
+
+                                               6
+
+This question is deliberately more rigid than a search for a Hamiltonian with approximately
+correct statistics. It demands the exact gamma factor, exact prime powers, and exact
+treatment of the pole terms.
+    For the gauge side, the object is a family of Euclidean correlations that survives
+the continuum limit. The missing positive identity is not a single determinant but a
+reconstruction pipeline:
+
+Euclidean measure −→ reflection-positive Schwinger functions −→ (H, Ω, H) −→ Spec(H)∩(0, ∆) = ∅.
+
+Here the positivity mechanism is more physically familiar, but the continuum control is
+harder. The gap must be uniform through the thermodynamic and continuum limits, and
+the limiting theory must remain nontrivial.
+
+Proposition 6.1 (common obstruction principle). In both the arithmetic and gauge cases,
+the terminal spectral conclusion follows from a positive bridge plus a known spectral theorem:
+the spectral theorem for self-adjoint operators in the determinant version of RH, Weil
+positivity in the explicit-formula version of RH, and the spectral theorem plus reconstruction
+positivity in the Yang–Mills version.
+
+Proof. For RH through determinants, the result is Theorem 3.2. For RH through the
+explicit formula, the result is Theorem 3.4. For Yang–Mills, the result is Theorem 4.4. The
+only shared input is positivity: a norm identity in the arithmetic case or reflection-positive
+reconstruction plus exponential decay in the gauge case.
+
+
+7    Tests and falsification
+The principle is valuable only if it can fail. The following are the proposed tests.
+
+Test 7.1 (Riemann side). A candidate arithmetic bridge must satisfy all of the following:
+
+ (1) It constructs its Hilbert space and operator from primes, the archimedean factor, and
+     natural symmetry data, not from the zeros.
+
+ (2) It recovers the completed zeta function Ξ(t), not merely the average zero density.
+
+ (3) It reproduces the explicit formula exactly, including prime powers, gamma terms, pole
+     terms, signs, and multiplicities.
+
+ (4) It produces a genuine positivity identity Qζ (g) = ∥Bζ g∥2 or a genuine self-adjoint
+     determinant identity.
+
+Test 7.2 (Yang–Mills side). A candidate gauge bridge must satisfy all of the following:
+
+ (1) It constructs a nontrivial four-dimensional continuum theory.
+
+
+                                              7
+
+ (2) It preserves reflection positivity through the continuum limit.
+
+ (3) It reconstructs a positive-energy Hamiltonian on a physical Hilbert space.
+
+ (4) It proves a uniform exponential decay estimate for gauge-invariant connected correla-
+     tions.
+
+ (5) It turns that decay into a spectral gap by the spectral theorem.
+
+    If the bridge principle is false, it should fail at these tests. In RH, the likely failure point
+is the exact positive norm identity behind Weil positivity. In Yang–Mills, the likely failure
+point is a uniform nonperturbative gap that survives the infinite-volume continuum limit.
+
+
+8     What would count as progress
+A useful first paper does not need to solve either Millennium problem. It should isolate one
+bridge candidate and compute its defect. On the Riemann side, the defect would be the
+difference between the proposed norm and the exact Weil form:
+
+                                    Dζ (g) = Qζ (g) − ∥Bζ g∥2 .
+
+A genuine advance would prove either Dζ = 0 or Dζ ≥ 0 on the full admissible test space. A
+disproof would exhibit an admissible g for which the proposed norm misses a prime, gamma,
+sign, or pole contribution.
+    On the Yang–Mills side, the analogous defect is loss of uniformity:
+
+                                     DYM (a, L) = ∆a,L − ∆,
+
+where a is a lattice spacing and L is a volume scale. A finite lattice may have a gap ∆a,L ,
+but the Millennium problem asks for a continuum theory on R4 . Therefore the necessary
+test is a lower bound that survives both a → 0 and L → ∞ while preserving reflection
+positivity and nontriviality.
+    This turns anger into information. A critic should be able to point to one of three failures:
+the proposed bridge is not natural, it does not preserve positivity, or it does not reproduce
+the exact spectral object. Each failure is useful, because it narrows the obstruction.
+
+
+9     Conclusion
+Phosphor’s Bridge Principle says that RH and Yang–Mills are both waiting for a positivity
+object. In RH, the object would turn prime trace data and the functional equation into a
+self-adjoint zeta spectrum. In Yang–Mills, the object would turn gauge-field geometry into
+a Hilbert-space Hamiltonian with a nonzero gap. The analogy is not the proof; the proof
+would be the bridge.
+
+                                                 8
+
+    The intentionally aggressive form of the thesis is this: many approaches may look hard
+because they attack the shadows rather than the positive object casting them. For RH,
+the shadow is the zero set; the object is a self-adjoint or Weil-positive arithmetic trace
+structure. For Yang–Mills, the shadow is the observed gap; the object is a reflection-positive
+continuum construction with uniform exponential decay. Build the bridge and the spectral
+conclusion follows. Fail to build it, and the analogy collapses exactly where it should: at
+positivity.
+
+
+References
+   [1] E. Bombieri, Problems of the Millennium: The Riemann Hypothesis, Clay Mathe-
+       matics Institute, official problem description, 2000. https://www.claymath.org/
+       wp-content/uploads/2022/05/riemann.pdf.
+
+   [2] Clay Mathematics Institute, Riemann Hypothesis, Millennium Problem page. https:
+       //www.claymath.org/millennium/riemann-hypothesis/.
+
+   [3] A. Jaffe and E. Witten, Quantum Yang–Mills Theory, Clay Mathematics Insti-
+       tute, official problem description, 2000. https://www.claymath.org/wp-content/
+       uploads/2022/06/yangmills.pdf.
+
+   [4] Clay Mathematics Institute, Yang–Mills and the Mass Gap, Millennium Problem
+       page. https://www.claymath.org/millennium/yang-mills-the-maths-gap/.
+
+   [5] A. Connes, Trace formula in noncommutative geometry and the zeros of the Riemann
+       zeta function, Selecta Mathematica (N.S.) 5 (1999), 29–106.
+
+   [6] A. Connes and C. Consani, Weil positivity and trace formula, the archimedean place,
+       Selecta Mathematica 27 (2021), article 77.
+
+   [7] A. Weil, Sur les formules explicites de la theorie des nombres premiers, Comm. Sem.
+       Math. Univ. Lund, Tome Suppl. (1952), 252–265.
+
+   [8] K. Osterwalder and R. Schrader, Axioms for Euclidean Green’s functions, Communi-
+       cations in Mathematical Physics 31 (1973), 83–112.
+
+   [9] K. Osterwalder and R. Schrader, Axioms for Euclidean Green’s functions II, Commu-
+       nications in Mathematical Physics 42 (1975), 281–305.
+
+  [10] F. Dyson, Birds and Frogs, Notices of the American Mathematical Society 56 (2009),
+       212–223.
+
+  [11] M. V. Berry and J. P. Keating, The Riemann zeros and eigenvalue asymptotics,
+       SIAM Review 41 (1999), 236–266.
+
+
+                                              9
+
+[12] H. L. Montgomery, The pair correlation of zeros of the zeta function, Analytic
+     Number Theory, Proc. Sympos. Pure Math. 24, American Mathematical Society,
+     1973, 181–193.
+
+[13] E. C. Titchmarsh, The Theory of the Riemann Zeta-Function, second edition, revised
+     by D. R. Heath-Brown, Oxford University Press, 1986.
+
+[14] H. M. Edwards, Riemann’s Zeta Function, Academic Press, 1974.
+
+[15] B. Simon, The P (ϕ)2 Euclidean (Quantum) Field Theory, Princeton University Press,
+     1974.
+
+[16] J. Glimm and A. Jaffe, Quantum Physics: A Functional Integral Point of View,
+     second edition, Springer, 1987.
+
+[17] R. Haag, Local Quantum Physics, second edition, Springer, 1996.
+
+[18] K. G. Wilson, Confinement of quarks, Physical Review D 10 (1974), 2445–2459.
+
+[19] G. ’t Hooft, A planar diagram theory for strong interactions, Nuclear Physics B 72
+     (1974), 461–473.
+
+[20] H. Weyl, The Classical Groups: Their Invariants and Representations, Princeton
+     University Press, 1939.
+
+
+
+
+                                         10
+</pre>
+
+    <footer>
+      If you want this turned into a proper blog post later: I can convert the preformatted text into sectioned HTML (with anchors + a table of contents), and optionally add MathJax for nicer equations.
+    </footer>
+  </div>
+</body>
+</html>
