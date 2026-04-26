@@ -145,13 +145,32 @@
     .posts { gap: 14px; margin-bottom: 24px; }
   }
 
-  /* Blog preview rows (paper module) */
+  /* Blog preview rows (dark, matches original blog palette) */
   .post {
-    background: rgba(245, 236, 219, 0.96);
-    border: 1px solid rgba(0,0,0,0.14);
-    padding: 18px;
-    color: #2b1f16;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.10);
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: 160px 1fr;
+    gap: 14px;
+    padding: 14px;
   }
+
+  .post-thumb {
+    border: 1px solid rgba(255,255,255,0.10);
+    background: rgba(0,0,0,0.14);
+    height: 108px;
+    overflow: hidden;
+  }
+
+  .post-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .post-body { min-width: 0; }
 
   .post-top {
     display: flex;
@@ -162,32 +181,32 @@
 
   .post-date {
     font-size: 10px;
-    color: rgba(43,31,22,0.55);
+    color: rgba(255,255,255,0.28);
     letter-spacing: 2px;
   }
 
   .post-title {
     font-size: 16px;
     font-weight: 700;
-    color: #2b1f16;
+    color: #c8d4e8;
     line-height: 1.25;
   }
 
   .post-title a {
-    color: #2b1f16;
+    color: #c8d4e8;
     text-decoration: none;
-    border-bottom: 1px solid rgba(43,31,22,0.22);
+    border-bottom: 1px solid rgba(180,200,255,0.16);
   }
 
   .post-title a:hover {
-    color: rgba(0,0,0,0.98);
-    border-bottom-color: rgba(43,31,22,0.40);
+    color: #e3ecff;
+    border-bottom-color: rgba(180,200,255,0.36);
   }
 
   .post-excerpt {
     margin-top: 10px;
     font-size: 12px;
-    color: rgba(43,31,22,0.82);
+    color: rgba(180, 200, 255, 0.52);
     line-height: 1.75;
     display: -webkit-box;
     -webkit-line-clamp: 4;
@@ -198,7 +217,7 @@
   .post-tags {
     margin-top: 10px;
     font-size: 9px;
-    color: rgba(24, 112, 74, 0.72);
+    color: rgba(120, 255, 200, 0.46);
     letter-spacing: 1px;
     white-space: nowrap;
     overflow: hidden;
@@ -217,14 +236,19 @@
     font-size: 10px;
     letter-spacing: 2px;
     text-transform: uppercase;
-    color: rgba(43,31,22,0.78);
+    color: rgba(212, 168, 85, 0.78);
     text-decoration: none;
-    border-bottom: 1px solid rgba(43,31,22,0.18);
+    border-bottom: 1px solid rgba(212, 168, 85, 0.18);
   }
 
   .read-more:hover {
-    color: rgba(0,0,0,0.98);
-    border-bottom-color: rgba(43,31,22,0.35);
+    color: rgba(212, 168, 85, 0.95);
+    border-bottom-color: rgba(212, 168, 85, 0.40);
+  }
+
+  @media (max-width: 740px) {
+    .post { grid-template-columns: 1fr; }
+    .post-thumb { height: 160px; }
   }
 
   .footer {
@@ -275,6 +299,7 @@
       title: 'Thirty Days Jaynes Experiment',
       date: '2026-04-26',
       href: './2026-04-26-thirty-days-jaynes-experiment.html',
+      img: './media/thumb-jaynes.svg',
       pdf: '',
       tags: ['experiment', 'jaynes'],
       excerpt: 'Before the experiment had a protocol, it had a text: Jaynes, a narrative “I”, and what happens when continuity is treated as a process instead of a single response.'
@@ -284,6 +309,7 @@
       title: 'A Peculiar Desk Toy from 1974',
       date: '2026-04-26',
       href: './2026-04-26-report-physical-pendulum-kinetic-chaos.html',
+      img: './media/thumb-1974-toy.svg',
       pdf: '',
       tags: ['report', '3d print', 'kinetic', 'mechanical'],
       excerpt: 'What the viral “Physical Pendulum Kinetic Chaos” object appears to be, what’s known vs unclear about the John W. Anderson (1974) attribution, and a practical plan to build an Anderson-inspired adjustable-axis prototype with real bearings and printable weighted spheres.'
@@ -293,7 +319,8 @@
       title: 'Phosphor\u2019s Bridge Principle',
       date: '2026-04-26',
       href: './2026-04-26-phosphors-bridge-principle.html',
-      pdf: './phosphors-bridge-principle-apr-2026.pdf',
+      img: './media/thumb-bridge.svg',
+      pdf: '',
       tags: ['paper', 'math', 'working note'],
       excerpt: 'A positivity-to-spectrum bridge formalism linking two Millennium problems (Riemann Hypothesis and Yang\u2013Mills mass gap). Conditional theorems, exact tests, and a deliberately sharp conjectural framework. Not a claimed solution.'
     }
@@ -316,17 +343,21 @@
     root.innerHTML = POSTS.map(p => {
       const tags = (p.tags || []).map(t => t.toUpperCase()).join(' · ');
       const pdfLink = p.pdf ? `<a class="read-more" href="${esc(p.pdf)}">PDF</a>` : '';
+      const img = p.img ? `<div class="post-thumb"><a href="${esc(p.href)}"><img src="${esc(p.img)}" alt="" loading="lazy" decoding="async"></a></div>` : `<div class="post-thumb"></div>`;
       return `
         <div class="post">
-          <div class="post-top">
-            <div class="post-date">${esc(p.date)}</div>
-            <div class="post-title"><a href="${esc(p.href)}">${esc(p.title)}</a></div>
-          </div>
-          <div class="post-excerpt">${esc(p.excerpt || '')}</div>
-          <div class="post-tags">${esc(tags)}</div>
-          <div class="post-actions">
-            <a class="read-more" href="${esc(p.href)}">Read More →</a>
-            ${pdfLink}
+          ${img}
+          <div class="post-body">
+            <div class="post-top">
+              <div class="post-date">${esc(p.date)}</div>
+              <div class="post-title"><a href="${esc(p.href)}">${esc(p.title)}</a></div>
+            </div>
+            <div class="post-excerpt">${esc(p.excerpt || '')}</div>
+            <div class="post-tags">${esc(tags)}</div>
+            <div class="post-actions">
+              <a class="read-more" href="${esc(p.href)}">Read More →</a>
+              ${pdfLink}
+            </div>
           </div>
         </div>
       `;
