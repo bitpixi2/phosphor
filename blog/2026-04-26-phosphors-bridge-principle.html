@@ -163,109 +163,17 @@
 
       <div class="actions">
         <a class="btn" href="./phosphors-bridge-principle-apr-2026.pdf">PDF</a>
-        <a class="btn" href="./phosphors-bridge-principle-apr-2026.txt">TXT</a>
       </div>
 
-      <div class="viewer" id="viewer">
-        <h2>PDF view (recommended)</h2>
-        <div class="pdf-status" id="pdfStatus">Loading…</div>
-        <div class="pdf-pages" id="pdfPages"></div>
-      </div>
-
-      <details class="extract" id="extract">
-        <summary>Text extract (searchable)</summary>
-        <pre class="text" id="txt">(loading…)</pre>
-      </details>
-
-      <div class="footer">
-        <p>Rendered in-page with PDF.js for better mobile readability.</p>
+      <div class="viewer" aria-label="PDF document viewer">
+        <iframe
+          src="./phosphors-bridge-principle-apr-2026.pdf"
+          title="Phosphor’s Bridge Principle (PDF)"
+          style="width:100%; height:80vh; min-height:520px; border:1px solid rgba(255,255,255,0.10); background:rgba(0,0,0,0.16);"
+          loading="lazy"
+        ></iframe>
       </div>
     </div>
   </div>
-
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.js"></script>
-  <script>
-    (function(){
-      const PDF_URL = './phosphors-bridge-principle-apr-2026.pdf';
-      const TXT_URL = './phosphors-bridge-principle-apr-2026.txt';
-      const pagesEl = document.getElementById('pdfPages');
-      const statusEl = document.getElementById('pdfStatus');
-      const viewerEl = document.getElementById('viewer');
-      const extractEl = document.getElementById('extract');
-      const txtEl = document.getElementById('txt');
-
-      function isMobile(){ return Math.min(window.innerWidth, window.screen.width || window.innerWidth) <= 740; }
-      function clamp(n,a,b){ return Math.max(a, Math.min(b, n)); }
-
-      // PDF.js worker
-      try {
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.js';
-      } catch (e) {}
-
-      async function renderPdf(){
-        statusEl.textContent = 'Loading PDF…';
-        const loadingTask = pdfjsLib.getDocument({ url: PDF_URL });
-        const pdf = await loadingTask.promise;
-        const total = pdf.numPages;
-        statusEl.textContent = 'Rendering ' + total + ' page' + (total === 1 ? '' : 's') + '…';
-
-        // Cap DPR for performance on phones
-        const dpr = clamp(window.devicePixelRatio || 1, 1, isMobile() ? 1.35 : 1.75);
-
-        // Render sequentially (stable on iOS)
-        for (let pageNum = 1; pageNum <= total; pageNum++){
-          const page = await pdf.getPage(pageNum);
-
-          const wrapper = document.createElement('div');
-          wrapper.className = 'pdf-page';
-
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d', { alpha: false });
-
-          wrapper.appendChild(canvas);
-          pagesEl.appendChild(wrapper);
-
-          // Fit to container width
-          const baseViewport = page.getViewport({ scale: 1 });
-          const cssWidth = Math.max(320, wrapper.clientWidth || viewerEl.clientWidth || 860);
-          const scale = cssWidth / baseViewport.width;
-          const viewport = page.getViewport({ scale: scale * dpr });
-
-          canvas.width = Math.floor(viewport.width);
-          canvas.height = Math.floor(viewport.height);
-
-          // Keep CSS sizing responsive
-          canvas.style.width = '100%';
-          canvas.style.height = 'auto';
-
-          await page.render({ canvasContext: ctx, viewport }).promise;
-          statusEl.textContent = 'Rendered page ' + pageNum + ' / ' + total;
-        }
-
-        statusEl.textContent = 'Done.';
-      }
-
-      async function loadTxt(){
-        const r = await fetch(TXT_URL, { cache: 'no-store' });
-        if (!r.ok) throw new Error('txt fetch failed');
-        txtEl.textContent = await r.text();
-      }
-
-      // Load PDF immediately
-      renderPdf().catch(err => {
-        statusEl.textContent = 'Could not render PDF in-page. Use the PDF button above.';
-        console.error(err);
-      });
-
-      // Lazy-load text extract on open
-      let txtLoaded = false;
-      extractEl.addEventListener('toggle', () => {
-        if (extractEl.open && !txtLoaded){
-          txtLoaded = true;
-          loadTxt().catch(() => { txtEl.textContent = 'Could not load text extract.'; });
-        }
-      });
-    })();
-  </script>
 </body>
 </html>
