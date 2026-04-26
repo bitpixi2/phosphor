@@ -87,19 +87,22 @@
     border-bottom-color: rgba(180, 200, 255, 0.38);
   }
 
-  .card { background: rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); padding: 18px; }
+  /* Paper module for readability */
+  .card { background: rgba(245,236,219,0.96); border:1px solid rgba(0,0,0,0.14); padding: 18px; color: #2b1f16; }
+  .card a { color: rgba(43,31,22,0.92); border-bottom: 1px solid rgba(43,31,22,0.22); }
+  .card a:hover { color: rgba(0,0,0,0.98); border-bottom-color: rgba(43,31,22,0.40); }
 
-  .title { font-size: 18px; font-weight:700; color:#c8d4e8; margin-bottom: 10px; line-height:1.25; }
-  .meta { font-size: 10px; color: rgba(255,255,255,0.28); letter-spacing:2px; margin-bottom: 12px; }
-  .lead { font-size: 11px; color: rgba(180,200,255,0.52); line-height:1.7; margin-bottom: 14px; }
+  .title { font-size: 18px; font-weight:700; color:#2b1f16; margin-bottom: 10px; line-height:1.25; }
+  .meta { font-size: 10px; color: rgba(43,31,22,0.55); letter-spacing:2px; margin-bottom: 12px; }
+  .lead { font-size: 11px; color: rgba(43,31,22,0.78); line-height:1.7; margin-bottom: 14px; }
 
   .actions { display:flex; flex-wrap:wrap; gap:10px; margin-top: 10px; }
-  .btn { display:inline-block; font-size:10px; letter-spacing:2px; text-transform:uppercase; padding: 10px 12px; border:1px solid rgba(255,255,255,0.12); color: rgba(212,168,85,0.78); text-decoration:none; background: rgba(0,0,0,0.12); transition: background 0.2s, border-color 0.2s, color 0.2s; }
-  .btn:hover { background: rgba(0,0,0,0.22); border-color: rgba(212,168,85,0.30); color: rgba(212,168,85,0.95); }
+  .btn { display:inline-block; font-size:10px; letter-spacing:2px; text-transform:uppercase; padding: 10px 12px; border:1px solid rgba(0,0,0,0.16); color: rgba(43,31,22,0.86); text-decoration:none; background: rgba(255,255,255,0.40); transition: background 0.2s, border-color 0.2s, color 0.2s; }
+  .btn:hover { background: rgba(255,255,255,0.65); border-color: rgba(0,0,0,0.24); color: rgba(0,0,0,0.98); }
 
   .viewer {
     margin-top: 18px;
-    border-top: 1px solid rgba(255,255,255,0.08);
+    border-top: 1px solid rgba(0,0,0,0.10);
     padding-top: 18px;
   }
 
@@ -107,13 +110,13 @@
     font-size: 11px;
     letter-spacing: 2px;
     text-transform: uppercase;
-    color: rgba(255,255,255,0.30);
+    color: rgba(43,31,22,0.55);
     margin-bottom: 12px;
   }
 
   .pdf-status {
     font-size: 11px;
-    color: rgba(180,200,255,0.52);
+    color: rgba(43,31,22,0.72);
     line-height: 1.6;
     margin-bottom: 10px;
   }

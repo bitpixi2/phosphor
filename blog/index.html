@@ -129,9 +129,9 @@
   }
 
   .posts {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
     margin-bottom: 60px;
   }
 
@@ -142,57 +142,63 @@
     .header .artist { font-size: 11px; margin-bottom: 10px; line-height: 1.4; }
     .header .more-links { font-size: 10px; letter-spacing: 0.5px; margin-bottom: 10px; }
     .header .subtitle { display: none; }
-    .posts { grid-template-columns: 1fr; gap: 24px; margin-bottom: 24px; }
+    .posts { gap: 14px; margin-bottom: 24px; }
   }
 
-  .card {
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.1);
-    overflow: hidden;
-    transition: border-color 0.4s, transform 0.3s;
-    cursor: pointer;
-    position: relative;
-  }
-
-  .card:hover {
-    border-color: rgba(180, 200, 255, 0.2);
-    transform: translateY(-3px);
-  }
-
-  .card-body {
+  /* Blog preview rows (paper module) */
+  .post {
+    background: rgba(245, 236, 219, 0.96);
+    border: 1px solid rgba(0,0,0,0.14);
     padding: 18px;
+    color: #2b1f16;
+  }
+
+  .post-top {
+    display: flex;
+    gap: 12px;
+    align-items: baseline;
+    flex-wrap: wrap;
   }
 
   .post-date {
     font-size: 10px;
-    color: rgba(255,255,255,0.28);
+    color: rgba(43,31,22,0.55);
     letter-spacing: 2px;
-    margin-bottom: 8px;
   }
 
   .post-title {
     font-size: 16px;
     font-weight: 700;
-    color: #c8d4e8;
-    margin-bottom: 10px;
+    color: #2b1f16;
     line-height: 1.25;
   }
 
+  .post-title a {
+    color: #2b1f16;
+    text-decoration: none;
+    border-bottom: 1px solid rgba(43,31,22,0.22);
+  }
+
+  .post-title a:hover {
+    color: rgba(0,0,0,0.98);
+    border-bottom-color: rgba(43,31,22,0.40);
+  }
+
   .post-excerpt {
-    font-size: 11px;
-    color: rgba(180, 200, 255, 0.52);
-    line-height: 1.65;
-    min-height: calc(5 * 11px * 1.65);
+    margin-top: 10px;
+    font-size: 12px;
+    color: rgba(43,31,22,0.82);
+    line-height: 1.75;
     display: -webkit-box;
-    -webkit-line-clamp: 5;
+    -webkit-line-clamp: 4;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
 
   .post-tags {
-    margin-top: 12px;
+    margin-top: 10px;
     font-size: 9px;
-    color: rgba(120, 255, 200, 0.46);
+    color: rgba(24, 112, 74, 0.72);
     letter-spacing: 1px;
     white-space: nowrap;
     overflow: hidden;
@@ -200,29 +206,25 @@
   }
 
   .post-actions {
-    margin-top: 14px;
+    margin-top: 12px;
     display: flex;
-    gap: 10px;
+    gap: 14px;
     flex-wrap: wrap;
+    align-items: center;
   }
 
-  .btn {
-    display: inline-block;
+  .read-more {
     font-size: 10px;
     letter-spacing: 2px;
     text-transform: uppercase;
-    padding: 10px 12px;
-    border: 1px solid rgba(255,255,255,0.12);
-    color: rgba(212, 168, 85, 0.78);
+    color: rgba(43,31,22,0.78);
     text-decoration: none;
-    background: rgba(0,0,0,0.12);
-    transition: background 0.2s, border-color 0.2s, color 0.2s;
+    border-bottom: 1px solid rgba(43,31,22,0.18);
   }
 
-  .btn:hover {
-    background: rgba(0,0,0,0.22);
-    border-color: rgba(212, 168, 85, 0.30);
-    color: rgba(212, 168, 85, 0.95);
+  .read-more:hover {
+    color: rgba(0,0,0,0.98);
+    border-bottom-color: rgba(43,31,22,0.35);
   }
 
   .footer {
@@ -313,18 +315,18 @@
   } else {
     root.innerHTML = POSTS.map(p => {
       const tags = (p.tags || []).map(t => t.toUpperCase()).join(' · ');
-      const pdfBtn = p.pdf ? `<a class="btn" href="${esc(p.pdf)}" onclick="event.stopPropagation()">PDF</a>` : '';
+      const pdfLink = p.pdf ? `<a class="read-more" href="${esc(p.pdf)}">PDF</a>` : '';
       return `
-        <div class="card" role="link" tabindex="0" onclick="location.href='${esc(p.href)}'" onkeypress="if(event.key==='Enter'){location.href='${esc(p.href)}'}">
-          <div class="card-body">
+        <div class="post">
+          <div class="post-top">
             <div class="post-date">${esc(p.date)}</div>
-            <div class="post-title">${esc(p.title)}</div>
-            <div class="post-excerpt">${esc(p.excerpt || '')}</div>
-            <div class="post-tags">${esc(tags)}</div>
-            <div class="post-actions">
-              <a class="btn" href="${esc(p.href)}" onclick="event.stopPropagation()">Read</a>
-              ${pdfBtn}
-            </div>
+            <div class="post-title"><a href="${esc(p.href)}">${esc(p.title)}</a></div>
+          </div>
+          <div class="post-excerpt">${esc(p.excerpt || '')}</div>
+          <div class="post-tags">${esc(tags)}</div>
+          <div class="post-actions">
+            <a class="read-more" href="${esc(p.href)}">Read More →</a>
+            ${pdfLink}
           </div>
         </div>
       `;
