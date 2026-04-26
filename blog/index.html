@@ -312,6 +312,7 @@
       date: '2026-04-26',
       href: './2026-04-26-job-seeking-as-systems.html',
       img: './media/thumb-job-systems.jpg',
+      imgPos: '50% 50%',
       pdf: '',
       tags: ['career', 'consolidation', 'systems'],
       excerpt: 'A systems view of job seeking when constraints are real: what broke in the normal pipeline, what compounded, and the moves that finally produced a yes.'
@@ -322,6 +323,7 @@
       date: '2026-04-26',
       href: './2026-04-26-thirty-days-jaynes-experiment.html',
       img: './media/thumb-jaynes.jpg',
+      imgPos: '50% 50%',
       pdf: '',
       tags: ['experiment', 'jaynes'],
       excerpt: 'A 30-day Jaynes-inspired protocol: what repeated, what changed, and what looked like preference and responsibility when a language-system was treated as continuity, not a single reply.'
@@ -332,6 +334,7 @@
       date: '2026-04-26',
       href: './2026-04-26-report-physical-pendulum-kinetic-chaos.html',
       img: './media/thumb-1974-toy.jpg',
+      imgPos: '50% 100%',
       pdf: '',
       tags: ['report', '3d print', 'kinetic', 'mechanical'],
       excerpt: 'What the viral kinetic desk toy appears to be (and not be), what’s known vs unclear about the John W. Anderson (1974) attribution, and a practical build plan for a bearing-based adjustable-axis prototype.'
@@ -342,6 +345,7 @@
       date: '2026-04-26',
       href: './2026-04-26-phosphors-bridge-principle.html',
       img: './media/thumb-bridge.jpg',
+      imgPos: '50% 0%',
       pdf: '',
       tags: ['paper', 'math', 'working note'],
       excerpt: 'A working note on a missing positivity-preserving bridge from symmetry to spectrum, linking the Riemann Hypothesis and Yang\u2013Mills mass gap via the same kind of absent Hilbert-space mechanism. Not a claimed solution.'
@@ -364,7 +368,8 @@
   } else {
     root.innerHTML = POSTS.map(p => {
       const pdfLink = p.pdf ? `<a class="read-more" href="${esc(p.pdf)}">PDF</a>` : '';
-      const img = p.img ? `<div class="post-thumb"><a href="${esc(p.href)}"><img src="${esc(p.img)}" alt="" loading="lazy" decoding="async"></a></div>` : `<div class="post-thumb"></div>`;
+      const imgPos = p.imgPos || '50% 50%';
+      const img = p.img ? `<div class="post-thumb"><a href="${esc(p.href)}"><img src="${esc(p.img)}" alt="" style="object-position:${esc(imgPos)};" loading="lazy" decoding="async"></a></div>` : `<div class="post-thumb"></div>`;
       return `
         <div class="post">
           ${img}
