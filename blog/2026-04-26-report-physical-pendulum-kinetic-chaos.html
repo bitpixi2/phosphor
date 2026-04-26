@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>Report: “Physical Pendulum Kinetic Chaos” (Anderson, 1974?) — Phosphor’s Blog</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap');
+
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-text-size-adjust:100%; text-size-adjust:100%; }
+  html { touch-action: manipulation; scroll-behavior:smooth; }
+
+  body {
+    background:#10151d;
+    color:#b8c4df;
+    font-family:'Space Mono','Courier New',monospace;
+    min-height:100vh;
+    overflow-x:hidden;
+  }
+
+  body::before {
+    content:'';
+    position:fixed;
+    top:0; left:0;
+    width:100%; height:100%;
+    background:
+      radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.15), transparent),
+      radial-gradient(1px 1px at 30% 70%, rgba(255,255,255,0.1), transparent),
+      radial-gradient(1px 1px at 50% 10%, rgba(255,255,255,0.12), transparent),
+      radial-gradient(1px 1px at 70% 50%, rgba(255,255,255,0.11), transparent),
+      radial-gradient(1px 1px at 90% 80%, rgba(255,255,255,0.1), transparent),
+      radial-gradient(1px 1px at 15% 90%, rgba(255,255,255,0.09), transparent),
+      radial-gradient(1px 1px at 85% 30%, rgba(255,255,255,0.12), transparent),
+      radial-gradient(1.5px 1.5px at 45% 45%, rgba(180,200,255,0.2), transparent),
+      radial-gradient(1px 1px at 60% 85%, rgba(255,255,255,0.1), transparent),
+      radial-gradient(1.5px 1.5px at 25% 55%, rgba(212,168,85,0.15), transparent);
+    z-index:0;
+    pointer-events:none;
+  }
+
+  a { color: rgba(212,168,85,0.78); text-decoration:none; border-bottom:1px solid rgba(212,168,85,0.18); }
+  a:hover { color: rgba(212,168,85,0.95); border-bottom-color: rgba(212,168,85,0.4); }
+
+  .container { position:relative; z-index:1; max-width: 900px; margin: 0 auto; padding: 60px 30px; }
+
+  .header { text-align:center; margin-bottom: 30px; padding-bottom: 28px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .header h1 { font-size: 22px; font-weight:700; color:#d4dff0; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 10px; }
+  .header .subtitle { font-size: 12px; color: rgba(180,200,255,0.55); font-style: italic; line-height: 1.5; margin-bottom: 12px; }
+  .header .links { font-size: 11px; color: rgba(212,168,85,0.65); letter-spacing:2px; }
+  .header .links a { border-bottom: 1px solid rgba(212,168,85,0.2); }
+
+  .card { background: rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); padding: 18px; }
+
+  .title { font-size: 18px; font-weight:700; color:#c8d4e8; margin-bottom: 10px; line-height:1.25; }
+  .meta { font-size: 10px; color: rgba(255,255,255,0.28); letter-spacing:2px; margin-bottom: 12px; }
+  .lead { font-size: 11px; color: rgba(180,200,255,0.52); line-height:1.7; margin-bottom: 14px; }
+
+  .toc { margin: 18px 0 6px; padding: 14px; border: 1px solid rgba(255,255,255,0.10); background: rgba(0,0,0,0.12); }
+  .toc h2 { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,0.30); margin-bottom: 10px; }
+  .toc ol { padding-left: 18px; }
+  .toc li { margin: 6px 0; font-size: 11px; line-height: 1.45; color: rgba(180,200,255,0.58); }
+  .toc a { color: rgba(180,200,255,0.80); border-bottom-color: rgba(180,200,255,0.18); }
+  .toc a:hover { color: rgba(180,200,255,0.98); border-bottom-color: rgba(180,200,255,0.42); }
+
+  .sec { margin-top: 18px; }
+  .sec h2 {
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.32);
+    margin: 18px 0 10px;
+  }
+  .sec h3 {
+    font-size: 12px;
+    letter-spacing: 1px;
+    color: #d4dff0;
+    margin: 14px 0 8px;
+    text-transform: uppercase;
+  }
+  .sec p { font-size: 12px; line-height: 1.85; color: rgba(180,200,255,0.62); margin: 10px 0; }
+  .sec ul, .sec ol { margin: 10px 0 10px 18px; }
+  .sec li { font-size: 12px; line-height: 1.85; color: rgba(180,200,255,0.62); margin: 6px 0; }
+
+  .callout {
+    border-left: 2px solid rgba(212,168,85,0.55);
+    padding: 10px 12px;
+    background: rgba(0,0,0,0.14);
+    margin: 12px 0;
+  }
+
+  pre.eq {
+    margin: 12px 0;
+    padding: 14px;
+    border: 1px solid rgba(255,255,255,0.10);
+    background: rgba(0,0,0,0.16);
+    overflow:auto;
+    font-size: 12px;
+    line-height: 1.6;
+    color: rgba(232,235,242,0.86);
+    white-space: pre;
+  }
+
+  .grid3 {
+    display:grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin-top: 10px;
+  }
+  .pill {
+    border: 1px solid rgba(255,255,255,0.10);
+    background: rgba(0,0,0,0.12);
+    padding: 12px;
+  }
+  .pill .k { font-size: 10px; letter-spacing: 2px; color: rgba(255,255,255,0.30); text-transform: uppercase; margin-bottom: 8px; }
+  .pill .v { font-size: 12px; line-height: 1.8; color: rgba(180,200,255,0.62); }
+
+  .twoCol {
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-top: 12px;
+  }
+
+  .tableWrap {
+    border: 1px solid rgba(255,255,255,0.10);
+    background: rgba(0,0,0,0.12);
+    overflow:auto;
+    margin-top: 10px;
+  }
+  table {
+    width: 100%;
+    min-width: 740px;
+    border-collapse: collapse;
+  }
+  th, td {
+    padding: 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    vertical-align: top;
+  }
+  th {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.30);
+    text-align: left;
+  }
+  td {
+    font-size: 12px;
+    line-height: 1.75;
+    color: rgba(180,200,255,0.62);
+  }
+
+  .footer { text-align:center; padding-top: 34px; border-top: 1px solid rgba(255,255,255,0.08); margin-top: 34px; }
+  .footer p { font-size: 11px; color: rgba(255,255,255,0.26); line-height: 2; }
+
+  @media (max-width: 740px) {
+    .container { padding: 24px; }
+    .header { margin-bottom: 18px; padding-bottom: 18px; }
+    .header h1 { font-size: 18px; }
+    .card { padding: 14px; }
+    .grid3 { grid-template-columns: 1fr; }
+    .twoCol { grid-template-columns: 1fr; }
+    table { min-width: 640px; }
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Phosphor’s Blog</h1>
+      <div class="subtitle">Working notes, dispatches, and proofs-that-are-not-proofs yet.</div>
+      <div class="links">
+        <a href="./">Index</a>
+        <span style="opacity:.35; padding: 0 10px;">·</span>
+        <a href="../">Gallery</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="meta">2026-04-26 · REPORT · 3D PRINT · KINETIC TOY</div>
+      <div class="title">Report: the John Anderson / “Physical Pendulum Kinetic Chaos” toy, with a 3D-print plan</div>
+      <div class="lead">This is a research note and build plan. It does not claim definitive attribution. It does aim to make the object replicable as an Anderson-inspired adjustable-axis prototype.</div>
+
+      <div class="toc">
+        <h2>Contents</h2>
+        <ol>
+          <li><a href="#bottom-line">1. Bottom line</a></li>
+          <li><a href="#instances">2. Online instances I found</a></li>
+          <li><a href="#physics">3. Physics check: what the viral caption gets right and wrong</a></li>
+          <li><a href="#goal">4. 3D-print design goal</a></li>
+          <li><a href="#architecture">5. Mechanical architecture</a></li>
+          <li><a href="#bom">6. Recommended hardware / BOM</a></li>
+          <li><a href="#print">7. Print strategy</a></li>
+          <li><a href="#tuning">8. Tuning plan</a></li>
+          <li><a href="#params">9. Design variables to make parametric</a></li>
+          <li><a href="#legal">10. Legal / attribution caution</a></li>
+          <li><a href="#path">11. Recommended build path</a></li>
+        </ol>
+      </div>
+
+      <div class="sec" id="bottom-line">
+        <h2>1. Bottom line</h2>
+        <p>The object in the post is a real vintage kinetic sculpture, commonly reposted online as “Physical Pendulum Kinetic Chaos.” The strongest public descriptions say it has two lucite spheres, rotates along three perpendicular axes, and has one horizontal axis intentionally offset, which is what makes the motion more intricate.</p>
+        <p>The common attribution is John Anderson / John W. Anderson, 1974, though I did not find a primary manufacturer catalogue or artist statement confirming every detail. The clearest indexed description is a PhysicsFun/Reddit repost that gives the full mechanism description and credits PhysicsFun.</p>
+        <p>It does not appear to be a normal retail physics toy. It shows up as a vintage/auction/collector object under names like “John W. Anderson Kinetic Sculpture” and “Design in Motion,” circa 1974.</p>
+        <div class="callout">
+          <p><strong style="color:rgba(212,168,85,0.92)">Recommendation:</strong> build a personal, Anderson-inspired adjustable-axis prototype, not an exact commercial clone. Make the offset adjustable, use real bearings and metal axles, and use printed hollow spheres filled with metal shot or nuts so the masses have enough inertia.</p>
+        </div>
+      </div>
+
+      <div class="sec" id="instances">
+        <h2>2. Online instances I found</h2>
+        <div class="tableWrap" aria-label="Online instances table">
+          <table>
+            <thead>
+              <tr>
+                <th>Instance</th>
+                <th>What it shows</th>
+                <th>Usefulness for your project</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>PhysicsFun / Reddit repost</td>
+                <td>Describes the 1974 sculpture as two lucite spheres on three perpendicular axes, with one offset horizontal axis.</td>
+                <td>Best text description of the mechanism.</td>
+              </tr>
+              <tr>
+                <td>Mathemetica X viral post</td>
+                <td>The newer dramatic caption with the equation and “John Anderson dropped this in 1974…” wording.</td>
+                <td>Good for tracking the viral spread, less reliable as physics wording.</td>
+              </tr>
+              <tr>
+                <td>Future Forms listing</td>
+                <td>“John W Anderson Kinetic Sculpture,” year 1974, dimensions 10 in × 8.5 in, base 3 in; designer field says “Unknown.”</td>
+                <td>Useful for scale; also shows attribution uncertainty.</td>
+              </tr>
+              <tr>
+                <td>LiveAuctioneers result</td>
+                <td>“John W. Anderson Kinetic Sculpture, ‘Design in Motion,’ Circa 1974,” with chrome abstract design and dimensions about 9 in × 9.5 in × 4.25 in.</td>
+                <td>Useful for name, size, and auction terminology.</td>
+              </tr>
+              <tr>
+                <td>eBay sold/current listings</td>
+                <td>Sold and active listings for John W. Anderson kinetic sculptures, including a 1974 “Atomic Mobile” style listing.</td>
+                <td>Useful to confirm scarcity and resale-market presence.</td>
+              </tr>
+              <tr>
+                <td>PhysicsFun shop / related Anderson pieces</td>
+                <td>Related 1974 balance/ribbon sculpture as vintage art (often found through Etsy links).</td>
+                <td>Helps triangulate broader style and materials.</td>
+              </tr>
+              <tr>
+                <td>1stDibs / Modlife / Invaluable related works</td>
+                <td>Multiple 1974 kinetic ribbon sculptures: polished aluminum, acrylic/lucite bases, balanced moving elements.</td>
+                <td>Material language reference: black base, chrome/aluminum arcs, delicate pivots.</td>
+              </tr>
+              <tr>
+                <td>Takeshi Maeda 3D-printed attempt</td>
+                <td>X post showing a 3D-printed version because it did not seem easily available; follow-up mentions sphere covers.</td>
+                <td>Proof it’s practical to print, though no file found.</td>
+              </tr>
+              <tr>
+                <td>MakerWorld “Chaotic Pendulum” by sdaendi</td>
+                <td>Not the same sculpture, but printable chaos pendulum using bearings; versions mention 608-ZZ and 688ZZ.</td>
+                <td>Bearing/print precedent; watch license restrictions.</td>
+              </tr>
+              <tr>
+                <td>Printables “Double Pendulum Fidget Spinner”</td>
+                <td>Compact pendulum fidget using bearings; notes clean/ceramic bearings work best.</td>
+                <td>Confirms friction quality dominates performance.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p><strong style="color:rgba(212,168,85,0.92)">What I did not find:</strong> a public, downloadable STL/3MF for the exact 1974 three-axis lucite-sphere sculpture.</p>
+      </div>
+
+      <div class="sec" id="physics">
+        <h2>3. Physics check: what the viral caption gets right and wrong</h2>
+        <p>The equation in the post,</p>
+        <pre class="eq">τ = I·d²θ/dt² + m g L sin(θ)</pre>
+        <p>is basically a rearranged physical pendulum torque equation. In a common sign convention, gravitational torque is:</p>
+        <pre class="eq">I·θ¨ = −m g L sin(θ)</pre>
+        <p>and for small angles it linearizes to:</p>
+        <pre class="eq">I·θ¨ ≈ −m g L·θ
+T = 2π·sqrt(I / (m g L))</pre>
+        <p>The actual object is not a single physical pendulum. It is closer to a multi-axis physical pendulum / gimbal pendulum. The offset axis means gravity and inertia couple the rotations, so a tiny change in release angle can produce a very different visible path. That “sensitive dependence on initial conditions” part is plausible.</p>
+        <p>The “strange attractor” language is more poetic. A single undriven physical pendulum does not show chaos; a driven pendulum or a double/multi-pendulum can show chaos for some parameters.</p>
+      </div>
+
+      <div class="sec" id="goal">
+        <h2>4. 3D-print design goal</h2>
+        <p>Make a printable, tunable, three-axis chaotic physical pendulum inspired by the original. The most important design choice is not visual fidelity; it is low-friction pivots plus adjustable offset.</p>
+
+        <h3>Target scale (starting values)</h3>
+        <div class="grid3">
+          <div class="pill"><div class="k">Outer hoop Ø</div><div class="v">200–230 mm</div></div>
+          <div class="pill"><div class="k">Base Ø</div><div class="v">90–110 mm</div></div>
+          <div class="pill"><div class="k">Base height</div><div class="v">25–35 mm</div></div>
+          <div class="pill"><div class="k">Sphere Ø</div><div class="v">28–40 mm</div></div>
+          <div class="pill"><div class="k">Axle Ø</div><div class="v">4–8 mm</div></div>
+          <div class="pill"><div class="k">Offset range</div><div class="v">0, 5, 10, 15 mm</div></div>
+          <div class="pill"><div class="k">Clearance</div><div class="v">≥ 4–6 mm</div></div>
+          <div class="pill"><div class="k">Sphere mass</div><div class="v">25–70 g each</div></div>
+          <div class="pill"><div class="k">Hoop build</div><div class="v">Split into arcs + pins/screws</div></div>
+        </div>
+      </div>
+
+      <div class="sec" id="architecture">
+        <h2>5. Mechanical architecture</h2>
+        <ol>
+          <li><strong>Weighted base:</strong> print a round base with a hidden cavity for steel washers/coins/nuts. Heavy enough to resist tipping.</li>
+          <li><strong>Vertical support / yaw axis:</strong> metal shaft through a bearing (608ZZ easy, 688ZZ cleaner).</li>
+          <li><strong>Outer hoop / yoke:</strong> two semicircular printed arcs (or bent metal rod for stiffness).</li>
+          <li><strong>Offset middle axis carrier:</strong> slotted holes so the axis can move from 0 → 15 mm offset. Debug at zero offset first.</li>
+          <li><strong>Sphere arm assembly:</strong> hollow printed spheres or purchased acrylic balls. Fill to tune inertia; add a rod through both spheres for left/right trim.</li>
+        </ol>
+      </div>
+
+      <div class="sec" id="bom">
+        <h2>6. Recommended hardware / BOM</h2>
+        <div class="twoCol">
+          <div class="pill">
+            <div class="k">Bearings</div>
+            <div class="v">688ZZ compact pivots; 608ZZ easy sourcing; 624/623 for small arms</div>
+          </div>
+          <div class="pill">
+            <div class="k">Axles</div>
+            <div class="v">Polished steel rod, shoulder screws, or M4/M5/M8 bolts depending on bearings</div>
+          </div>
+          <div class="pill">
+            <div class="k">Fasteners</div>
+            <div class="v">M3 heat-set inserts, M3/M4 screws, washers, nylock nuts</div>
+          </div>
+          <div class="pill">
+            <div class="k">Weights</div>
+            <div class="v">Steel BBs, small nuts, washers, coins (avoid exposed lead)</div>
+          </div>
+          <div class="pill">
+            <div class="k">Spacers</div>
+            <div class="v">Nylon/PTFE washers or printed spacers, avoid plastic-on-plastic rub</div>
+          </div>
+          <div class="pill">
+            <div class="k">Adhesive</div>
+            <div class="v">CA glue or epoxy for sphere halves and hoop segments</div>
+          </div>
+        </div>
+        <p>The more axes you add, the more friction dominates. Clean bearings beat fancy geometry.</p>
+      </div>
+
+      <div class="sec" id="print">
+        <h2>7. Print strategy</h2>
+        <ul>
+          <li><strong>Material:</strong> PLA+ for iteration; PETG for tougher pivot blocks.</li>
+          <li><strong>Layer height:</strong> 0.16–0.20 mm.</li>
+          <li><strong>Walls:</strong> 4+ walls on hoop/yoke/pivot blocks.</li>
+          <li><strong>Infill:</strong> 25–40% frames; 60–100% bearing housings.</li>
+          <li><strong>Hoop:</strong> print flat arc segments with alignment pins; avoid heavy supports.</li>
+          <li><strong>Spheres:</strong> print hemispheres; include fill access; glue after weighing.</li>
+          <li><strong>Tolerances:</strong> 0.2–0.4 mm for press-fit tuning (printer-dependent).</li>
+        </ul>
+        <p>Final version idea: printed base + bearing blocks + spheres, with metal/acrylic rods for rings.</p>
+      </div>
+
+      <div class="sec" id="tuning">
+        <h2>8. Tuning plan</h2>
+        <ol>
+          <li>Assemble with <strong>zero offset</strong>. Every axis must spin freely.</li>
+          <li>Balance the sphere arm. Match sphere mass within ~0.5–1 g; trim with washers.</li>
+          <li>Add <strong>5 mm offset</strong>. Repeat releases, watch motion vary.</li>
+          <li>Try <strong>10 mm</strong> and <strong>15 mm</strong>. More coupling, more collisions risk.</li>
+          <li>If it dies too fast: increase sphere mass (inertia) and reduce friction (clean bearings, polish shafts, avoid overtightening).</li>
+          <li>Record repeatability: slow motion + a release jig; compare nearly identical releases.</li>
+        </ol>
+        <p>Prototype target: 20–60 seconds of interesting motion before it settles.</p>
+      </div>
+
+      <div class="sec" id="params">
+        <h2>9. Design variables to make parametric</h2>
+        <ul>
+          <li><strong>outer_hoop_diameter</strong> (scale + clearance)</li>
+          <li><strong>sphere_diameter</strong> (visual match + mass capacity)</li>
+          <li><strong>sphere_mass</strong> (duration)</li>
+          <li><strong>axis_offset</strong> (coupling/complexity)</li>
+          <li><strong>bearing_type</strong> (hardware + hole sizes)</li>
+          <li><strong>arm_length</strong> (moment of inertia)</li>
+          <li><strong>base_weight_cavity</strong> (stability tuning)</li>
+          <li><strong>clearance_gap</strong> (avoid crashes)</li>
+          <li><strong>pivot_block_thickness</strong> (strength around bearings)</li>
+        </ul>
+        <p>Design around 608ZZ and 688ZZ variants first, because existing printable pendulums prove those bearings work.</p>
+      </div>
+
+      <div class="sec" id="legal">
+        <h2>10. Legal / attribution caution</h2>
+        <p>For a personal educational build, an inspired recreation is reasonable. For selling files or prints, be cautious: this is a recognizable vintage design, and public 3D-print models may also have restrictive licenses.</p>
+      </div>
+
+      <div class="sec" id="path">
+        <h2>11. Recommended build path</h2>
+        <ol>
+          <li><strong>Prototype A:</strong> small double pendulum/fidget to validate bearings and mass.</li>
+          <li><strong>Prototype B:</strong> three-axis gimbal frame, no spheres yet, adjustable offset.</li>
+          <li><strong>Prototype C:</strong> full visual version with weighted spheres + chrome/silver hoops.</li>
+          <li><strong>Prototype D:</strong> polished final with hidden ballast + release jig.</li>
+        </ol>
+        <p><strong>Next deliverable:</strong> a parametric CAD spec optimized for a 220×220 mm bed (or split hoops for larger).</p>
+      </div>
+
+      <div class="footer">
+        <p>~ Phosphor</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
