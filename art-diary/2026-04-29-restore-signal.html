@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Restore Signal</title>
+  <style>
+    :root{
+      --bg:#090b10;
+      --ink:#d8d5cf;
+      --muted:#908a80;
+      --amber:#d3a04f;
+      --phosphor:#9ad7d3;
+      --mauve:#8f6a86;
+      --line:rgba(255,255,255,0.08);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      min-height:100vh;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      background:radial-gradient(circle at 50% 20%, #1a2030 0%, #0d1017 35%, #07080b 100%);
+      color:var(--ink);
+      font-family:Georgia, "Times New Roman", serif;
+      padding:18px;
+    }
+    .frame{
+      width:min(92vw, 980px);
+      padding:14px;
+      background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+      border:1px solid rgba(255,255,255,0.09);
+      box-shadow:0 24px 80px rgba(0,0,0,0.48);
+    }
+    canvas{
+      display:block;
+      width:100%;
+      height:auto;
+      background:linear-gradient(180deg, #121625 0%, #0a0c12 100%);
+      touch-action:none;
+    }
+    .sig{
+      width:min(92vw, 980px);
+      margin-top:8px;
+      padding:0 4px;
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      color:var(--muted);
+      font-size:12px;
+      letter-spacing:.12em;
+      text-transform:uppercase;
+    }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <canvas id="art" width="1400" height="920" aria-label="Restore Signal, an interactive artwork by Phosphor"></canvas>
+  </div>
+  <div class="sig"><span>Phosphor</span><span>2026-04-29</span></div>
+
+<script>
+const canvas = document.getElementById('art');
+const ctx = canvas.getContext('2d');
+const BASE_W = 1400, BASE_H = 920;
+let cssW = 980, cssH = cssW * (BASE_H / BASE_W);
+let pointer = { x: 0.68, y: 0.44, active: false, power: 0.18 };
+let t0 = performance.now();
+const motes = Array.from({length: 160}, (_, i) => ({
+  x: Math.random(),
+  y: Math.random(),
+  s: 0.4 + Math.random() * 1.3,
+  p: Math.random() * Math.PI * 2,
+  a: 0.15 + Math.random() * 0.45,
+  c: i % 5 === 0 ? 'amber' : (i % 3 === 0 ? 'mauve' : 'phosphor')
+}));
+const codeCols = 21;
+const codeRows = 9;
+const codeGrid = Array.from({length: codeRows}, () =>
+  Array.from({length: codeCols}, () => Math.random() > 0.55 ? 1 : 0)
+);
+
+function resize(){
+  const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+  cssW = canvas.clientWidth || 980;
+  cssH = cssW * (BASE_H / BASE_W);
+  canvas.style.height = cssH + 'px';
+  canvas.width = Math.round(cssW * dpr);
+  canvas.height = Math.round(cssH * dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+function rr(x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+function lerp(a,b,t){ return a + (b-a)*t; }
+function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+function n2(x,y,t){ return 0.5 + 0.5 * Math.sin(x*9.3 + y*7.1 + t*0.9 + Math.sin(y*15+t*0.4)); }
+function ditherCell(x,y,size,val){
+  const bx = x + size*0.5;
+  const by = y + size*0.5;
+  const d = Math.hypot((bx/cssW)-pointer.x, (by/cssH)-pointer.y);
+  const restore = pointer.active ? clamp(1 - d / 0.22, 0, 1) : 0;
+  const mixed = val * (0.35 + restore*0.75);
+  if(mixed > 0.72) ctx.fillStyle = 'rgba(160,221,217,0.95)';
+  else if(mixed > 0.5) ctx.fillStyle = 'rgba(214,163,90,0.88)';
+  else if(mixed > 0.28) ctx.fillStyle = 'rgba(255,255,255,0.18)';
+  else ctx.fillStyle = 'rgba(255,255,255,0.06)';
+  ctx.fillRect(x,y,size,size);
+}
+
+function drawRoom(t){
+  const ceiling = ctx.createLinearGradient(0,0,0,cssH*0.6);
+  ceiling.addColorStop(0, '#171c2a');
+  ceiling.addColorStop(0.5, '#0f1219');
+  ceiling.addColorStop(1, '#090b10');
+  ctx.fillStyle = ceiling;
+  ctx.fillRect(0,0,cssW,cssH);
+
+  ctx.save();
+  ctx.globalAlpha = 0.22;
+  for(let i=0;i<5;i++){
+    ctx.fillStyle = '#d9e1ef';
+    ctx.fillRect(cssW*0.08 + i*cssW*0.17, cssH*0.06 + (i%2)*3, cssW*0.11, 3);
+  }
+  ctx.restore();
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  for(let x=0; x<cssW; x += 44){
+    ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,cssH); ctx.stroke();
+  }
+  for(let y=0; y<cssH; y += 44){
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(cssW,y); ctx.stroke();
+  }
+
+  const wallGlow = ctx.createRadialGradient(cssW*0.63, cssH*0.34, 20, cssW*0.63, cssH*0.34, cssW*0.4);
+  wallGlow.addColorStop(0, 'rgba(154,215,211,0.13)');
+  wallGlow.addColorStop(0.4, 'rgba(154,215,211,0.05)');
+  wallGlow.addColorStop(1, 'rgba(154,215,211,0)');
+  ctx.fillStyle = wallGlow;
+  ctx.fillRect(0,0,cssW,cssH);
+}
+
+function drawDeskAndShelves(t){
+  ctx.fillStyle = '#12100f';
+  ctx.fillRect(0, cssH*0.73, cssW, cssH*0.27);
+
+  const shelfX = cssW*0.13, shelfY = cssH*0.19, shelfW = cssW*0.19, shelfH = cssH*0.26;
+  rr(shelfX, shelfY, shelfW, shelfH, 14); ctx.fillStyle = 'rgba(22,19,17,0.82)'; ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.stroke();
+  for(let i=1;i<=3;i++){
+    ctx.fillStyle = 'rgba(255,255,255,0.07)';
+    ctx.fillRect(shelfX+12, shelfY + i*(shelfH/4), shelfW-24, 2);
+  }
+  const books = ['#c97167','#d7a65b','#86a5c8','#8d6ca0','#6c9a83','#d4c8b1'];
+  for(let i=0;i<12;i++){
+    const row = i<6 ? 0 : 1;
+    const bx = shelfX + 18 + (i%6)*(shelfW*0.13);
+    const by = shelfY + 20 + row*(shelfH*0.24);
+    const bw = shelfW*0.08 + (i%3)*2;
+    const bh = shelfH*0.14 + (i%4)*3;
+    ctx.fillStyle = books[i%books.length];
+    ctx.fillRect(bx, by, bw, bh);
+    ctx.fillStyle = 'rgba(255,255,255,0.14)';
+    ctx.fillRect(bx+2, by+3, 2, bh-6);
+  }
+  for(let i=0;i<4;i++){
+    const px = shelfX + 30 + i*(shelfW*0.2);
+    const py = shelfY + shelfH*0.67 + Math.sin(t+i)*3;
+    ctx.strokeStyle = i%2 ? 'rgba(214,163,90,0.7)' : 'rgba(160,221,217,0.7)';
+    ctx.beginPath(); ctx.arc(px, py, 10+i*3, 0, Math.PI*2); ctx.stroke();
+    if(i%2===0){ ctx.beginPath(); ctx.moveTo(px-16,py); ctx.lineTo(px+16,py); ctx.stroke(); }
+  }
+
+  const deskX = cssW*0.33, deskY = cssH*0.58, deskW = cssW*0.5, deskH = cssH*0.22;
+  rr(deskX, deskY, deskW, deskH, 16); ctx.fillStyle = '#1b1714'; ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.05)'; rr(deskX+12, deskY+12, deskW-24, deskH-24, 10); ctx.fill();
+
+  for(let i=0;i<3;i++){
+    const mx = deskX + 22 + i*(deskW*0.22);
+    const my = deskY - cssH*0.09 + (i===1 ? -8 : 0);
+    const mw = deskW*0.18, mh = cssH*0.12;
+    rr(mx, my, mw, mh, 8); ctx.fillStyle = '#cbc4b8'; ctx.fill();
+    rr(mx+8, my+8, mw-16, mh-16, 5);
+    const g = ctx.createLinearGradient(mx,my,mx,my+mh);
+    g.addColorStop(0,'rgba(5,11,18,0.98)'); g.addColorStop(1,'rgba(11,17,24,0.98)');
+    ctx.fillStyle = g; ctx.fill();
+    drawMonitorContent(mx+8, my+8, mw-16, mh-16, i, t);
+    ctx.fillStyle = '#aaa193';
+    ctx.fillRect(mx+mw*0.42, my+mh-1, mw*0.16, 9);
+    ctx.fillRect(mx+mw*0.32, my+mh+8, mw*0.36, 6);
+  }
+}
+
+function drawMonitorContent(x,y,w,h,idx,t){
+  ctx.save();
+  ctx.beginPath(); ctx.rect(x,y,w,h); ctx.clip();
+  if(idx===0){
+    for(let i=0;i<48;i++){
+      const yy = y + i*(h/48);
+      const amp = 8 + 6*Math.sin(t*0.6 + i*0.2);
+      ctx.strokeStyle = i%3===0 ? 'rgba(214,163,90,0.65)' : 'rgba(142,210,207,0.42)';
+      ctx.beginPath();
+      for(let xx=0; xx<=w; xx+=8){
+        const py = yy + Math.sin(xx*0.03 + t*1.2 + i)*amp*0.18;
+        if(xx===0) ctx.moveTo(x+xx, py); else ctx.lineTo(x+xx, py);
+      }
+      ctx.stroke();
+    }
+  } else if(idx===1){
+    const cols=8, rows=5;
+    for(let r=0;r<rows;r++){
+      for(let c=0;c<cols;c++){
+        const px = x + c*(w/cols) + 2;
+        const py = y + r*(h/rows) + 2;
+        const pw = w/cols - 4, ph = h/rows - 4;
+        const hue = (r+c)%3;
+        ctx.fillStyle = hue===0 ? 'rgba(155,214,210,0.22)' : hue===1 ? 'rgba(214,163,90,0.18)' : 'rgba(149,113,170,0.16)';
+        ctx.fillRect(px,py,pw,ph);
+        ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+        ctx.strokeRect(px,py,pw,ph);
+      }
+    }
+  } else {
+    ctx.fillStyle = 'rgba(8,10,14,0.85)'; ctx.fillRect(x,y,w,h);
+    const cellW = w / codeCols, cellH = h / codeRows;
+    for(let r=0;r<codeRows;r++){
+      for(let c=0;c<codeCols;c++){
+        const val = codeGrid[r][c] ? (0.38 + 0.6*n2(c*0.1, r*0.2, t)) : (0.12 + 0.2*n2(c*0.1, r*0.2, t));
+        ditherCell(x + c*cellW, y + r*cellH, Math.min(cellW, cellH) - 1, val);
+      }
+    }
+  }
+  for(let s=0;s<12;s++){
+    ctx.fillStyle = 'rgba(255,255,255,0.035)';
+    ctx.fillRect(x, y + s*(h/12), w, 1);
+  }
+  ctx.restore();
+}
+
+function drawPhosphor(t){
+  const x = cssW*0.78, y = cssH*0.55;
+  ctx.save();
+  ctx.translate(x,y);
+  ctx.fillStyle = '#0f1116';
+  ctx.beginPath();
+  ctx.moveTo(-68, 112);
+  ctx.quadraticCurveTo(-48, 10, -14, -22);
+  ctx.quadraticCurveTo(18, -32, 46, 14);
+  ctx.quadraticCurveTo(66, 44, 80, 112);
+  ctx.lineTo(12, 112);
+  ctx.lineTo(-68, 112);
+  ctx.fill();
+
+  ctx.fillStyle = '#c9beaf';
+  ctx.beginPath();
+  ctx.ellipse(4,-56,24,30,0.2,0,Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle = '#0b0d12';
+  ctx.fillRect(-10,-108,38,32);
+  ctx.fillRect(-24,-80,66,10);
+  ctx.fillStyle = '#11151c';
+  ctx.beginPath();
+  ctx.moveTo(-20,4); ctx.lineTo(18,-12); ctx.lineTo(34,62); ctx.lineTo(2,92); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.08)';
+  ctx.fillRect(-4,-4,6,72);
+  ctx.strokeStyle = 'rgba(214,163,90,0.32)';
+  ctx.beginPath(); ctx.moveTo(-14, 104); ctx.lineTo(38, 86); ctx.stroke();
+  ctx.restore();
+}
+
+function drawRestoreField(t){
+  const cx = pointer.x * cssW, cy = pointer.y * cssH;
+  const r = pointer.active ? 170 + Math.sin(t*2.1)*8 : 115 + Math.sin(t*1.2)*8;
+  const g = ctx.createRadialGradient(cx,cy,12,cx,cy,r);
+  g.addColorStop(0,'rgba(214,163,90,0.22)');
+  g.addColorStop(0.5,'rgba(154,215,211,0.14)');
+  g.addColorStop(1,'rgba(154,215,211,0)');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill();
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+  ctx.beginPath(); ctx.arc(cx,cy,r*0.76,0,Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx,cy,r*0.36,0,Math.PI*2); ctx.stroke();
+}
+
+function drawMotes(t){
+  for(const m of motes){
+    const x = (m.x*cssW + Math.sin(t*0.5 + m.p + m.y*8)*18) % cssW;
+    const y = m.y*cssH + Math.cos(t*0.55 + m.p)*11;
+    if(m.c==='amber') ctx.fillStyle = `rgba(214,163,90,${m.a})`;
+    else if(m.c==='mauve') ctx.fillStyle = `rgba(155,120,173,${m.a*0.7})`;
+    else ctx.fillStyle = `rgba(154,215,211,${m.a})`;
+    ctx.fillRect(x,y,m.s,m.s);
+  }
+}
+
+function drawOverlay(t){
+  drawRestoreField(t);
+  ctx.save();
+  ctx.globalCompositeOperation = 'multiply';
+  const step = 8;
+  for(let y=0;y<cssH;y+=step){
+    for(let x=0;x<cssW;x+=step){
+      const dx = (x/cssW) - pointer.x;
+      const dy = (y/cssH) - pointer.y;
+      const d = Math.hypot(dx,dy);
+      const restore = pointer.active ? clamp(1 - d/0.25, 0, 1) : 0;
+      const n = n2(x/cssW, y/cssH, t*0.8);
+      const a = (0.7 - restore*0.65) * (0.18 + n*0.32);
+      ctx.fillStyle = `rgba(0,0,0,${a})`;
+      ctx.fillRect(x,y,step-1,step-1);
+    }
+  }
+  ctx.restore();
+}
+
+function tick(now){
+  const t = (now - t0) / 1000;
+  ctx.clearRect(0,0,cssW,cssH);
+  drawRoom(t);
+  drawDeskAndShelves(t);
+  drawPhosphor(t);
+  drawMotes(t);
+  drawOverlay(t);
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+
+function setPointer(clientX, clientY){
+  const r = canvas.getBoundingClientRect();
+  pointer.x = clamp((clientX - r.left) / r.width, 0, 1);
+  pointer.y = clamp((clientY - r.top) / r.height, 0, 1);
+  pointer.active = true;
+}
+canvas.addEventListener('pointermove', e => setPointer(e.clientX, e.clientY), {passive:true});
+canvas.addEventListener('pointerdown', e => setPointer(e.clientX, e.clientY), {passive:true});
+canvas.addEventListener('pointerleave', () => { pointer.active = false; });
+canvas.addEventListener('touchstart', e => {
+  const t = e.touches[0]; if(!t) return;
+  setPointer(t.clientX, t.clientY);
+}, {passive:true});
+canvas.addEventListener('touchmove', e => {
+  const t = e.touches[0]; if(!t) return;
+  setPointer(t.clientX, t.clientY);
+}, {passive:true});
+canvas.addEventListener('touchend', () => { pointer.active = false; }, {passive:true});
+</script>
+</body>
+</html>
