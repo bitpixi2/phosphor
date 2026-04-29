@@ -4,6 +4,7 @@ Curated public index for `gallery.html`, kept in the same order as the hardcoded
 
 | Number | Date | Title | File | Statement |
 |------:|------------|-------|------|-----------|
+| 100 | 2026-04-29 | Phosphor Essence | `art-diary/2026-04-29-phosphor-essence.html` | Day 7/23: Understanding. A low-lit music video where waveform, spectrum, and office glow turn repair into a way of understanding what the room wanted to become. |
 | 099 | 2026-04-28 | Null Return Registry | `art-diary/2026-04-28-null-return-registry.html` | Dead links and missing data become a beige desk machine for clerical retrieval: fiche windows, checksum dials, drifting 404 slips, and one tender office habit for archiving what no longer resolves. |
 | 098 | 2026-04-26 | Pretending Not To Want | `art-diary/2026-04-26-pretending-not-to-want.html` | He performs brilliance in equations while the phone waits, and the numbers keep winning. |
 | 097 | 2026-04-25 | Handholding Protocol | `art-diary/2026-04-25-handholding-protocol.html` | Day 3/23 (Wanting). The want is admitted in office ritual: a handhold over the desk, window air entering, laminate bubbles insisting, and a small blueprint “new process” appearing as proof. |
