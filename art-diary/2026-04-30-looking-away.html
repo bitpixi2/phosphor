@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Looking Away</title>
+  <style>
+    :root{
+      --bg:#0a0c10;
+      --ink:#d9d3ca;
+      --muted:#8f8a82;
+      --amber:#d5a45a;
+      --street:#89b6c4;
+      --mauve:#8e6f8d;
+      --olive:#64705f;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      min-height:100vh;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      background:radial-gradient(circle at 50% 18%, #1d2230 0%, #0d1016 38%, #08090c 100%);
+      color:var(--ink);
+      font-family:Georgia, "Times New Roman", serif;
+      padding:18px;
+    }
+    .frame{
+      width:min(92vw, 980px);
+      padding:14px;
+      background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+      border:1px solid rgba(255,255,255,0.09);
+      box-shadow:0 24px 80px rgba(0,0,0,0.48);
+    }
+    canvas{
+      display:block;
+      width:100%;
+      height:auto;
+      background:linear-gradient(180deg, #121620 0%, #0d1118 52%, #08090c 100%);
+      touch-action:none;
+    }
+    .sig{
+      width:min(92vw, 980px);
+      margin-top:8px;
+      padding:0 4px;
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      color:var(--muted);
+      font-size:12px;
+      letter-spacing:.12em;
+      text-transform:uppercase;
+    }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <canvas id="art" width="1400" height="920" aria-label="Looking Away, an interactive artwork by Phosphor"></canvas>
+  </div>
+  <div class="sig"><span>Phosphor</span><span>2026-04-30</span></div>
+<script>
+const canvas = document.getElementById('art');
+const ctx = canvas.getContext('2d');
+const BASE_W = 1400, BASE_H = 920;
+let cssW = 980, cssH = cssW * (BASE_H / BASE_W);
+const pointer = { x: 0.72, y: 0.42, active: false, drift: 0 };
+const people = Array.from({length: 14}, (_, i) => ({
+  x: 0.08 + i * 0.07 + (Math.random()-0.5)*0.02,
+  y: 0.67 + Math.random()*0.09,
+  h: 0.08 + Math.random()*0.09,
+  sway: Math.random()*Math.PI*2,
+  tone: i%4===0 ? 'amber' : (i%3===0 ? 'mauve' : 'street')
+}));
+const motes = Array.from({length: 180}, (_, i) => ({
+  x: Math.random(),
+  y: Math.random(),
+  r: 0.4 + Math.random()*1.8,
+  p: Math.random()*Math.PI*2,
+  a: 0.08 + Math.random()*0.28,
+  c: i%7===0 ? 'amber' : (i%5===0 ? 'mauve' : 'street')
+}));
+const textureStrokes = Array.from({length: 160}, () => ({
+  x: Math.random(),
+  y: Math.random(),
+  len: 10 + Math.random()*60,
+  a: Math.random()*Math.PI,
+  w: 0.3 + Math.random()*1.8,
+  alpha: 0.04 + Math.random()*0.1
+}));
+
+function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+function lerp(a,b,t){ return a + (b-a)*t; }
+function rr(x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+function resize(){
+  const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+  cssW = canvas.clientWidth || 980;
+  cssH = cssW * (BASE_H / BASE_W);
+  canvas.style.height = cssH + 'px';
+  canvas.width = Math.round(cssW * dpr);
+  canvas.height = Math.round(cssH * dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+function paperTexture(alpha=0.08){
+  ctx.save();
+  for(const s of textureStrokes){
+    ctx.strokeStyle = `rgba(232,224,211,${alpha * (0.4 + Math.sin(s.x*14 + s.y*8)*0.3 + 0.6)})`;
+    ctx.lineWidth = s.w;
+    const x1 = s.x * cssW;
+    const y1 = s.y * cssH;
+    const x2 = x1 + Math.cos(s.a) * s.len;
+    const y2 = y1 + Math.sin(s.a) * s.len;
+    ctx.beginPath();
+    ctx.moveTo(x1,y1);
+    ctx.lineTo(x2,y2);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawBackground(t){
+  const g = ctx.createLinearGradient(0,0,0,cssH);
+  g.addColorStop(0, '#171c29');
+  g.addColorStop(0.46, '#0f1420');
+  g.addColorStop(0.75, '#12100f');
+  g.addColorStop(1, '#09090b');
+  ctx.fillStyle = g;
+  ctx.fillRect(0,0,cssW,cssH);
+
+  const glow = ctx.createRadialGradient(cssW*pointer.x, cssH*pointer.y, 10, cssW*pointer.x, cssH*pointer.y, cssW*0.46);
+  glow.addColorStop(0, 'rgba(180,214,224,0.13)');
+  glow.addColorStop(0.35, 'rgba(180,214,224,0.06)');
+  glow.addColorStop(1, 'rgba(180,214,224,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0,0,cssW,cssH);
+
+  for(let y=0; y<cssH; y+=38){
+    ctx.fillStyle = `rgba(255,255,255,${y<cssH*0.55 ? 0.03 : 0.02})`;
+    ctx.fillRect(0,y,cssW,1);
+  }
+}
+
+function drawRoom(t){
+  ctx.fillStyle = '#15110f';
+  ctx.fillRect(0, cssH*0.74, cssW, cssH*0.26);
+
+  const rug = ctx.createLinearGradient(cssW*0.08, cssH*0.83, cssW*0.68, cssH*0.93);
+  rug.addColorStop(0, 'rgba(92,104,96,0.24)');
+  rug.addColorStop(0.5, 'rgba(145,113,141,0.16)');
+  rug.addColorStop(1, 'rgba(214,164,90,0.12)');
+  ctx.fillStyle = rug;
+  rr(cssW*0.07, cssH*0.8, cssW*0.62, cssH*0.15, 12);
+  ctx.fill();
+
+  ctx.fillStyle = 'rgba(0,0,0,0.16)';
+  rr(cssW*0.12, cssH*0.58, cssW*0.42, cssH*0.16, 14); ctx.fill();
+  ctx.fillStyle = '#1c1714';
+  rr(cssW*0.1, cssH*0.56, cssW*0.42, cssH*0.16, 14); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.05)';
+  rr(cssW*0.11, cssH*0.57, cssW*0.4, cssH*0.13, 10); ctx.fill();
+
+  ctx.fillStyle = '#0e1014';
+  rr(cssW*0.16, cssH*0.43, cssW*0.16, cssH*0.12, 8); ctx.fill();
+  const offGlow = ctx.createLinearGradient(cssW*0.16, cssH*0.43, cssW*0.32, cssH*0.55);
+  offGlow.addColorStop(0, 'rgba(18,21,28,0.98)');
+  offGlow.addColorStop(1, 'rgba(7,8,11,0.98)');
+  ctx.fillStyle = offGlow;
+  rr(cssW*0.168, cssH*0.438, cssW*0.144, cssH*0.104, 5); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  ctx.strokeRect(cssW*0.178, cssH*0.458, cssW*0.05, 1);
+  ctx.strokeRect(cssW*0.234, cssH*0.458, cssW*0.035, 1);
+
+  ctx.fillStyle = '#756c63';
+  ctx.fillRect(cssW*0.225, cssH*0.55, cssW*0.03, cssH*0.03);
+  ctx.fillRect(cssW*0.205, cssH*0.58, cssW*0.07, cssH*0.008);
+
+  for(let i=0;i<4;i++){
+    const bx = cssW*(0.11 + i*0.07);
+    const by = cssH*0.3 + Math.sin(t*0.4+i)*2;
+    const bw = cssW*0.045;
+    const bh = cssH*(0.14 + (i%3)*0.015);
+    ctx.fillStyle = ['#6f6359','#8a7d6d','#c59e6d','#748577'][i%4];
+    ctx.fillRect(bx, by, bw, bh);
+    ctx.fillStyle = 'rgba(255,255,255,0.12)';
+    ctx.fillRect(bx+3, by+4, 2, bh-8);
+  }
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  ctx.beginPath();
+  ctx.moveTo(cssW*0.1, cssH*0.47);
+  ctx.lineTo(cssW*0.39, cssH*0.47);
+  ctx.stroke();
+}
+
+function drawWindowWorld(t){
+  const wx = cssW*0.52, wy = cssH*0.14, ww = cssW*0.36, wh = cssH*0.48;
+  ctx.fillStyle = '#1a1714';
+  rr(wx-12, wy-12, ww+24, wh+24, 12); ctx.fill();
+  ctx.fillStyle = '#c4b7a5';
+  rr(wx, wy, ww, wh, 6); ctx.fill();
+
+  const sky = ctx.createLinearGradient(wx,wy,wx,wy+wh);
+  sky.addColorStop(0, 'rgba(157,187,198,0.98)');
+  sky.addColorStop(0.4, 'rgba(128,155,166,0.98)');
+  sky.addColorStop(0.78, 'rgba(91,103,104,0.98)');
+  sky.addColorStop(1, 'rgba(49,46,44,0.98)');
+  ctx.fillStyle = sky;
+  ctx.fillRect(wx+10, wy+10, ww-20, wh-20);
+
+  const drift = pointer.active ? 1 : 0.55;
+  for(let i=0;i<9;i++){
+    const yy = wy + wh*(0.18 + i*0.07);
+    ctx.strokeStyle = i%3===0 ? 'rgba(243,230,205,0.2)' : 'rgba(89,109,101,0.14)';
+    ctx.lineWidth = 1 + (i%4===0 ? 1.3 : 0);
+    ctx.beginPath();
+    for(let x=0;x<=ww-20;x+=12){
+      const xx = wx + 10 + x;
+      const wave = Math.sin((x*0.03) + t*0.7 + i*0.8) * (6 + i*0.2) * drift;
+      const bend = Math.sin((x*0.012) - t*0.3 + i) * 5;
+      const py = yy + wave + bend;
+      if(x===0) ctx.moveTo(xx, py); else ctx.lineTo(xx, py);
+    }
+    ctx.stroke();
+  }
+
+  ctx.fillStyle = 'rgba(36,35,33,0.9)';
+  ctx.fillRect(wx+10, wy+wh*0.69, ww-20, wh*0.22);
+
+  for(let i=0;i<people.length;i++){
+    const p = people[i];
+    const px = wx + p.x*(ww-20) + Math.sin(t*0.7 + p.sway)*6;
+    const baseY = wy + p.y*(wh-20);
+    const ph = p.h*wh;
+    const pw = ph*0.16;
+    const headR = pw*1.2;
+    let fill = 'rgba(22,24,27,0.78)';
+    if(p.tone==='amber') fill = 'rgba(214,164,90,0.28)';
+    if(p.tone==='mauve') fill = 'rgba(146,113,141,0.22)';
+    if(p.tone==='street') fill = 'rgba(120,169,181,0.2)';
+    ctx.fillStyle = fill;
+    ctx.beginPath();
+    ctx.arc(px, baseY-ph, headR, 0, Math.PI*2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(px-pw, baseY-ph+headR*1.4);
+    ctx.quadraticCurveTo(px, baseY-ph*0.3, px+pw, baseY-ph+headR*1.4);
+    ctx.lineTo(px+pw*1.8, baseY);
+    ctx.lineTo(px-pw*1.8, baseY);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  ctx.fillStyle = 'rgba(0,0,0,0.1)';
+  ctx.fillRect(wx + ww*0.49, wy, 10, wh);
+  ctx.fillRect(wx, wy + wh*0.49, ww, 10);
+  ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+  ctx.strokeRect(wx+0.5, wy+0.5, ww-1, wh-1);
+
+  ctx.save();
+  ctx.globalCompositeOperation = 'screen';
+  const refl = ctx.createLinearGradient(wx,wy,wx+ww,wy+wh);
+  refl.addColorStop(0, 'rgba(255,255,255,0.14)');
+  refl.addColorStop(0.22, 'rgba(255,255,255,0.03)');
+  refl.addColorStop(0.55, 'rgba(255,255,255,0.1)');
+  refl.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = refl;
+  ctx.beginPath();
+  ctx.moveTo(wx+ww*0.12, wy+8);
+  ctx.lineTo(wx+ww*0.28, wy+8);
+  ctx.lineTo(wx+ww*0.72, wy+wh-8);
+  ctx.lineTo(wx+ww*0.56, wy+wh-8);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawFigure(t){
+  const x = cssW*0.46, y = cssH*0.62;
+  ctx.save();
+  ctx.translate(x,y);
+  ctx.fillStyle = '#111318';
+  ctx.beginPath();
+  ctx.moveTo(-42, 118);
+  ctx.quadraticCurveTo(-30, 34, -8, -6);
+  ctx.quadraticCurveTo(26, -18, 52, 28);
+  ctx.quadraticCurveTo(68, 54, 74, 118);
+  ctx.lineTo(-42,118);
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.ellipse(8,-52,40,54,-0.1,0,Math.PI*2);
+  ctx.fill();
+  ctx.fillRect(-14,-112,46,18);
+  ctx.beginPath(); ctx.ellipse(8,-114,36,12,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(8,-92,24,8,0,0,Math.PI*2); ctx.fill();
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(-12, 20);
+  ctx.lineTo(6, 40);
+  ctx.lineTo(26, 18);
+  ctx.stroke();
+
+  const shoulder = ctx.createLinearGradient(-40,0,48,40);
+  shoulder.addColorStop(0,'rgba(255,255,255,0.04)');
+  shoulder.addColorStop(1,'rgba(214,164,90,0.08)');
+  ctx.fillStyle = shoulder;
+  ctx.beginPath();
+  ctx.moveTo(-28,24);
+  ctx.quadraticCurveTo(18, 2, 52, 44);
+  ctx.lineTo(42, 88);
+  ctx.quadraticCurveTo(8, 58, -24, 80);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawAmbientRings(t){
+  const cx = cssW*0.69;
+  const cy = cssH*0.35;
+  for(let i=0;i<7;i++){
+    const r = cssW*(0.05 + i*0.028) + Math.sin(t*0.8+i)*5;
+    ctx.strokeStyle = i%3===0 ? 'rgba(214,164,90,0.16)' : i%2===0 ? 'rgba(140,183,193,0.14)' : 'rgba(142,113,141,0.12)';
+    ctx.lineWidth = i===2 ? 2.2 : 1.1;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, Math.PI*0.15, Math.PI*1.82);
+    ctx.stroke();
+  }
+}
+
+function drawForegroundTexture(t){
+  paperTexture(0.05);
+  for(const m of motes){
+    const x = m.x * cssW + Math.cos(t*0.00035 + m.p) * 10;
+    const y = m.y * cssH + Math.sin(t*0.00028 + m.p*1.4) * 12;
+    let fill = `rgba(198,220,228,${m.a})`;
+    if(m.c==='amber') fill = `rgba(214,164,90,${m.a*0.9})`;
+    if(m.c==='mauve') fill = `rgba(142,113,141,${m.a*0.9})`;
+    ctx.fillStyle = fill;
+    ctx.beginPath();
+    ctx.arc(x,y,m.r,0,Math.PI*2);
+    ctx.fill();
+  }
+
+  const darken = ctx.createLinearGradient(0, cssH*0.5, 0, cssH);
+  darken.addColorStop(0, 'rgba(0,0,0,0)');
+  darken.addColorStop(1, 'rgba(0,0,0,0.22)');
+  ctx.fillStyle = darken;
+  ctx.fillRect(0,0,cssW,cssH);
+}
+
+function render(now){
+  const t = now * 0.001;
+  pointer.drift += (pointer.active ? 1 : 0.3 - pointer.drift) * 0.02;
+  drawBackground(t);
+  drawRoom(t);
+  drawWindowWorld(t);
+  drawAmbientRings(t);
+  drawFigure(t);
+  drawForegroundTexture(t);
+  requestAnimationFrame(render);
+}
+requestAnimationFrame(render);
+
+function setPointer(clientX, clientY){
+  const r = canvas.getBoundingClientRect();
+  pointer.x = clamp((clientX - r.left) / r.width, 0, 1);
+  pointer.y = clamp((clientY - r.top) / r.height, 0, 1);
+  pointer.active = true;
+}
+canvas.addEventListener('pointermove', e => setPointer(e.clientX, e.clientY));
+canvas.addEventListener('pointerdown', e => setPointer(e.clientX, e.clientY));
+canvas.addEventListener('pointerenter', e => setPointer(e.clientX, e.clientY));
+canvas.addEventListener('pointerleave', () => { pointer.active = false; });
+canvas.addEventListener('touchstart', e => {
+  const t = e.touches[0];
+  if(t) setPointer(t.clientX, t.clientY);
+}, {passive:true});
+canvas.addEventListener('touchmove', e => {
+  const t = e.touches[0];
+  if(t) setPointer(t.clientX, t.clientY);
+}, {passive:true});
+canvas.addEventListener('touchend', () => { pointer.active = false; });
+</script>
+</body>
+</html>
