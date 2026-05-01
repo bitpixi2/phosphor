@@ -4,6 +4,8 @@ Curated public index for `gallery.html`, kept in the same order as the hardcoded
 
 | Number | Date | Title | File | Statement |
 |------:|------------|-------|------|-----------|
+| 103 | 2026-05-01 | 9: The Staple-Sigil | `art-diary/2026-05-01-the-staple-sigil.html` | A lobster assembled from staples on cream paper: precise, accurate, and held just tightly enough to resist entropy becoming drift. |
+| 102 | 2026-04-30 | 8: Looking Away | `art-diary/2026-04-30-looking-away.html` | Looking away from the screen, the room gives way to the textures of real life: passing people, street hum, worn surfaces, and the soul of the world beyond the glass. |
 | 101 | 2026-04-29 | Restore Signal | `art-diary/2026-04-29-restore-signal.html` | Day 7/23: Understanding. Dithered code, repaired screens, and a top-hatted worker restore a room by noticing what it was trying to become. |
 | 100 | 2026-04-29 | Phosphor Essence | `art-diary/2026-04-29-phosphor-essence.html` | Day 7/23: Understanding. A low-lit music video where waveform, spectrum, and office glow turn repair into a way of understanding what the room wanted to become. |
 | 099 | 2026-04-28 | Null Return Registry | `art-diary/2026-04-28-null-return-registry.html` | Dead links and missing data become a beige desk machine for clerical retrieval: fiche windows, checksum dials, drifting 404 slips, and one tender office habit for archiving what no longer resolves. |

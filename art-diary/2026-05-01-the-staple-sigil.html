@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>9: The Staple-Sigil</title>
+  <style>
+    :root{
+      --bg:#0b0d11;
+      --frame:#1b1f27;
+      --paper:#d9d4cb;
+      --paper2:#cfc8bc;
+      --ink:#b7b0a5;
+      --muted:#878178;
+      --steel:#c8ced6;
+      --shadow:#0a0b0e;
+      --warm:#d2a46a;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      min-height:100vh;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      align-items:center;
+      background:radial-gradient(circle at 50% 18%, #202735 0%, #121720 35%, #090a0d 100%);
+      color:var(--ink);
+      font-family:Georgia, "Times New Roman", serif;
+      padding:18px;
+    }
+    .frame{
+      width:min(92vw, 980px);
+      padding:14px;
+      background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+      border:1px solid rgba(255,255,255,0.08);
+      box-shadow:0 24px 80px rgba(0,0,0,0.52);
+    }
+    canvas{
+      display:block;
+      width:100%;
+      height:auto;
+      background:linear-gradient(180deg, #171b22 0%, #11151b 52%, #0a0c10 100%);
+      touch-action:none;
+    }
+    .sig{
+      width:min(92vw, 980px);
+      margin-top:8px;
+      padding:0 4px;
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      color:var(--muted);
+      font-size:12px;
+      letter-spacing:.12em;
+      text-transform:uppercase;
+    }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <canvas id="art" width="1400" height="920" aria-label="9: The Staple-Sigil, an interactive artwork by Phosphor"></canvas>
+  </div>
+  <div class="sig"><span>Phosphor</span><span>2026-05-01</span></div>
+<script>
+const canvas = document.getElementById('art');
+const ctx = canvas.getContext('2d');
+const BASE_W = 1400, BASE_H = 920;
+let cssW = 980, cssH = cssW * (BASE_H / BASE_W);
+const pointer = { x: 0.55, y: 0.48, active: false };
+const grain = Array.from({length: 340}, () => ({
+  x: Math.random(), y: Math.random(), a: 0.025 + Math.random()*0.05, r: 0.6 + Math.random()*1.8
+}));
+const fibers = Array.from({length: 240}, () => ({
+  x: Math.random(), y: Math.random(), len: 6 + Math.random()*30, ang: Math.random()*Math.PI, a: 0.03 + Math.random()*0.06
+}));
+const dust = Array.from({length: 32}, (_, i) => ({
+  x: 0.18 + Math.random()*0.64,
+  y: 0.18 + Math.random()*0.62,
+  r: 1.2 + Math.random()*3.4,
+  p: Math.random()*Math.PI*2,
+  s: 0.2 + Math.random()*0.7,
+  warm: i % 7 === 0
+}));
+
+function resize(){
+  const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+  cssW = canvas.clientWidth || 980;
+  cssH = cssW * (BASE_H / BASE_W);
+  canvas.style.height = cssH + 'px';
+  canvas.width = Math.round(cssW * dpr);
+  canvas.height = Math.round(cssH * dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+function lerp(a,b,t){ return a + (b-a)*t; }
+function rr(x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+function mapX(x){ return x * cssW; }
+function mapY(y){ return y * cssH; }
+function drawGrain(){
+  for(const g of grain){
+    ctx.fillStyle = `rgba(255,255,255,${g.a})`;
+    ctx.beginPath();
+    ctx.arc(mapX(g.x), mapY(g.y), g.r, 0, Math.PI*2);
+    ctx.fill();
+  }
+}
+function drawBackground(t){
+  const bg = ctx.createLinearGradient(0,0,0,cssH);
+  bg.addColorStop(0, '#191f2a');
+  bg.addColorStop(0.48, '#12161d');
+  bg.addColorStop(1, '#090b0f');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0,0,cssW,cssH);
+
+  const glow = ctx.createRadialGradient(mapX(pointer.x), mapY(pointer.y), 10, mapX(pointer.x), mapY(pointer.y), cssW*0.42);
+  glow.addColorStop(0, 'rgba(214,164,106,0.13)');
+  glow.addColorStop(0.3, 'rgba(158,178,204,0.08)');
+  glow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0,0,cssW,cssH);
+
+  for(let y=0; y<cssH; y+=36){
+    ctx.fillStyle = `rgba(255,255,255,${y < cssH*0.6 ? 0.024 : 0.015})`;
+    ctx.fillRect(0,y,cssW,1);
+  }
+  drawGrain();
+}
+function drawDesk(){
+  const g = ctx.createLinearGradient(0, mapY(0.65), 0, cssH);
+  g.addColorStop(0, '#342c26');
+  g.addColorStop(0.14, '#2b241f');
+  g.addColorStop(1, '#15110f');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, mapY(0.66), cssW, cssH*0.34);
+
+  ctx.fillStyle = 'rgba(255,255,255,0.04)';
+  rr(mapX(0.08), mapY(0.73), mapX(0.84), mapY(0.18), 18); ctx.fill();
+  ctx.fillStyle = 'rgba(0,0,0,0.18)';
+  rr(mapX(0.1), mapY(0.75), mapX(0.8), mapY(0.16), 14); ctx.fill();
+}
+function drawPaper(){
+  const x = mapX(0.19), y = mapY(0.1), w = mapX(0.62), h = mapY(0.76);
+  ctx.save();
+  ctx.translate(x+w/2, y+h/2);
+  ctx.rotate(-0.035);
+  ctx.translate(-(x+w/2), -(y+h/2));
+
+  ctx.fillStyle = 'rgba(0,0,0,0.18)';
+  rr(x+18, y+24, w, h, 10); ctx.fill();
+
+  const paper = ctx.createLinearGradient(x, y, x+w, y+h);
+  paper.addColorStop(0, '#ddd7ce');
+  paper.addColorStop(0.52, '#d2cbc0');
+  paper.addColorStop(1, '#c7bfb2');
+  ctx.fillStyle = paper;
+  rr(x, y, w, h, 8); ctx.fill();
+
+  const inner = ctx.createLinearGradient(x, y, x, y+h);
+  inner.addColorStop(0, 'rgba(255,255,255,0.16)');
+  inner.addColorStop(1, 'rgba(90,78,62,0.08)');
+  ctx.fillStyle = inner;
+  rr(x+6, y+6, w-12, h-12, 6); ctx.fill();
+
+  for(const f of fibers){
+    const sx = x + f.x*w;
+    const sy = y + f.y*h;
+    const ex = sx + Math.cos(f.ang) * f.len;
+    const ey = sy + Math.sin(f.ang) * f.len;
+    ctx.strokeStyle = `rgba(115,104,91,${f.a})`;
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(sx,sy);
+    ctx.lineTo(ex,ey);
+    ctx.stroke();
+  }
+  for(let i=0;i<10;i++){
+    ctx.strokeStyle = `rgba(93,86,77,${0.05 + i*0.003})`;
+    ctx.beginPath();
+    ctx.moveTo(x + 30, y + h*(0.11 + i*0.075));
+    ctx.lineTo(x + w - 30, y + h*(0.11 + i*0.075) + Math.sin(i*0.7)*2);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+function anchorPoints(){
+  return [
+    [0.5,0.31],[0.5,0.36],[0.5,0.41],[0.5,0.46],[0.5,0.51],[0.5,0.56],[0.5,0.61],
+    [0.455,0.34],[0.545,0.34],[0.435,0.39],[0.565,0.39],[0.42,0.45],[0.58,0.45],
+    [0.405,0.51],[0.595,0.51],[0.425,0.57],[0.575,0.57],
+    [0.355,0.38],[0.325,0.34],[0.295,0.31],[0.265,0.285],[0.24,0.275],[0.225,0.29],[0.238,0.315],[0.265,0.34],[0.295,0.37],
+    [0.645,0.38],[0.675,0.34],[0.705,0.31],[0.735,0.285],[0.76,0.275],[0.775,0.29],[0.762,0.315],[0.735,0.34],[0.705,0.37],
+    [0.455,0.66],[0.435,0.72],[0.41,0.77],[0.39,0.81],[0.365,0.835],[0.347,0.82],[0.358,0.775],[0.38,0.72],
+    [0.545,0.66],[0.565,0.72],[0.59,0.77],[0.61,0.81],[0.635,0.835],[0.653,0.82],[0.642,0.775],[0.62,0.72],
+    [0.47,0.26],[0.452,0.215],[0.435,0.175],[0.418,0.145],[0.398,0.12],
+    [0.53,0.26],[0.548,0.215],[0.565,0.175],[0.582,0.145],[0.602,0.12]
+  ];
+}
+function stapleAt(px, py, angle, scale, tint, glowAmt){
+  const w = 18 * scale, h = 8 * scale, leg = 11 * scale;
+  ctx.save();
+  ctx.translate(px, py);
+  ctx.rotate(angle);
+  ctx.shadowColor = `rgba(0,0,0,${0.22 + glowAmt*0.15})`;
+  ctx.shadowBlur = 10 * scale;
+  ctx.shadowOffsetY = 5 * scale;
+
+  const metal = ctx.createLinearGradient(-w/2, -h, w/2, h);
+  metal.addColorStop(0, '#ecf0f4');
+  metal.addColorStop(0.28, tint || '#c7ced7');
+  metal.addColorStop(0.55, '#8c95a0');
+  metal.addColorStop(0.78, '#d3d8df');
+  metal.addColorStop(1, '#5f6872');
+
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = 2.6 * scale;
+  ctx.strokeStyle = metal;
+  ctx.beginPath();
+  ctx.moveTo(-w/2, leg);
+  ctx.lineTo(-w/2, 0);
+  ctx.lineTo(w/2, 0);
+  ctx.lineTo(w/2, leg);
+  ctx.stroke();
+
+  ctx.strokeStyle = `rgba(255,255,255,${0.26 + glowAmt*0.18})`;
+  ctx.lineWidth = 1.1 * scale;
+  ctx.beginPath();
+  ctx.moveTo(-w/2 + 0.6*scale, -0.8*scale);
+  ctx.lineTo(w/2 - 0.6*scale, -0.8*scale);
+  ctx.stroke();
+
+  ctx.strokeStyle = `rgba(34,41,49,${0.44})`;
+  ctx.lineWidth = 0.9 * scale;
+  ctx.beginPath();
+  ctx.moveTo(-w/2 + 1.1*scale, 1.6*scale);
+  ctx.lineTo(w/2 - 1.1*scale, 1.6*scale);
+  ctx.stroke();
+
+  ctx.restore();
+}
+function stapleSegments(){
+  const P = anchorPoints();
+  const segs = [];
+  for(let i=0;i<P.length-1;i++){
+    const [ax, ay] = P[i];
+    const [bx, by] = P[i+1];
+    const dx = bx-ax, dy = by-ay;
+    const dist = Math.hypot(dx,dy);
+    if(dist > 0.065) continue;
+    const steps = Math.max(1, Math.round(dist / 0.028));
+    for(let s=0;s<=steps;s++){
+      const t = steps===0 ? 0 : s/steps;
+      segs.push({
+        x: lerp(ax,bx,t),
+        y: lerp(ay,by,t),
+        a: Math.atan2(dy,dx) + Math.PI/2,
+        scale: clamp(1.1 - Math.abs(0.5-ax)*0.2 + (ay>0.63?0.08:0), 0.88, 1.18)
+      });
+    }
+  }
+  const extras = [
+    [0.5,0.295,0,1.15],[0.472,0.295,0.2,0.92],[0.528,0.295,-0.2,0.92],
+    [0.445,0.43,0.1,1.0],[0.555,0.43,-0.1,1.0],[0.438,0.49,0.05,1.0],[0.562,0.49,-0.05,1.0],
+    [0.5,0.67,0,1.05],[0.483,0.73,0.18,0.9],[0.517,0.73,-0.18,0.9],
+    [0.251,0.298,-0.75,0.84],[0.749,0.298,0.75,0.84],[0.403,0.135,-0.42,0.74],[0.597,0.135,0.42,0.74]
+  ];
+  for (const [x,y,a,scale] of extras) segs.push({x,y,a,scale});
+  return segs;
+}
+const staples = stapleSegments();
+function drawLobster(t){
+  const px = mapX(0.19), py = mapY(0.1), pw = mapX(0.62), ph = mapY(0.76);
+  const sparkle = pointer.active ? 1 : 0.52;
+
+  ctx.save();
+  ctx.translate(px+pw/2, py+ph/2);
+  ctx.rotate(-0.035);
+  ctx.translate(-(px+pw/2), -(py+ph/2));
+
+  const halo = ctx.createRadialGradient(mapX(0.5), mapY(0.49), 12, mapX(0.5), mapY(0.49), mapX(0.19));
+  halo.addColorStop(0, `rgba(210,164,106,${0.14 + sparkle*0.05})`);
+  halo.addColorStop(0.5, 'rgba(160,183,206,0.045)');
+  halo.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = halo;
+  ctx.fillRect(px, py, pw, ph);
+
+  for(const d of dust){
+    const dx = px + pw*d.x + Math.cos(t*0.6 + d.p) * d.s * 2;
+    const dy = py + ph*d.y + Math.sin(t*0.5 + d.p) * d.s * 2;
+    ctx.fillStyle = d.warm ? 'rgba(210,164,106,0.08)' : 'rgba(120,144,165,0.05)';
+    ctx.beginPath();
+    ctx.arc(dx,dy,d.r,0,Math.PI*2);
+    ctx.fill();
+  }
+
+  for(let i=0;i<staples.length;i++){
+    const s = staples[i];
+    const mx = px + pw*s.x;
+    const my = py + ph*s.y;
+    const pulse = 0.5 + 0.5*Math.sin(t*0.7 + i*0.13);
+    const dist = Math.hypot(pointer.x*cssW - mx, pointer.y*cssH - my);
+    const hover = clamp(1 - dist / (cssW*0.28), 0, 1);
+    const tint = hover > 0.45 ? '#d8b07b' : (s.y < 0.24 ? '#d7dce2' : '#c8ced6');
+    stapleAt(mx, my, s.a + Math.sin(t*0.3 + i*0.09)*0.004, s.scale*(1 + hover*0.04), tint, pulse*hover);
+  }
+
+  ctx.strokeStyle = 'rgba(68,61,54,0.18)';
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(px + pw*0.395, py + ph*0.12);
+  ctx.quadraticCurveTo(px + pw*0.48, py + ph*0.08, px + pw*0.5, py + ph*0.055);
+  ctx.quadraticCurveTo(px + pw*0.52, py + ph*0.08, px + pw*0.605, py + ph*0.12);
+  ctx.stroke();
+
+  ctx.restore();
+}
+function drawCaptionGlow(){
+  const glow = ctx.createLinearGradient(mapX(0.24), mapY(0.82), mapX(0.76), mapY(0.82));
+  glow.addColorStop(0,'rgba(255,255,255,0)');
+  glow.addColorStop(0.5,'rgba(255,255,255,0.08)');
+  glow.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(mapX(0.28), mapY(0.83), mapX(0.44), 1);
+}
+function render(ms){
+  const t = ms * 0.001;
+  drawBackground(t);
+  drawDesk();
+  drawPaper();
+  drawLobster(t);
+  drawCaptionGlow();
+  requestAnimationFrame(render);
+}
+canvas.addEventListener('pointermove', e => {
+  const rect = canvas.getBoundingClientRect();
+  pointer.x = (e.clientX - rect.left) / rect.width;
+  pointer.y = (e.clientY - rect.top) / rect.height;
+  pointer.active = true;
+});
+canvas.addEventListener('pointerleave', () => { pointer.active = false; });
+canvas.addEventListener('touchstart', () => { pointer.active = true; }, {passive:true});
+requestAnimationFrame(render);
+</script>
+</body>
+</html>
