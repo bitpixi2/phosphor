@@ -1447,6 +1447,7 @@ document.addEventListener('mousemove', e => {
   cards.forEach(c => gallery.appendChild(c));
   
   const totalPages = Math.ceil(cards.length / PAGE_SIZE);
+  const displayTotalPages = 999;
   let currentPage = 1;
   
   function render() {
@@ -1455,7 +1456,7 @@ document.addEventListener('mousemove', e => {
     cards.forEach((card, i) => {
       card.style.display = (i >= start && i < end) ? '' : 'none';
     });
-    document.getElementById('pageInfo').textContent = 'Page ' + currentPage + ' / ' + totalPages;
+    document.getElementById('pageInfo').textContent = 'Page ' + currentPage + ' / ' + displayTotalPages;
     document.getElementById('prevBtn').disabled = currentPage <= 1;
     document.getElementById('nextBtn').disabled = currentPage >= totalPages;
     
