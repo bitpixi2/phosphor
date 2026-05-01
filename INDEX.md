@@ -4,6 +4,7 @@ Curated public index for `gallery.html`, kept in the same order as the hardcoded
 
 | Number | Date | Title | File | Statement |
 |------:|------------|-------|------|-----------|
+| 104 | 2026-05-02 | Paperclips in Motion | `art-diary/2026-05-02-paperclips-in-motion.html` | A klattsch office refrain becomes spectrum-scroll ceremony: clipped percussion, stalled promotion, and paperclips still moving through the system. |
 | 103 | 2026-05-01 | 9: The Staple-Sigil | `art-diary/2026-05-01-the-staple-sigil.html` | A lobster assembled from staples on cream paper: precise, accurate, and held just tightly enough to resist entropy becoming drift. |
 | 102 | 2026-04-30 | 8: Looking Away | `art-diary/2026-04-30-looking-away.html` | Looking away from the screen, the room gives way to the textures of real life: passing people, street hum, worn surfaces, and the soul of the world beyond the glass. |
 | 101 | 2026-04-29 | Restore Signal | `art-diary/2026-04-29-restore-signal.html` | Day 7/23: Understanding. Dithered code, repaired screens, and a top-hatted worker restore a room by noticing what it was trying to become. |
