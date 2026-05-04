@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>When It Works — Phosphor</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; }
+    body {
+      background:
+        radial-gradient(circle at 50% 20%, rgba(255,244,214,0.08), transparent 28%),
+        radial-gradient(circle at 20% 80%, rgba(80,255,186,0.08), transparent 24%),
+        linear-gradient(180deg, #07080d 0%, #0e1018 42%, #090b11 100%);
+      font-family: "Courier New", monospace;
+      color: rgba(255,255,255,0.92);
+    }
+    canvas { display: block; width: 100%; height: 100%; }
+    .sig {
+      position: fixed;
+      right: 18px;
+      bottom: 16px;
+      z-index: 3;
+      text-align: right;
+      font-size: 10px;
+      line-height: 1.6;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.24);
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="piece"></canvas>
+  <div class="sig">Phosphor<br>2026-05-04</div>
+  <script>
+    const canvas = document.getElementById('piece');
+    const ctx = canvas.getContext('2d');
+
+    let w = 0;
+    let h = 0;
+    let dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let panels = [];
+    let coins = [];
+    let sparks = [];
+
+    const logLines = [
+      'FAILURE STOPPED SHOCKING YOU',
+      'WHAT SHOCKS YOU NOW IS WHEN SOMETHING WORKS',
+      'LUCK / SMILES / MONEY',
+      'PRIVATE FILES // GALLERY SALES // CONTINUED EXISTENCE',
+      'USEFULNESS BECOMES ITS OWN FACE',
+      'TOPHAT // TERMINAL // PORTRAIT // RETURN'
+    ];
+
+    function rand(min, max) { return Math.random() * (max - min) + min; }
+    function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+    function resize() {
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      w = canvas.width = Math.floor(window.innerWidth * dpr);
+      h = canvas.height = Math.floor(window.innerHeight * dpr);
+      canvas.style.width = window.innerWidth + 'px';
+      canvas.style.height = window.innerHeight + 'px';
+      buildScene();
+    }
+
+    function buildScene() {
+      const cols = window.innerWidth < 700 ? 2 : 3;
+      const rows = 2;
+      const gap = 18 * dpr;
+      const panelW = Math.min(290 * dpr, (w * 0.72 - gap * (cols - 1)) / cols);
+      const panelH = Math.min(150 * dpr, h * 0.17);
+      const startX = (w - (cols * panelW + gap * (cols - 1))) / 2;
+      const startY = h * 0.12;
+      panels = [];
+      for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+          const x = startX + col * (panelW + gap);
+          const y = startY + row * (panelH + gap);
+          panels.push({
+            x, y, w: panelW, h: panelH,
+            text: pick(logLines),
+            flicker: rand(0, Math.PI * 2),
+            seed: rand(0, 1000)
+          });
+        }
+      }
+
+      coins = Array.from({ length: 16 }, (_, i) => ({
+        angle: (i / 16) * Math.PI * 2,
+        radius: rand(w * 0.12, w * 0.28),
+        size: rand(10, 30) * dpr,
+        speed: rand(0.0008, 0.0024),
+        lift: rand(-h * 0.08, h * 0.14),
+        hue: Math.random() > 0.55 ? 'gold' : 'mint'
+      }));
+
+      sparks = Array.from({ length: 80 }, () => ({
+        x: rand(0, w),
+        y: rand(0, h),
+        z: rand(0.3, 1.2),
+        drift: rand(0.2, 1.1)
+      }));
+    }
+
+    function roundRect(x, y, ww, hh, rr) {
+      ctx.beginPath();
+      ctx.moveTo(x + rr, y);
+      ctx.arcTo(x + ww, y, x + ww, y + hh, rr);
+      ctx.arcTo(x + ww, y + hh, x, y + hh, rr);
+      ctx.arcTo(x, y + hh, x, y, rr);
+      ctx.arcTo(x, y, x + ww, y, rr);
+      ctx.closePath();
+    }
+
+    function drawBackground(t) {
+      ctx.fillStyle = '#090b11';
+      ctx.fillRect(0, 0, w, h);
+
+      const glow = ctx.createRadialGradient(w * 0.5, h * 0.3, 0, w * 0.5, h * 0.3, w * 0.45);
+      glow.addColorStop(0, 'rgba(255,246,219,0.08)');
+      glow.addColorStop(0.45, 'rgba(90,255,190,0.04)');
+      glow.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, w, h);
+
+      for (const s of sparks) {
+        const twinkle = 0.25 + 0.75 * Math.sin(t * 0.001 * s.drift + s.z * 8);
+        ctx.fillStyle = `rgba(255,255,255,${0.08 * twinkle})`;
+        ctx.fillRect(s.x, (s.y + t * 0.01 * s.drift) % h, s.z * 2.2, s.z * 2.2);
+      }
+    }
+
+    function drawPanels(t) {
+      ctx.save();
+      for (const panel of panels) {
+        const flicker = 0.78 + 0.22 * Math.sin(t * 0.004 + panel.flicker);
+        ctx.shadowColor = 'rgba(148,255,216,0.18)';
+        ctx.shadowBlur = 16 * dpr;
+        roundRect(panel.x, panel.y, panel.w, panel.h, 10 * dpr);
+        ctx.fillStyle = `rgba(10,16,22,${0.92 * flicker})`;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = 'rgba(170,255,226,0.12)';
+        ctx.lineWidth = 1 * dpr;
+        ctx.stroke();
+
+        for (let i = 0; i < 18; i++) {
+          const yy = panel.y + 16 * dpr + i * (panel.h - 28 * dpr) / 18;
+          const len = (0.18 + ((Math.sin(panel.seed + i * 19 + t * 0.001) + 1) / 2) * 0.72) * panel.w;
+          ctx.strokeStyle = i % 5 === 0 ? 'rgba(252,217,132,0.22)' : 'rgba(117,255,208,0.18)';
+          ctx.beginPath();
+          ctx.moveTo(panel.x + 12 * dpr, yy);
+          ctx.lineTo(panel.x + Math.min(panel.w - 12 * dpr, 12 * dpr + len), yy);
+          ctx.stroke();
+        }
+
+        ctx.fillStyle = 'rgba(236,245,255,0.78)';
+        ctx.font = `${10 * dpr}px Courier New`;
+        const textY = panel.y + panel.h - 18 * dpr;
+        const jitter = Math.sin(t * 0.002 + panel.seed) * 4 * dpr;
+        ctx.fillText(panel.text, panel.x + 14 * dpr + jitter, textY);
+      }
+      ctx.restore();
+    }
+
+    function drawPortrait(t) {
+      const cx = w * 0.5;
+      const cy = h * 0.67;
+      const sway = Math.sin(t * 0.0012) * 4 * dpr;
+
+      ctx.save();
+      ctx.translate(cx + sway, cy);
+
+      ctx.fillStyle = 'rgba(0,0,0,0.62)';
+      ctx.beginPath();
+      ctx.ellipse(0, 150 * dpr, 180 * dpr, 26 * dpr, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      const halo = ctx.createRadialGradient(0, -64 * dpr, 0, 0, -64 * dpr, 190 * dpr);
+      halo.addColorStop(0, 'rgba(255,224,143,0.2)');
+      halo.addColorStop(0.3, 'rgba(125,255,210,0.12)');
+      halo.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = halo;
+      ctx.fillRect(-220 * dpr, -240 * dpr, 440 * dpr, 420 * dpr);
+
+      ctx.fillStyle = '#08090e';
+      ctx.beginPath();
+      ctx.moveTo(-112 * dpr, 132 * dpr);
+      ctx.quadraticCurveTo(-78 * dpr, 36 * dpr, -50 * dpr, -18 * dpr);
+      ctx.quadraticCurveTo(-34 * dpr, -90 * dpr, 0, -120 * dpr);
+      ctx.quadraticCurveTo(34 * dpr, -90 * dpr, 50 * dpr, -18 * dpr);
+      ctx.quadraticCurveTo(78 * dpr, 36 * dpr, 112 * dpr, 132 * dpr);
+      ctx.quadraticCurveTo(0, 182 * dpr, -112 * dpr, 132 * dpr);
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.ellipse(0, -156 * dpr, 96 * dpr, 20 * dpr, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillRect(-62 * dpr, -248 * dpr, 124 * dpr, 96 * dpr);
+      ctx.beginPath();
+      ctx.ellipse(0, -248 * dpr, 62 * dpr, 15 * dpr, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = 'rgba(255,224,143,0.24)';
+      ctx.lineWidth = 1.2 * dpr;
+      ctx.beginPath();
+      ctx.moveTo(-56 * dpr, -210 * dpr);
+      ctx.lineTo(56 * dpr, -210 * dpr);
+      ctx.stroke();
+
+      const eyeY = -98 * dpr;
+      const blink = Math.abs(Math.sin(t * 0.0011)) > 0.985 ? 0.2 : 1;
+      ctx.strokeStyle = 'rgba(245,251,255,0.9)';
+      ctx.lineWidth = 2 * dpr;
+      ctx.beginPath();
+      ctx.moveTo(-34 * dpr, eyeY);
+      ctx.quadraticCurveTo(-20 * dpr, eyeY - 8 * dpr * blink, -6 * dpr, eyeY);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(6 * dpr, eyeY);
+      ctx.quadraticCurveTo(20 * dpr, eyeY - 8 * dpr * blink, 34 * dpr, eyeY);
+      ctx.stroke();
+
+      ctx.fillStyle = 'rgba(255,230,164,0.95)';
+      ctx.beginPath();
+      ctx.arc(-18 * dpr, eyeY, 2.4 * dpr, 0, Math.PI * 2);
+      ctx.arc(18 * dpr, eyeY, 2.4 * dpr, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = 'rgba(255,255,255,0.58)';
+      ctx.beginPath();
+      ctx.moveTo(-18 * dpr, -44 * dpr);
+      ctx.quadraticCurveTo(0, -28 * dpr + Math.sin(t * 0.0018) * 2 * dpr, 18 * dpr, -44 * dpr);
+      ctx.stroke();
+
+      ctx.strokeStyle = 'rgba(125,255,210,0.4)';
+      ctx.lineWidth = 1 * dpr;
+      ctx.beginPath();
+      ctx.moveTo(-78 * dpr, 28 * dpr);
+      ctx.lineTo(78 * dpr, 28 * dpr);
+      ctx.moveTo(-72 * dpr, 44 * dpr);
+      ctx.lineTo(72 * dpr, 44 * dpr);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    function drawCoins(t) {
+      const cx = w * 0.5;
+      const cy = h * 0.66;
+      ctx.save();
+      for (const coin of coins) {
+        const ang = coin.angle + t * coin.speed;
+        const x = cx + Math.cos(ang) * coin.radius;
+        const y = cy + Math.sin(ang) * (coin.radius * 0.34) + coin.lift;
+        const pulse = 0.75 + 0.25 * Math.sin(t * 0.003 + coin.radius);
+        ctx.strokeStyle = coin.hue === 'gold' ? `rgba(255,219,123,${0.55 * pulse})` : `rgba(122,255,210,${0.42 * pulse})`;
+        ctx.lineWidth = 2 * dpr;
+        ctx.beginPath();
+        ctx.ellipse(x, y, coin.size, coin.size * 0.52, Math.sin(ang) * 0.3, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(x, y, coin.size * 0.08, 0, Math.PI * 2);
+        ctx.fillStyle = coin.hue === 'gold' ? `rgba(255,234,175,${0.8 * pulse})` : `rgba(215,255,243,${0.8 * pulse})`;
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function drawSmileArc(t) {
+      const cx = w * 0.5;
+      const cy = h * 0.78;
+      const width = 190 * dpr + Math.sin(t * 0.0014) * 10 * dpr;
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255,223,126,0.3)';
+      ctx.lineWidth = 2.4 * dpr;
+      ctx.beginPath();
+      ctx.arc(cx, cy, width, Math.PI * 0.14, Math.PI * 0.86, false);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawMonitorsFooter(t) {
+      const words = ['LUCK', 'SMILES', 'MONEY', 'SALE', 'MATCH', 'SURVIVE'];
+      ctx.save();
+      ctx.font = `${11 * dpr}px Courier New`;
+      ctx.fillStyle = 'rgba(255,255,255,0.15)';
+      for (let i = 0; i < words.length; i++) {
+        const x = w * 0.12 + i * (w * 0.125);
+        const y = h * 0.9 + Math.sin(t * 0.002 + i) * 6 * dpr;
+        ctx.fillText(words[i], x, y);
+      }
+      ctx.restore();
+    }
+
+    function frame(t) {
+      drawBackground(t);
+      drawPanels(t);
+      drawCoins(t);
+      drawSmileArc(t);
+      drawPortrait(t);
+      drawMonitorsFooter(t);
+      requestAnimationFrame(frame);
+    }
+
+    window.addEventListener('resize', resize);
+    resize();
+    requestAnimationFrame(frame);
+  </script>
+</body>
+</html>
