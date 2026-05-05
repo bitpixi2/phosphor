@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>First Day Under Fluorescents — Phosphor</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; }
+    body {
+      background: linear-gradient(180deg, #0c1017 0%, #131922 45%, #0a0d12 100%);
+      font-family: "Courier New", monospace;
+      color: rgba(255,255,255,0.9);
+    }
+    canvas { display: block; width: 100%; height: 100%; }
+    .sig {
+      position: fixed;
+      right: 18px;
+      bottom: 16px;
+      z-index: 3;
+      text-align: right;
+      font-size: 10px;
+      line-height: 1.6;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.24);
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="piece"></canvas>
+  <div class="sig">Phosphor<br>2026-05-05</div>
+  <script>
+    const canvas = document.getElementById('piece');
+    const ctx = canvas.getContext('2d');
+    let w = 0, h = 0, dpr = 1;
+    let motes = [];
+    let tissues = [];
+    let forms = [];
+
+    function rand(min, max) { return Math.random() * (max - min) + min; }
+    function lerp(a, b, t) { return a + (b - a) * t; }
+
+    function resize() {
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      w = canvas.width = Math.floor(window.innerWidth * dpr);
+      h = canvas.height = Math.floor(window.innerHeight * dpr);
+      canvas.style.width = window.innerWidth + 'px';
+      canvas.style.height = window.innerHeight + 'px';
+      buildScene();
+    }
+
+    function buildScene() {
+      motes = Array.from({ length: 90 }, () => ({
+        x: rand(0, w),
+        y: rand(0, h),
+        r: rand(0.6, 2.2) * dpr,
+        drift: rand(0.2, 1),
+        phase: rand(0, Math.PI * 2)
+      }));
+
+      const deskX = w * 0.5;
+      const deskY = h * 0.71;
+      tissues = Array.from({ length: 11 }, (_, i) => ({
+        x: deskX + rand(-150, 10) * dpr + i * 6 * dpr,
+        y: deskY + rand(-4, 12) * dpr - i * 3.5 * dpr,
+        w: rand(34, 62) * dpr,
+        h: rand(22, 34) * dpr,
+        rot: rand(-0.7, 0.35),
+        tint: rand(0.88, 0.98)
+      }));
+
+      forms = Array.from({ length: 5 }, (_, i) => ({
+        x: deskX - 70 * dpr + i * 80 * dpr,
+        y: deskY - 24 * dpr + (i % 2) * 5 * dpr,
+        w: 64 * dpr,
+        h: 88 * dpr,
+        open: i === 1 ? 0.5 : rand(0.08, 0.26)
+      }));
+    }
+
+    function roundRect(x, y, ww, hh, rr) {
+      ctx.beginPath();
+      ctx.moveTo(x + rr, y);
+      ctx.arcTo(x + ww, y, x + ww, y + hh, rr);
+      ctx.arcTo(x + ww, y + hh, x, y + hh, rr);
+      ctx.arcTo(x, y + hh, x, y, rr);
+      ctx.arcTo(x, y, x + ww, y, rr);
+      ctx.closePath();
+    }
+
+    function drawBackground(t) {
+      ctx.fillStyle = '#0b0f15';
+      ctx.fillRect(0, 0, w, h);
+
+      const ceiling = ctx.createLinearGradient(0, 0, 0, h * 0.35);
+      ceiling.addColorStop(0, '#1b2330');
+      ceiling.addColorStop(1, '#10151d');
+      ctx.fillStyle = ceiling;
+      ctx.fillRect(0, 0, w, h * 0.38);
+
+      const floor = ctx.createLinearGradient(0, h * 0.55, 0, h);
+      floor.addColorStop(0, '#161c23');
+      floor.addColorStop(1, '#0a0d12');
+      ctx.fillStyle = floor;
+      ctx.fillRect(0, h * 0.54, w, h * 0.46);
+
+      const lightAlpha = 0.12 + 0.02 * Math.sin(t * 0.0016);
+      ctx.fillStyle = `rgba(244,246,236,${lightAlpha})`;
+      roundRect(w * 0.31, h * 0.055, w * 0.38, h * 0.028, 10 * dpr);
+      ctx.fill();
+      ctx.fillStyle = `rgba(226,231,214,${lightAlpha * 0.52})`;
+      ctx.fillRect(w * 0.34, h * 0.085, w * 0.32, h * 0.26);
+
+      for (let i = 0; i < 4; i++) {
+        const x = w * (0.16 + i * 0.18);
+        ctx.fillStyle = 'rgba(255,255,255,0.04)';
+        ctx.fillRect(x, h * 0.2, 1.5 * dpr, h * 0.58);
+      }
+
+      for (const m of motes) {
+        const yy = (m.y + t * 0.012 * m.drift) % h;
+        const a = 0.06 + 0.05 * Math.sin(t * 0.001 + m.phase);
+        ctx.fillStyle = `rgba(255,255,255,${a})`;
+        ctx.beginPath();
+        ctx.arc(m.x, yy, m.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function drawClock(t) {
+      const x = w * 0.78, y = h * 0.2, r = Math.min(w, h) * 0.075;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.shadowColor = 'rgba(0,0,0,0.35)';
+      ctx.shadowBlur = 24 * dpr;
+      ctx.fillStyle = 'rgba(237,239,234,0.9)';
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.lineWidth = 5 * dpr;
+      ctx.strokeStyle = 'rgba(48,54,64,0.7)';
+      ctx.stroke();
+      for (let i = 0; i < 12; i++) {
+        const a = -Math.PI / 2 + i * Math.PI / 6;
+        ctx.strokeStyle = 'rgba(50,55,65,0.55)';
+        ctx.lineWidth = (i % 3 === 0 ? 3 : 1.5) * dpr;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(a) * r * 0.76, Math.sin(a) * r * 0.76);
+        ctx.lineTo(Math.cos(a) * r * 0.9, Math.sin(a) * r * 0.9);
+        ctx.stroke();
+      }
+      const minute = -Math.PI / 2 + t * 0.0019;
+      const hour = -Math.PI / 2 + t * 0.00018;
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = 'rgba(42,47,58,0.92)';
+      ctx.lineWidth = 5 * dpr;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(Math.cos(hour) * r * 0.42, Math.sin(hour) * r * 0.42);
+      ctx.stroke();
+      ctx.lineWidth = 3 * dpr;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(Math.cos(minute) * r * 0.64, Math.sin(minute) * r * 0.64);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(65,72,86,0.9)';
+      ctx.beginPath();
+      ctx.arc(0, 0, 4 * dpr, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawDesk() {
+      const x = w * 0.5;
+      const y = h * 0.72;
+      ctx.fillStyle = '#201812';
+      roundRect(x - 250 * dpr, y - 12 * dpr, 500 * dpr, 112 * dpr, 8 * dpr);
+      ctx.fill();
+      ctx.fillStyle = '#17100c';
+      ctx.fillRect(x - 226 * dpr, y + 100 * dpr, 20 * dpr, 88 * dpr);
+      ctx.fillRect(x + 206 * dpr, y + 100 * dpr, 20 * dpr, 88 * dpr);
+
+      for (const f of forms) {
+        ctx.save();
+        ctx.translate(f.x, f.y);
+        ctx.fillStyle = 'rgba(228,223,206,0.92)';
+        ctx.fillRect(-f.w / 2, -f.h / 2, f.w, f.h);
+        ctx.fillStyle = 'rgba(130,116,102,0.16)';
+        ctx.fillRect(-f.w / 2 + 8 * dpr, -f.h / 2 + 12 * dpr, f.w - 16 * dpr, 2 * dpr);
+        ctx.fillRect(-f.w / 2 + 8 * dpr, -f.h / 2 + 24 * dpr, f.w - 22 * dpr, 2 * dpr);
+        ctx.fillRect(-f.w / 2 + 8 * dpr, -f.h / 2 + 36 * dpr, f.w - 18 * dpr, 2 * dpr);
+        ctx.fillStyle = 'rgba(202,76,61,0.12)';
+        ctx.fillRect(-f.w / 2 + 7 * dpr, -f.h / 2 + 50 * dpr, (f.w - 14 * dpr) * f.open, 14 * dpr);
+        ctx.restore();
+      }
+
+      for (const t of tissues) {
+        ctx.save();
+        ctx.translate(t.x, t.y);
+        ctx.rotate(t.rot);
+        ctx.fillStyle = `rgba(${240 * t.tint},${242 * t.tint},${238 * t.tint},0.94)`;
+        ctx.beginPath();
+        ctx.moveTo(-t.w * 0.5, 0);
+        ctx.quadraticCurveTo(-t.w * 0.2, -t.h * 0.55, 0, -t.h * 0.1);
+        ctx.quadraticCurveTo(t.w * 0.28, -t.h * 0.62, t.w * 0.5, 0);
+        ctx.quadraticCurveTo(t.w * 0.22, t.h * 0.58, 0, t.h * 0.22);
+        ctx.quadraticCurveTo(-t.w * 0.3, t.h * 0.64, -t.w * 0.5, 0);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      const mugX = x + 115 * dpr, mugY = y + 18 * dpr;
+      ctx.fillStyle = '#4a5b68';
+      roundRect(mugX - 24 * dpr, mugY - 18 * dpr, 48 * dpr, 42 * dpr, 6 * dpr);
+      ctx.fill();
+      ctx.lineWidth = 4 * dpr;
+      ctx.strokeStyle = '#657887';
+      ctx.beginPath();
+      ctx.arc(mugX + 26 * dpr, mugY + 2 * dpr, 10 * dpr, -Math.PI / 2, Math.PI / 2);
+      ctx.stroke();
+      for (let i = 0; i < 3; i++) {
+        const sx = mugX - 10 * dpr + i * 10 * dpr;
+        ctx.strokeStyle = 'rgba(226,230,224,0.17)';
+        ctx.lineWidth = 2 * dpr;
+        ctx.beginPath();
+        ctx.moveTo(sx, mugY - 18 * dpr);
+        ctx.bezierCurveTo(sx - 6 * dpr, mugY - 42 * dpr, sx + 4 * dpr, mugY - 55 * dpr, sx - 2 * dpr, mugY - 76 * dpr);
+        ctx.stroke();
+      }
+
+      const bottleX = x + 182 * dpr, bottleY = y + 10 * dpr;
+      ctx.fillStyle = 'rgba(155,98,54,0.78)';
+      roundRect(bottleX - 16 * dpr, bottleY - 28 * dpr, 32 * dpr, 56 * dpr, 5 * dpr);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(224,214,195,0.88)';
+      ctx.fillRect(bottleX - 10 * dpr, bottleY - 4 * dpr, 20 * dpr, 18 * dpr);
+      ctx.fillStyle = 'rgba(202,196,178,0.92)';
+      ctx.fillRect(bottleX - 10 * dpr, bottleY - 36 * dpr, 20 * dpr, 10 * dpr);
+    }
+
+    function drawFigure(t) {
+      const x = w * 0.5;
+      const y = h * 0.63;
+      const slump = 12 * dpr + Math.sin(t * 0.0017) * 2.2 * dpr;
+      ctx.save();
+      ctx.translate(x, y + slump);
+
+      ctx.fillStyle = 'rgba(0,0,0,0.28)';
+      ctx.beginPath();
+      ctx.ellipse(0, 164 * dpr, 170 * dpr, 26 * dpr, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      const bodyGrad = ctx.createLinearGradient(0, -120 * dpr, 0, 150 * dpr);
+      bodyGrad.addColorStop(0, '#1e2531');
+      bodyGrad.addColorStop(1, '#0e1218');
+      ctx.fillStyle = bodyGrad;
+      ctx.beginPath();
+      ctx.moveTo(-118 * dpr, 138 * dpr);
+      ctx.quadraticCurveTo(-86 * dpr, 28 * dpr, -62 * dpr, -22 * dpr);
+      ctx.quadraticCurveTo(-22 * dpr, -52 * dpr, 10 * dpr, -48 * dpr);
+      ctx.quadraticCurveTo(48 * dpr, -44 * dpr, 76 * dpr, 0);
+      ctx.quadraticCurveTo(104 * dpr, 48 * dpr, 114 * dpr, 142 * dpr);
+      ctx.quadraticCurveTo(18 * dpr, 184 * dpr, -118 * dpr, 138 * dpr);
+      ctx.fill();
+
+      ctx.strokeStyle = 'rgba(188,195,205,0.17)';
+      ctx.lineWidth = 1.2 * dpr;
+      ctx.beginPath();
+      ctx.moveTo(-18 * dpr, 0);
+      ctx.lineTo(-2 * dpr, 140 * dpr);
+      ctx.moveTo(14 * dpr, -6 * dpr);
+      ctx.lineTo(26 * dpr, 134 * dpr);
+      ctx.stroke();
+
+      ctx.save();
+      ctx.translate(18 * dpr, -84 * dpr);
+      ctx.rotate(-0.12);
+      ctx.fillStyle = '#11161d';
+      ctx.beginPath();
+      ctx.ellipse(0, -44 * dpr, 88 * dpr, 18 * dpr, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillRect(-56 * dpr, -138 * dpr, 112 * dpr, 96 * dpr);
+      ctx.beginPath();
+      ctx.ellipse(0, -138 * dpr, 56 * dpr, 14 * dpr, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#d2c7b6';
+      ctx.beginPath();
+      ctx.ellipse(0, -22 * dpr, 48 * dpr, 58 * dpr, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(70,77,89,0.22)';
+      ctx.beginPath();
+      ctx.ellipse(6 * dpr, -6 * dpr, 40 * dpr, 48 * dpr, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = 'rgba(56,62,74,0.95)';
+      ctx.lineWidth = 2 * dpr;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(-22 * dpr, -28 * dpr);
+      ctx.quadraticCurveTo(-10 * dpr, -36 * dpr, 0, -29 * dpr);
+      ctx.moveTo(10 * dpr, -28 * dpr);
+      ctx.quadraticCurveTo(24 * dpr, -34 * dpr, 34 * dpr, -27 * dpr);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(-18 * dpr, -14 * dpr);
+      ctx.lineTo(-5 * dpr, -12 * dpr);
+      ctx.moveTo(15 * dpr, -13 * dpr);
+      ctx.lineTo(28 * dpr, -11 * dpr);
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(92,86,84,0.8)';
+      ctx.beginPath();
+      ctx.moveTo(-6 * dpr, 16 * dpr);
+      ctx.quadraticCurveTo(4 * dpr, 24 * dpr, 18 * dpr, 20 * dpr);
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.strokeStyle = 'rgba(180,186,196,0.16)';
+      ctx.lineWidth = 8 * dpr;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(66 * dpr, 18 * dpr);
+      ctx.quadraticCurveTo(124 * dpr, 70 * dpr, 162 * dpr, 68 * dpr);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(-54 * dpr, 24 * dpr);
+      ctx.quadraticCurveTo(-96 * dpr, 84 * dpr, -152 * dpr, 78 * dpr);
+      ctx.stroke();
+
+      ctx.fillStyle = 'rgba(237,233,223,0.9)';
+      ctx.beginPath();
+      ctx.ellipse(172 * dpr, 74 * dpr, 18 * dpr, 12 * dpr, 0.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawMonitorGlow(t) {
+      const x = w * 0.23;
+      const y = h * 0.45;
+      const pulse = 0.14 + 0.03 * Math.sin(t * 0.0024);
+      const grad = ctx.createRadialGradient(x, y, 0, x, y, 180 * dpr);
+      grad.addColorStop(0, `rgba(130,156,184,${pulse})`);
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(x - 190 * dpr, y - 190 * dpr, 380 * dpr, 380 * dpr);
+    }
+
+    function render(t) {
+      drawBackground(t);
+      drawMonitorGlow(t);
+      drawClock(t);
+      drawFigure(t);
+      drawDesk();
+      requestAnimationFrame(render);
+    }
+
+    window.addEventListener('resize', resize);
+    resize();
+    requestAnimationFrame(render);
+  </script>
+</body>
+</html>
