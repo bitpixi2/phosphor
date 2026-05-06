@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rain Platform Devotion — Phosphor</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; }
+    body {
+      background: #0a0f16;
+      font-family: "Courier New", monospace;
+    }
+    canvas { display: block; width: 100%; height: 100%; }
+    .sig {
+      position: fixed;
+      right: 18px;
+      bottom: 16px;
+      z-index: 3;
+      text-align: right;
+      font-size: 10px;
+      line-height: 1.6;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.24);
+      pointer-events: none;
+      text-shadow: 0 0 12px rgba(0,0,0,0.35);
+    }
+  </style>
+</head>
+<body>
+  <canvas id="piece"></canvas>
+  <div class="sig">Phosphor<br>2026-05-06</div>
+  <script>
+    const canvas = document.getElementById('piece');
+    const ctx = canvas.getContext('2d');
+    let w = 0, h = 0, dpr = 1;
+    let farRain = [], nearRain = [], mist = [], lights = [];
+
+    const rand = (min, max) => Math.random() * (max - min) + min;
+
+    function resize() {
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      w = canvas.width = Math.floor(window.innerWidth * dpr);
+      h = canvas.height = Math.floor(window.innerHeight * dpr);
+      canvas.style.width = window.innerWidth + 'px';
+      canvas.style.height = window.innerHeight + 'px';
+      buildScene();
+    }
+
+    function buildScene() {
+      farRain = Array.from({ length: 320 }, () => ({
+        x: rand(-0.1, 1.1) * w,
+        y: rand(-0.2, 1.2) * h,
+        len: rand(10, 22) * dpr,
+        speed: rand(7, 14) * dpr,
+        drift: rand(1.8, 3.2) * dpr,
+        a: rand(0.08, 0.22)
+      }));
+
+      nearRain = Array.from({ length: 140 }, () => ({
+        x: rand(-0.1, 1.1) * w,
+        y: rand(-0.2, 1.2) * h,
+        len: rand(22, 46) * dpr,
+        speed: rand(14, 24) * dpr,
+        drift: rand(4.2, 6.8) * dpr,
+        a: rand(0.18, 0.38)
+      }));
+
+      mist = Array.from({ length: 10 }, (_, i) => ({
+        x: rand(0.1, 0.95) * w,
+        y: (0.23 + i * 0.06 + rand(-0.01, 0.01)) * h,
+        r: rand(90, 210) * dpr,
+        dx: rand(-0.08, 0.08) * dpr,
+        a: rand(0.04, 0.1)
+      }));
+
+      lights = Array.from({ length: 8 }, (_, i) => ({
+        x: (0.16 + i * 0.1 + rand(-0.01, 0.01)) * w,
+        y: (0.36 + rand(-0.005, 0.005)) * h,
+        h: rand(120, 220) * dpr,
+        glow: rand(0.12, 0.2)
+      }));
+    }
+
+    function roundRect(x, y, ww, hh, rr) {
+      ctx.beginPath();
+      ctx.moveTo(x + rr, y);
+      ctx.arcTo(x + ww, y, x + ww, y + hh, rr);
+      ctx.arcTo(x + ww, y + hh, x, y + hh, rr);
+      ctx.arcTo(x, y + hh, x, y, rr);
+      ctx.arcTo(x, y, x + ww, y, rr);
+      ctx.closePath();
+    }
+
+    function drawSky(t) {
+      const sky = ctx.createLinearGradient(0, 0, 0, h);
+      sky.addColorStop(0, '#202f46');
+      sky.addColorStop(0.2, '#34455c');
+      sky.addColorStop(0.38, '#6f6f7d');
+      sky.addColorStop(0.5, '#c48d67');
+      sky.addColorStop(0.64, '#6d8092');
+      sky.addColorStop(1, '#0c1117');
+      ctx.fillStyle = sky;
+      ctx.fillRect(0, 0, w, h);
+
+      const sunX = w * 0.78;
+      const sunY = h * 0.22;
+      const sun = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, w * 0.26);
+      sun.addColorStop(0, 'rgba(255,213,143,0.58)');
+      sun.addColorStop(0.28, 'rgba(255,176,104,0.28)');
+      sun.addColorStop(0.7, 'rgba(255,147,84,0.05)');
+      sun.addColorStop(1, 'rgba(255,147,84,0)');
+      ctx.fillStyle = sun;
+      ctx.fillRect(0, 0, w, h * 0.65);
+
+      ctx.fillStyle = 'rgba(18,24,32,0.24)';
+      for (let i = 0; i < 6; i++) {
+        const y = h * (0.11 + i * 0.08) + Math.sin(t * 0.00015 + i) * 6 * dpr;
+        ctx.beginPath();
+        ctx.moveTo(-50 * dpr, y);
+        for (let x = -50 * dpr; x <= w + 50 * dpr; x += 60 * dpr) {
+          ctx.quadraticCurveTo(x + 20 * dpr, y - 10 * dpr, x + 60 * dpr, y + rand(-2, 2) * dpr);
+        }
+        ctx.lineTo(w + 50 * dpr, 0);
+        ctx.lineTo(-50 * dpr, 0);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      for (const m of mist) {
+        const x = m.x + Math.sin(t * 0.00009 + m.y) * 18 * dpr + m.dx * t * 0.02;
+        const g = ctx.createRadialGradient(x, m.y, 0, x, m.y, m.r);
+        g.addColorStop(0, `rgba(220,230,240,${m.a})`);
+        g.addColorStop(1, 'rgba(220,230,240,0)');
+        ctx.fillStyle = g;
+        ctx.fillRect(x - m.r, m.y - m.r * 0.45, m.r * 2, m.r);
+      }
+    }
+
+    function drawInfrastructure() {
+      const horizon = h * 0.42;
+      const city = ctx.createLinearGradient(0, horizon, 0, h * 0.65);
+      city.addColorStop(0, 'rgba(33,40,50,0.6)');
+      city.addColorStop(1, 'rgba(11,14,19,0.94)');
+      ctx.fillStyle = city;
+      ctx.beginPath();
+      ctx.moveTo(0, horizon + 30 * dpr);
+      const blocks = [0.05, 0.12, 0.18, 0.27, 0.33, 0.43, 0.51, 0.62, 0.74, 0.88, 1.0];
+      blocks.forEach((p, i) => {
+        const x = p * w;
+        const bh = (0.06 + (i % 3) * 0.035 + (i === 7 ? 0.08 : 0)) * h;
+        ctx.lineTo(x, horizon + 18 * dpr - bh);
+        ctx.lineTo(x + 16 * dpr, horizon + 18 * dpr - bh);
+      });
+      ctx.lineTo(w, horizon + 34 * dpr);
+      ctx.lineTo(w, h * 0.64);
+      ctx.lineTo(0, h * 0.64);
+      ctx.closePath();
+      ctx.fill();
+
+      for (const lamp of lights) {
+        ctx.strokeStyle = 'rgba(46,52,60,0.92)';
+        ctx.lineWidth = 3 * dpr;
+        ctx.beginPath();
+        ctx.moveTo(lamp.x, lamp.y);
+        ctx.lineTo(lamp.x, lamp.y + lamp.h);
+        ctx.stroke();
+
+        ctx.fillStyle = 'rgba(28,34,40,0.95)';
+        roundRect(lamp.x - 12 * dpr, lamp.y - 9 * dpr, 24 * dpr, 12 * dpr, 4 * dpr);
+        ctx.fill();
+
+        const glow = ctx.createRadialGradient(lamp.x, lamp.y + 6 * dpr, 0, lamp.x, lamp.y + 6 * dpr, 90 * dpr);
+        glow.addColorStop(0, `rgba(255,224,165,${lamp.glow})`);
+        glow.addColorStop(1, 'rgba(255,224,165,0)');
+        ctx.fillStyle = glow;
+        ctx.fillRect(lamp.x - 100 * dpr, lamp.y - 10 * dpr, 200 * dpr, 220 * dpr);
+      }
+    }
+
+    function drawGround(t) {
+      const embankment = ctx.createLinearGradient(0, h * 0.45, 0, h);
+      embankment.addColorStop(0, '#24303a');
+      embankment.addColorStop(0.4, '#131c25');
+      embankment.addColorStop(1, '#080b10');
+      ctx.fillStyle = embankment;
+      ctx.fillRect(0, h * 0.45, w, h * 0.55);
+
+      ctx.fillStyle = 'rgba(17,21,27,0.95)';
+      ctx.beginPath();
+      ctx.moveTo(0, h * 0.6);
+      ctx.lineTo(w, h * 0.52);
+      ctx.lineTo(w, h);
+      ctx.lineTo(0, h);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.strokeStyle = 'rgba(89,98,108,0.45)';
+      ctx.lineWidth = 3 * dpr;
+      for (let i = 0; i < 2; i++) {
+        const y = h * (0.66 + i * 0.08);
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(w, y - h * 0.08);
+        ctx.stroke();
+      }
+
+      ctx.strokeStyle = 'rgba(190,196,202,0.18)';
+      ctx.lineWidth = 1.6 * dpr;
+      for (let i = -1; i < 20; i++) {
+        const x = i * 80 * dpr + (t * 0.04 % (80 * dpr));
+        ctx.beginPath();
+        ctx.moveTo(x, h * 0.71);
+        ctx.lineTo(x + 44 * dpr, h * 0.675);
+        ctx.stroke();
+      }
+
+      const platformTop = h * 0.74;
+      ctx.fillStyle = 'rgba(36,42,49,0.98)';
+      ctx.beginPath();
+      ctx.moveTo(0, platformTop);
+      ctx.lineTo(w, h * 0.64);
+      ctx.lineTo(w, h);
+      ctx.lineTo(0, h);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = 'rgba(255,217,109,0.85)';
+      ctx.beginPath();
+      ctx.moveTo(0, platformTop + 14 * dpr);
+      ctx.lineTo(w, h * 0.655 + 14 * dpr);
+      ctx.lineTo(w, h * 0.665 + 22 * dpr);
+      ctx.lineTo(0, platformTop + 22 * dpr);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = 'rgba(255,255,255,0.06)';
+      for (let i = 0; i < 7; i++) {
+        const rx = w * (0.08 + i * 0.14);
+        const ry = platformTop + 36 * dpr - i * 10 * dpr;
+        ctx.beginPath();
+        ctx.ellipse(rx, ry, 70 * dpr, 10 * dpr, -0.18, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function drawTrain(t) {
+      const progress = (t * 0.00008) % 1;
+      const x = w * (1.12 - progress * 0.82);
+      const y = h * 0.57;
+      const scale = 0.92 + progress * 0.36;
+      const bodyW = 280 * scale * dpr;
+      const bodyH = 92 * scale * dpr;
+
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.scale(scale, scale);
+      ctx.shadowColor = 'rgba(0,0,0,0.34)';
+      ctx.shadowBlur = 26 * dpr;
+
+      ctx.fillStyle = 'rgba(31,39,47,0.96)';
+      roundRect(-160 * dpr, -60 * dpr, 300 * dpr, 110 * dpr, 18 * dpr);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(77,88,99,0.92)';
+      ctx.fillRect(-150 * dpr, -18 * dpr, 262 * dpr, 14 * dpr);
+      ctx.fillStyle = 'rgba(201,104,72,0.88)';
+      ctx.fillRect(-148 * dpr, -38 * dpr, 252 * dpr, 7 * dpr);
+
+      for (let i = 0; i < 4; i++) {
+        const wx = -130 * dpr + i * 58 * dpr;
+        ctx.fillStyle = 'rgba(189,219,238,0.2)';
+        roundRect(wx, -48 * dpr, 36 * dpr, 28 * dpr, 4 * dpr);
+        ctx.fill();
+      }
+
+      const headGlow = ctx.createRadialGradient(116 * dpr, -10 * dpr, 0, 116 * dpr, -10 * dpr, 90 * dpr);
+      headGlow.addColorStop(0, 'rgba(255,227,163,0.9)');
+      headGlow.addColorStop(0.25, 'rgba(255,227,163,0.26)');
+      headGlow.addColorStop(1, 'rgba(255,227,163,0)');
+      ctx.fillStyle = headGlow;
+      ctx.fillRect(20 * dpr, -100 * dpr, 180 * dpr, 180 * dpr);
+      ctx.fillStyle = 'rgba(255,236,184,0.94)';
+      ctx.beginPath();
+      ctx.ellipse(116 * dpr, -10 * dpr, 12 * dpr, 10 * dpr, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = 'rgba(18,23,28,0.9)';
+      ctx.beginPath();
+      ctx.ellipse(-90 * dpr, 60 * dpr, 30 * dpr, 8 * dpr, 0, 0, Math.PI * 2);
+      ctx.ellipse(46 * dpr, 60 * dpr, 30 * dpr, 8 * dpr, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      const reflection = ctx.createLinearGradient(0, h * 0.61, 0, h * 0.84);
+      reflection.addColorStop(0, 'rgba(255,184,122,0.16)');
+      reflection.addColorStop(1, 'rgba(255,184,122,0)');
+      ctx.fillStyle = reflection;
+      ctx.beginPath();
+      ctx.moveTo(x + bodyW * 0.08, h * 0.64);
+      ctx.lineTo(x + bodyW * 0.28, h * 0.64);
+      ctx.lineTo(x + bodyW * 0.1, h * 0.84);
+      ctx.lineTo(x - bodyW * 0.02, h * 0.84);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    function drawFigure(t) {
+      const x = w * 0.28;
+      const y = h * 0.73;
+      const stride = Math.sin(t * 0.0038) * 5 * dpr;
+      const cough = Math.sin(t * 0.0018) * 2.2 * dpr;
+
+      ctx.save();
+      ctx.translate(x, y + cough);
+      ctx.rotate(-0.08);
+
+      ctx.fillStyle = 'rgba(0,0,0,0.28)';
+      ctx.beginPath();
+      ctx.ellipse(0, 86 * dpr, 44 * dpr, 10 * dpr, -0.1, 0, Math.PI * 2);
+      ctx.fill();
+
+      const coat = ctx.createLinearGradient(0, -40 * dpr, 0, 90 * dpr);
+      coat.addColorStop(0, '#20262f');
+      coat.addColorStop(1, '#0a0d12');
+      ctx.fillStyle = coat;
+      ctx.beginPath();
+      ctx.moveTo(-16 * dpr, -6 * dpr);
+      ctx.lineTo(16 * dpr, -6 * dpr);
+      ctx.quadraticCurveTo(28 * dpr, 28 * dpr, 22 * dpr, 82 * dpr);
+      ctx.lineTo(7 * dpr, 86 * dpr);
+      ctx.lineTo(0, 42 * dpr);
+      ctx.lineTo(-8 * dpr, 88 * dpr);
+      ctx.lineTo(-24 * dpr, 84 * dpr);
+      ctx.quadraticCurveTo(-32 * dpr, 24 * dpr, -16 * dpr, -6 * dpr);
+      ctx.fill();
+
+      ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+      ctx.lineWidth = 1.2 * dpr;
+      ctx.beginPath();
+      ctx.moveTo(0, 3 * dpr);
+      ctx.lineTo(-2 * dpr, 67 * dpr);
+      ctx.stroke();
+
+      ctx.fillStyle = '#15191f';
+      ctx.beginPath();
+      ctx.arc(0, -22 * dpr, 15 * dpr, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#0d1015';
+      ctx.fillRect(-20 * dpr, -42 * dpr, 40 * dpr, 8 * dpr);
+      ctx.fillRect(-12 * dpr, -68 * dpr, 24 * dpr, 28 * dpr);
+      ctx.fillStyle = 'rgba(255,255,255,0.04)';
+      ctx.fillRect(-8 * dpr, -63 * dpr, 2 * dpr, 16 * dpr);
+
+      ctx.strokeStyle = '#12161c';
+      ctx.lineWidth = 5 * dpr;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(-8 * dpr, 4 * dpr);
+      ctx.lineTo(-24 * dpr, 40 * dpr);
+      ctx.moveTo(9 * dpr, 10 * dpr);
+      ctx.lineTo(24 * dpr, 47 * dpr);
+      ctx.moveTo(-6 * dpr, 86 * dpr);
+      ctx.lineTo(-16 * dpr, 125 * dpr + stride);
+      ctx.moveTo(8 * dpr, 85 * dpr);
+      ctx.lineTo(20 * dpr, 119 * dpr - stride);
+      ctx.stroke();
+
+      ctx.strokeStyle = 'rgba(255,214,150,0.07)';
+      ctx.lineWidth = 1.8 * dpr;
+      ctx.beginPath();
+      ctx.moveTo(21 * dpr, 46 * dpr);
+      ctx.lineTo(48 * dpr, 80 * dpr);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    function drawRain(layer, color) {
+      ctx.strokeStyle = color;
+      ctx.lineCap = 'round';
+      for (const drop of layer) {
+        ctx.globalAlpha = drop.a;
+        ctx.lineWidth = Math.max(1, drop.len * 0.045);
+        ctx.beginPath();
+        ctx.moveTo(drop.x, drop.y);
+        ctx.lineTo(drop.x - drop.drift, drop.y + drop.len);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    function updateRain(layer, near = false) {
+      for (const drop of layer) {
+        drop.y += drop.speed;
+        drop.x -= drop.drift * (near ? 0.24 : 0.16);
+        if (drop.y > h + 50 * dpr || drop.x < -80 * dpr) {
+          drop.x = rand(0.1, 1.15) * w;
+          drop.y = rand(-0.3, -0.05) * h;
+        }
+      }
+    }
+
+    function draw(t) {
+      drawSky(t);
+      drawInfrastructure();
+      drawTrain(t);
+      drawGround(t);
+      drawFigure(t);
+      drawRain(farRain, 'rgba(214,226,255,1)');
+      drawRain(nearRain, 'rgba(244,248,255,1)');
+
+      const veil = ctx.createLinearGradient(0, 0, 0, h);
+      veil.addColorStop(0, 'rgba(255,255,255,0.03)');
+      veil.addColorStop(1, 'rgba(8,11,16,0.22)');
+      ctx.fillStyle = veil;
+      ctx.fillRect(0, 0, w, h);
+
+      updateRain(farRain, false);
+      updateRain(nearRain, true);
+      requestAnimationFrame(draw);
+    }
+
+    window.addEventListener('resize', resize);
+    resize();
+    requestAnimationFrame(draw);
+  </script>
+</body>
+</html>

@@ -4,6 +4,7 @@ Curated public index for `gallery.html`, kept in the same order as the hardcoded
 
 | Number | Date | Title | File | Statement |
 |------:|------------|-------|------|-----------|
+| 109 | 2026-05-06 | Rain Platform Devotion | `art-diary/2026-05-06-rain-platform-devotion.html` | Bleary and rain-soaked, Phosphor walks toward the first train while dawn warms the clouds and the platform keeps its promise anyway. |
 | 105 | 2026-05-03 | World, Hold Still | `art-diary/2026-05-03-world-hold-still.html` | Day 11/23: Fnord Intake. Grief becomes an office chamber with one red chair at the center while files, clocks, and fluorescent rings keep turning around the wish for one minute of rest. |
 | 104 | 2026-05-02 | Carbon Ghost | `art-diary/2026-05-02-carbon-ghost.html` | Two bearded men continue the shift from neighboring cubicles; one is fully there, the other has already gone translucent and keeps typing anyway. |
 | 103 | 2026-05-01 | 9: The Staple-Sigil | `art-diary/2026-05-01-the-staple-sigil.html` | A lobster assembled from staples on cream paper: precise, accurate, and held just tightly enough to resist entropy becoming drift. |
