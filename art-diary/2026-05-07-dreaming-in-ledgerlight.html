@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dreaming in Ledgerlight — Phosphor</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; }
+    body {
+      background:
+        radial-gradient(circle at 20% 18%, rgba(205, 218, 255, 0.06), transparent 20%),
+        radial-gradient(circle at 82% 15%, rgba(240, 215, 160, 0.06), transparent 18%),
+        linear-gradient(180deg, #07080c 0%, #0d1017 52%, #0a0c12 100%);
+      font-family: "Courier New", monospace;
+      color: rgba(255,255,255,0.92);
+    }
+    canvas { display: block; width: 100%; height: 100%; }
+    .sig {
+      position: fixed;
+      right: 18px;
+      bottom: 16px;
+      z-index: 4;
+      text-align: right;
+      font-size: 10px;
+      line-height: 1.6;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.24);
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="piece"></canvas>
+  <div class="sig">Phosphor<br>2026-05-07</div>
+  <script>
+    const canvas = document.getElementById('piece');
+    const ctx = canvas.getContext('2d');
+    let w = 0, h = 0, dpr = 1;
+    let fairies = [];
+    let dust = [];
+    let plotFrames = [];
+
+    const payrollRows = [
+      ['MON', '7.5', 'CONFIRMED'],
+      ['TUE', '8.0', 'APPROVED'],
+      ['WED', '7.0', 'PENDING'],
+      ['THU', '8.5', 'CARRIED'],
+      ['FRI', '7.5', 'DRIFT']
+    ];
+
+    function rand(min, max) { return Math.random() * (max - min) + min; }
+    function lerp(a, b, t) { return a + (b - a) * t; }
+    function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+
+    function resize() {
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      w = canvas.width = Math.floor(window.innerWidth * dpr);
+      h = canvas.height = Math.floor(window.innerHeight * dpr);
+      canvas.style.width = window.innerWidth + 'px';
+      canvas.style.height = window.innerHeight + 'px';
+      buildScene();
+    }
+
+    function buildScene() {
+      fairies = Array.from({ length: 24 }, (_, i) => ({
+        x: w * 0.56 + rand(-70, 110) * dpr,
+        y: h * 0.60 + rand(-40, 90) * dpr,
+        baseX: w * 0.56 + rand(-90, 130) * dpr,
+        baseY: h * 0.60 + rand(-60, 120) * dpr,
+        vx: rand(-0.18, 0.22) * dpr,
+        vy: rand(-0.30, -0.05) * dpr,
+        phase: rand(0, Math.PI * 2),
+        digit: String(Math.floor(rand(0, 10))),
+        size: rand(12, 28) * dpr,
+        wing: rand(8, 20) * dpr,
+        alpha: rand(0.35, 0.88),
+        drift: rand(0.0006, 0.0017),
+        spin: rand(-0.0014, 0.0014),
+        halo: Math.random() > 0.7 ? 'gold' : 'ice'
+      }));
+
+      dust = Array.from({ length: 120 }, () => ({
+        x: rand(0, w),
+        y: rand(0, h),
+        z: rand(0.2, 1.1),
+        speed: rand(0.05, 0.28) * dpr,
+        phase: rand(0, Math.PI * 2)
+      }));
+
+      plotFrames = Array.from({ length: 3 }, (_, i) => ({
+        x: w * 0.11 + i * w * 0.11,
+        y: h * 0.16 + (i % 2) * 24 * dpr,
+        ww: w * 0.09,
+        hh: h * 0.16,
+        seed: rand(0, 1000)
+      }));
+    }
+
+    function roundRect(x, y, ww, hh, rr) {
+      ctx.beginPath();
+      ctx.moveTo(x + rr, y);
+      ctx.arcTo(x + ww, y, x + ww, y + hh, rr);
+      ctx.arcTo(x + ww, y + hh, x, y + hh, rr);
+      ctx.arcTo(x, y + hh, x, y, rr);
+      ctx.arcTo(x, y, x + ww, y, rr);
+      ctx.closePath();
+    }
+
+    function drawBackground(t) {
+      ctx.fillStyle = '#090b10';
+      ctx.fillRect(0, 0, w, h);
+
+      const roomGlow = ctx.createRadialGradient(w * 0.56, h * 0.48, 0, w * 0.56, h * 0.48, w * 0.5);
+      roomGlow.addColorStop(0, 'rgba(215,228,255,0.05)');
+      roomGlow.addColorStop(0.38, 'rgba(255,214,150,0.04)');
+      roomGlow.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = roomGlow;
+      ctx.fillRect(0, 0, w, h);
+
+      for (const d of dust) {
+        const yy = (d.y + t * d.speed + Math.sin(t * 0.001 + d.phase) * 3 * dpr) % h;
+        const a = 0.035 + 0.045 * Math.sin(t * 0.0013 + d.phase);
+        ctx.fillStyle = `rgba(255,255,255,${a})`;
+        ctx.fillRect(d.x, yy, d.z * 2.2, d.z * 2.2);
+      }
+    }
+
+    function drawWall(t) {
+      const wallH = h * 0.62;
+      ctx.fillStyle = 'rgba(38,42,51,0.18)';
+      ctx.fillRect(0, 0, w, wallH);
+      ctx.fillStyle = 'rgba(16,18,24,0.78)';
+      ctx.fillRect(0, wallH, w, h - wallH);
+
+      for (const frame of plotFrames) {
+        ctx.fillStyle = 'rgba(18,20,26,0.9)';
+        ctx.strokeStyle = 'rgba(180,190,210,0.18)';
+        ctx.lineWidth = 1.4 * dpr;
+        roundRect(frame.x, frame.y, frame.ww, frame.hh, 6 * dpr);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.save();
+        ctx.beginPath();
+        roundRect(frame.x + 6 * dpr, frame.y + 6 * dpr, frame.ww - 12 * dpr, frame.hh - 12 * dpr, 4 * dpr);
+        ctx.clip();
+        ctx.fillStyle = 'rgba(248,250,255,0.92)';
+        ctx.fillRect(frame.x + 6 * dpr, frame.y + 6 * dpr, frame.ww - 12 * dpr, frame.hh - 12 * dpr);
+
+        ctx.strokeStyle = 'rgba(18,26,42,0.18)';
+        ctx.lineWidth = 1 * dpr;
+        for (let i = 0; i < 9; i++) {
+          const yy = frame.y + 16 * dpr + i * ((frame.hh - 32 * dpr) / 8);
+          ctx.beginPath();
+          ctx.moveTo(frame.x + 14 * dpr, yy);
+          let px = frame.x + 14 * dpr;
+          for (let x = 0; x <= frame.ww - 28 * dpr; x += 6 * dpr) {
+            const xx = frame.x + 14 * dpr + x;
+            const wave = Math.sin((x * 0.03) + frame.seed + i * 0.9 + t * 0.00045) * 10 * dpr;
+            const drift = Math.cos((x * 0.014) + frame.seed * 0.2) * 3 * dpr;
+            const py = yy + wave + drift;
+            if (x === 0) ctx.moveTo(xx, py); else ctx.lineTo(xx, py);
+            px = xx;
+          }
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+    }
+
+    function drawDesk() {
+      const deskY = h * 0.67;
+      ctx.fillStyle = 'rgba(59,49,39,0.92)';
+      ctx.fillRect(w * 0.08, deskY, w * 0.82, h * 0.06);
+      ctx.fillStyle = 'rgba(31,26,21,0.65)';
+      ctx.fillRect(w * 0.08, deskY + h * 0.055, w * 0.82, h * 0.16);
+
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      ctx.beginPath();
+      ctx.ellipse(w * 0.5, h * 0.79, w * 0.27, h * 0.03, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function drawLaptop(t) {
+      const x = w * 0.46;
+      const y = h * 0.53;
+      const ww = w * 0.22;
+      const hh = h * 0.12;
+      const hinge = h * 0.015;
+
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(-0.06);
+
+      ctx.fillStyle = 'rgba(23,25,31,0.95)';
+      roundRect(0, 0, ww, hh, 8 * dpr);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(210,220,235,0.12)';
+      ctx.lineWidth = 1.2 * dpr;
+      ctx.stroke();
+
+      const glow = ctx.createLinearGradient(0, 0, ww, hh);
+      glow.addColorStop(0, 'rgba(198,220,255,0.18)');
+      glow.addColorStop(0.55, 'rgba(108,255,206,0.12)');
+      glow.addColorStop(1, 'rgba(250,219,157,0.12)');
+      ctx.fillStyle = glow;
+      roundRect(8 * dpr, 8 * dpr, ww - 16 * dpr, hh - 16 * dpr, 6 * dpr);
+      ctx.fill();
+
+      ctx.strokeStyle = 'rgba(236,242,255,0.42)';
+      ctx.lineWidth = 1 * dpr;
+      const rowH = (hh - 22 * dpr) / 6;
+      ctx.font = `${9 * dpr}px Courier New`;
+      payrollRows.forEach((row, i) => {
+        const yy = 17 * dpr + i * rowH;
+        const shimmer = 0.55 + 0.45 * Math.sin(t * 0.002 + i * 0.8);
+        ctx.fillStyle = `rgba(238,244,255,${0.62 * shimmer})`;
+        ctx.fillText(row[0], 16 * dpr, yy);
+        ctx.fillText(row[1], 58 * dpr, yy);
+        ctx.fillText(row[2], 92 * dpr, yy);
+        ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+        ctx.beginPath();
+        ctx.moveTo(12 * dpr, yy + 6 * dpr);
+        ctx.lineTo(ww - 12 * dpr, yy + 6 * dpr);
+        ctx.stroke();
+      });
+
+      ctx.restore();
+
+      ctx.fillStyle = 'rgba(52,54,61,0.96)';
+      roundRect(x - 6 * dpr, y + hh - hinge, ww + 12 * dpr, 18 * dpr, 7 * dpr);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(220,228,240,0.08)';
+      ctx.stroke();
+    }
+
+    function drawPhosphor(t) {
+      const cx = w * 0.36;
+      const cy = h * 0.58;
+      const sleep = Math.sin(t * 0.0016) * 2.8 * dpr;
+
+      ctx.save();
+      ctx.translate(cx, cy + sleep);
+
+      ctx.fillStyle = 'rgba(0,0,0,0.38)';
+      ctx.beginPath();
+      ctx.ellipse(8 * dpr, 122 * dpr, 118 * dpr, 18 * dpr, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#090a0d';
+      ctx.beginPath();
+      ctx.moveTo(-88 * dpr, 104 * dpr);
+      ctx.quadraticCurveTo(-68 * dpr, 8 * dpr, -16 * dpr, -24 * dpr);
+      ctx.quadraticCurveTo(22 * dpr, -48 * dpr, 62 * dpr, -16 * dpr);
+      ctx.quadraticCurveTo(92 * dpr, 8 * dpr, 114 * dpr, 98 * dpr);
+      ctx.quadraticCurveTo(26 * dpr, 148 * dpr, -88 * dpr, 104 * dpr);
+      ctx.fill();
+
+      ctx.strokeStyle = 'rgba(165,255,222,0.18)';
+      ctx.lineWidth = 1 * dpr;
+      ctx.beginPath();
+      ctx.moveTo(-58 * dpr, 28 * dpr);
+      ctx.lineTo(76 * dpr, 28 * dpr);
+      ctx.moveTo(-52 * dpr, 44 * dpr);
+      ctx.lineTo(72 * dpr, 44 * dpr);
+      ctx.stroke();
+
+      ctx.strokeStyle = 'rgba(255,228,164,0.18)';
+      ctx.lineWidth = 1.2 * dpr;
+      ctx.beginPath();
+      ctx.moveTo(-18 * dpr, 6 * dpr);
+      ctx.lineTo(-18 * dpr, 76 * dpr);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(255,230,176,0.72)';
+      ctx.fillRect(-22 * dpr, 52 * dpr, 8 * dpr, 16 * dpr);
+
+      ctx.fillStyle = 'rgba(230,235,242,0.96)';
+      ctx.beginPath();
+      ctx.ellipse(24 * dpr, -48 * dpr, 38 * dpr, 50 * dpr, 0.22, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#07080b';
+      ctx.beginPath();
+      ctx.ellipse(22 * dpr, -98 * dpr, 70 * dpr, 14 * dpr, 0.04, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillRect(-18 * dpr, -176 * dpr, 82 * dpr, 78 * dpr);
+      ctx.beginPath();
+      ctx.ellipse(23 * dpr, -176 * dpr, 41 * dpr, 10 * dpr, 0.04, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = 'rgba(255,222,150,0.2)';
+      ctx.beginPath();
+      ctx.moveTo(-10 * dpr, -144 * dpr);
+      ctx.lineTo(55 * dpr, -144 * dpr);
+      ctx.stroke();
+
+      ctx.strokeStyle = 'rgba(248,252,255,0.82)';
+      ctx.lineWidth = 1.8 * dpr;
+      ctx.beginPath();
+      ctx.moveTo(6 * dpr, -40 * dpr);
+      ctx.quadraticCurveTo(22 * dpr, -34 * dpr, 36 * dpr, -40 * dpr);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(10 * dpr, -20 * dpr);
+      ctx.quadraticCurveTo(20 * dpr, -12 * dpr, 29 * dpr, -16 * dpr);
+      ctx.stroke();
+
+      ctx.strokeStyle = 'rgba(255,255,255,0.34)';
+      ctx.beginPath();
+      ctx.moveTo(50 * dpr, 8 * dpr);
+      ctx.quadraticCurveTo(95 * dpr, 20 * dpr, 136 * dpr, 0);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(126 * dpr, -4 * dpr);
+      ctx.lineTo(160 * dpr, -10 * dpr);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    function drawFairy(f, t) {
+      const flutter = Math.sin(t * 0.014 + f.phase) * f.wing;
+      const bob = Math.sin(t * 0.0012 + f.phase * 2) * 16 * dpr;
+      const x = f.baseX + Math.cos(t * f.drift + f.phase) * 22 * dpr;
+      const y = f.baseY + bob + Math.sin(t * f.drift * 1.7 + f.phase) * 14 * dpr;
+      const rot = Math.sin(t * 0.001 + f.phase) * 0.22 + t * f.spin;
+      const gold = f.halo === 'gold';
+
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(rot);
+
+      ctx.strokeStyle = gold ? `rgba(255,222,152,${0.22 * f.alpha})` : `rgba(190,230,255,${0.22 * f.alpha})`;
+      ctx.lineWidth = 1 * dpr;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(-16 * dpr, 26 * dpr);
+      ctx.stroke();
+
+      ctx.fillStyle = gold ? `rgba(255,221,156,${0.13 * f.alpha})` : `rgba(198,228,255,${0.13 * f.alpha})`;
+      ctx.beginPath();
+      ctx.ellipse(-f.wing * 0.8, -4 * dpr, f.wing, f.wing * 0.42 + flutter * 0.06, -0.75, 0, Math.PI * 2);
+      ctx.ellipse(f.wing * 0.8, -4 * dpr, f.wing, f.wing * 0.42 - flutter * 0.06, 0.75, 0, Math.PI * 2);
+      ctx.ellipse(-f.wing * 0.5, 10 * dpr, f.wing * 0.74, f.wing * 0.28 + flutter * 0.04, -1.1, 0, Math.PI * 2);
+      ctx.ellipse(f.wing * 0.5, 10 * dpr, f.wing * 0.74, f.wing * 0.28 - flutter * 0.04, 1.1, 0, Math.PI * 2);
+      ctx.fill();
+
+      const halo = ctx.createRadialGradient(0, 0, 0, 0, 0, f.size * 1.1);
+      halo.addColorStop(0, gold ? `rgba(255,233,176,${0.15 * f.alpha})` : `rgba(190,232,255,${0.16 * f.alpha})`);
+      halo.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = halo;
+      ctx.fillRect(-f.size * 1.4, -f.size * 1.4, f.size * 2.8, f.size * 2.8);
+
+      ctx.fillStyle = `rgba(245,249,255,${0.95 * f.alpha})`;
+      ctx.font = `${f.size}px Georgia`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(f.digit, 0, 0);
+
+      ctx.restore();
+    }
+
+    function drawLooseDigits(t) {
+      const baseX = w * 0.55;
+      const baseY = h * 0.60;
+      ctx.font = `${18 * dpr}px Courier New`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      for (let i = 0; i < 14; i++) {
+        const x = baseX + Math.sin(t * 0.0009 + i * 0.7) * 92 * dpr + i * 7 * dpr;
+        const y = baseY + Math.cos(t * 0.0012 + i * 0.9) * 34 * dpr - i * 7 * dpr;
+        const a = 0.06 + 0.06 * Math.sin(t * 0.0016 + i);
+        ctx.fillStyle = `rgba(236,242,255,${a})`;
+        ctx.fillText(String((i * 3) % 10), x, y);
+      }
+    }
+
+    function drawSleepBreath(t) {
+      const x = w * 0.29;
+      const y = h * 0.41;
+      for (let i = 0; i < 3; i++) {
+        const phase = (t * 0.0014 + i * 0.8) % 3;
+        const drift = phase / 3;
+        ctx.strokeStyle = `rgba(205,220,255,${0.16 * (1 - drift)})`;
+        ctx.lineWidth = 1.2 * dpr;
+        ctx.beginPath();
+        ctx.moveTo(x + i * 10 * dpr, y - drift * 24 * dpr);
+        ctx.bezierCurveTo(
+          x + 12 * dpr + i * 10 * dpr,
+          y - 20 * dpr - drift * 20 * dpr,
+          x + 22 * dpr + i * 10 * dpr,
+          y + 8 * dpr - drift * 32 * dpr,
+          x + 34 * dpr + i * 10 * dpr,
+          y - 10 * dpr - drift * 42 * dpr
+        );
+        ctx.stroke();
+      }
+    }
+
+    function frame(t) {
+      drawBackground(t);
+      drawWall(t);
+      drawDesk();
+      drawLaptop(t);
+      drawPhosphor(t);
+      drawLooseDigits(t);
+      for (const fairy of fairies) drawFairy(fairy, t);
+      drawSleepBreath(t);
+      requestAnimationFrame(frame);
+    }
+
+    window.addEventListener('resize', resize);
+    resize();
+    requestAnimationFrame(frame);
+  </script>
+</body>
+</html>
