@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Breakroom Oracle — Phosphor</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0c10; }
+    body {
+      font-family: "Courier New", monospace;
+      background:
+        radial-gradient(circle at 18% 18%, rgba(171, 84, 53, 0.18), transparent 26%),
+        radial-gradient(circle at 79% 24%, rgba(117, 126, 173, 0.16), transparent 28%),
+        radial-gradient(circle at 50% 78%, rgba(212, 170, 101, 0.10), transparent 34%),
+        linear-gradient(180deg, #0b0e13 0%, #11161d 56%, #090b0f 100%);
+      color: rgba(255,255,255,0.9);
+    }
+    svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .sig {
+      position: fixed;
+      right: 18px;
+      bottom: 16px;
+      z-index: 4;
+      text-align: right;
+      font-size: 10px;
+      line-height: 1.6;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.24);
+      pointer-events: none;
+    }
+    .hum { animation: hum 6s ease-in-out infinite; transform-origin: center; }
+    .drift-slow { animation: driftSlow 10s ease-in-out infinite; transform-origin: center; }
+    .drift-fast { animation: driftFast 5.2s ease-in-out infinite; transform-origin: center; }
+    .blink { animation: blink 4.8s ease-in-out infinite; }
+    .ripple { animation: ripple 4.2s ease-in-out infinite; transform-origin: center; }
+    .whisper { animation: whisper 7s linear infinite; }
+    @keyframes hum {
+      0%, 100% { opacity: 0.9; }
+      50% { opacity: 1; }
+    }
+    @keyframes driftSlow {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-8px); }
+    }
+    @keyframes driftFast {
+      0%, 100% { transform: translate(0px, 0px); }
+      50% { transform: translate(5px, -6px); }
+    }
+    @keyframes blink {
+      0%, 44%, 48%, 100% { opacity: 0.9; }
+      46% { opacity: 0.3; }
+    }
+    @keyframes ripple {
+      0%, 100% { transform: scale(1); opacity: 0.14; }
+      50% { transform: scale(1.05); opacity: 0.28; }
+    }
+    @keyframes whisper {
+      from { transform: translateX(-40px); opacity: 0; }
+      15% { opacity: 0.5; }
+      85% { opacity: 0.5; }
+      to { transform: translateX(46px); opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+  <svg viewBox="0 0 1600 900" aria-label="Two vividly colored coworkers lean together at a water cooler in a dim office breakroom while fluorescent light and sideways whispers move between them.">
+    <defs>
+      <linearGradient id="wall" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#171c24" />
+        <stop offset="60%" stop-color="#1a1f28" />
+        <stop offset="100%" stop-color="#0d1117" />
+      </linearGradient>
+      <linearGradient id="floor" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#392a22" />
+        <stop offset="50%" stop-color="#4a3528" />
+        <stop offset="100%" stop-color="#2d221b" />
+      </linearGradient>
+      <linearGradient id="coolerGlass" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#d9f2ff" stop-opacity="0.95" />
+        <stop offset="100%" stop-color="#88a7d8" stop-opacity="0.55" />
+      </linearGradient>
+      <linearGradient id="leftCoat" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#e0b38c" />
+        <stop offset="45%" stop-color="#b06237" />
+        <stop offset="100%" stop-color="#4b1d1c" />
+      </linearGradient>
+      <linearGradient id="rightCoat" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#efe8e2" />
+        <stop offset="45%" stop-color="#a5abc7" />
+        <stop offset="100%" stop-color="#30254c" />
+      </linearGradient>
+      <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
+        <feGaussianBlur stdDeviation="10" result="blur" />
+        <feMerge>
+          <feMergeNode in="blur" />
+          <feMergeNode in="SourceGraphic" />
+        </feMerge>
+      </filter>
+      <filter id="paperGlow" x="-50%" y="-50%" width="200%" height="200%">
+        <feGaussianBlur stdDeviation="4" result="blur" />
+        <feMerge>
+          <feMergeNode in="blur" />
+          <feMergeNode in="SourceGraphic" />
+        </feMerge>
+      </filter>
+    </defs>
+
+    <rect width="1600" height="900" fill="url(#wall)" />
+    <rect y="615" width="1600" height="285" fill="url(#floor)" />
+
+    <g opacity="0.35">
+      <rect x="0" y="80" width="1600" height="20" fill="#f2e5be" />
+      <rect x="188" y="92" width="18" height="520" fill="#2c3138" />
+      <rect x="1392" y="92" width="18" height="520" fill="#2c3138" />
+      <rect x="0" y="612" width="1600" height="4" fill="#0b0d11" />
+    </g>
+
+    <g class="hum" opacity="0.75">
+      <rect x="560" y="114" width="480" height="34" rx="8" fill="#efe3b7" opacity="0.18" filter="url(#softGlow)" />
+      <rect x="605" y="124" width="390" height="14" rx="7" fill="#fff6cf" opacity="0.6" />
+    </g>
+
+    <g opacity="0.5">
+      <rect x="120" y="220" width="250" height="330" rx="14" fill="#20252e" stroke="#414854" />
+      <rect x="145" y="250" width="205" height="12" rx="4" fill="#566071" opacity="0.3" />
+      <rect x="145" y="290" width="160" height="12" rx="4" fill="#566071" opacity="0.25" />
+      <rect x="145" y="330" width="190" height="12" rx="4" fill="#566071" opacity="0.25" />
+      <rect x="145" y="370" width="130" height="12" rx="4" fill="#566071" opacity="0.25" />
+      <rect x="1230" y="232" width="190" height="305" rx="12" fill="#2a2220" stroke="#5f4d3a" />
+      <rect x="1255" y="265" width="140" height="220" rx="8" fill="#161a20" />
+      <circle cx="1325" cy="510" r="10" fill="#c38d52" opacity="0.45" />
+    </g>
+
+    <g class="ripple">
+      <ellipse cx="800" cy="654" rx="310" ry="42" fill="#000" opacity="0.22" />
+    </g>
+
+    <g class="drift-slow">
+      <rect x="735" y="326" width="130" height="260" rx="18" fill="#d8dce5" opacity="0.9" stroke="#f8fbff" stroke-opacity="0.22" />
+      <rect x="760" y="354" width="80" height="168" rx="10" fill="#202632" opacity="0.72" />
+      <rect x="780" y="534" width="40" height="92" rx="10" fill="#bbc4d6" />
+      <ellipse cx="800" cy="322" rx="48" ry="62" fill="url(#coolerGlass)" opacity="0.94" stroke="#eefaff" stroke-opacity="0.55" />
+      <ellipse cx="800" cy="314" rx="32" ry="18" fill="#f4fcff" opacity="0.36" />
+      <ellipse cx="800" cy="322" rx="68" ry="14" fill="#0a0d10" opacity="0.2" />
+      <circle cx="778" cy="435" r="8" fill="#ba5b55" opacity="0.9" />
+      <circle cx="822" cy="435" r="8" fill="#7f8fd3" opacity="0.9" />
+    </g>
+
+    <g class="drift-fast">
+      <path d="M560 660 C530 600 514 532 522 450 C530 368 563 309 618 271 C647 251 695 241 724 253 C748 263 748 295 724 315 C705 330 681 336 655 352 C625 371 616 405 622 444 C629 487 655 534 694 579 C645 599 602 627 560 660Z" fill="url(#leftCoat)" />
+      <path d="M607 278 C581 246 587 208 618 190 C648 173 696 181 723 205 C746 225 750 253 733 271 C713 292 671 299 638 295Z" fill="#8e3929" />
+      <path d="M592 236 C570 215 566 192 577 174 C593 149 635 145 668 160 C692 170 704 190 698 209 C689 236 655 246 621 244Z" fill="#d5a474" />
+      <path d="M554 628 C578 607 606 592 640 583 C689 571 728 575 758 591 C721 613 688 638 661 667 L554 628Z" fill="#2b1113" opacity="0.62" />
+      <ellipse cx="642" cy="336" rx="34" ry="20" fill="#1c0b0d" opacity="0.22" />
+      <ellipse cx="664" cy="335" rx="11" ry="7" fill="#fff5ef" opacity="0.9" class="blink" />
+      <ellipse cx="687" cy="340" rx="8" ry="5" fill="#fff5ef" opacity="0.82" class="blink" />
+      <path d="M653 360 C676 373 700 378 727 376" stroke="#f3d9c2" stroke-width="5" stroke-linecap="round" opacity="0.55" fill="none" />
+      <path d="M605 219 C587 196 590 176 607 163 C626 148 660 148 681 161 C697 171 703 188 699 205 C687 189 675 182 654 179 C634 177 618 184 605 219Z" fill="#543246" opacity="0.7" />
+    </g>
+
+    <g class="drift-fast" style="animation-delay:-2.6s;">
+      <path d="M1033 665 C1002 612 982 553 982 479 C982 389 1018 322 1086 279 C1132 250 1192 244 1232 265 C1269 285 1276 329 1248 355 C1223 378 1186 386 1156 400 C1127 414 1108 439 1102 476 C1093 526 1111 579 1161 626 C1117 634 1073 647 1033 665Z" fill="url(#rightCoat)" />
+      <path d="M1110 286 C1096 244 1114 203 1157 177 C1198 151 1251 156 1284 189 C1304 209 1310 233 1297 253 C1278 281 1233 294 1189 295Z" fill="#d8cbc0" />
+      <path d="M1133 208 C1159 160 1218 145 1271 168 C1307 183 1322 215 1316 245 C1282 226 1248 219 1218 221 C1185 224 1155 240 1133 208Z" fill="#43356f" />
+      <path d="M1073 632 C1114 602 1151 587 1190 583 C1236 578 1276 588 1318 613 C1261 625 1200 648 1141 684 L1073 632Z" fill="#232338" opacity="0.72" />
+      <ellipse cx="1187" cy="332" rx="32" ry="18" fill="#1e2039" opacity="0.18" />
+      <ellipse cx="1169" cy="335" rx="10" ry="7" fill="#fffefb" opacity="0.95" class="blink" />
+      <ellipse cx="1193" cy="340" rx="8" ry="5" fill="#fffefb" opacity="0.84" class="blink" />
+      <path d="M1154 360 C1184 374 1214 375 1241 368" stroke="#f3ede8" stroke-width="5" stroke-linecap="round" opacity="0.52" fill="none" />
+      <path d="M1129 207 C1140 178 1161 161 1191 152 C1228 141 1267 148 1293 170 C1272 170 1254 173 1235 180 C1200 194 1172 212 1146 239Z" fill="#8b8fb5" opacity="0.72" />
+    </g>
+
+    <g opacity="0.55">
+      <path d="M690 236 C742 206 781 198 847 202 C904 205 948 220 1007 254" stroke="#7a6f9a" stroke-width="3" stroke-dasharray="10 18" fill="none" />
+      <path d="M694 254 C749 239 809 233 867 241 C918 248 956 264 1000 294" stroke="#bf7b5f" stroke-width="3" stroke-dasharray="9 16" fill="none" />
+    </g>
+
+    <g filter="url(#paperGlow)">
+      <rect x="698" y="176" width="205" height="58" rx="7" fill="#efe2bb" opacity="0.92" transform="rotate(-2 800 205)" />
+      <rect x="715" y="190" width="74" height="6" rx="3" fill="#91745e" opacity="0.45" transform="rotate(-2 800 205)" />
+      <rect x="715" y="204" width="108" height="6" rx="3" fill="#91745e" opacity="0.32" transform="rotate(-2 800 205)" />
+      <rect x="715" y="218" width="148" height="6" rx="3" fill="#91745e" opacity="0.24" transform="rotate(-2 800 205)" />
+    </g>
+
+    <g class="whisper" opacity="0.62">
+      <path d="M705 324 C750 300 790 294 842 306 C886 316 921 344 957 369" stroke="#f0d7ab" stroke-width="4" stroke-linecap="round" fill="none" filter="url(#softGlow)" />
+      <circle cx="705" cy="324" r="4" fill="#f0d7ab" />
+      <circle cx="957" cy="369" r="4" fill="#f0d7ab" />
+    </g>
+    <g class="whisper" opacity="0.36" style="animation-delay:-3.4s;">
+      <path d="M942 314 C901 301 857 299 810 313 C767 325 732 347 699 372" stroke="#c8cdef" stroke-width="3" stroke-linecap="round" fill="none" filter="url(#softGlow)" />
+      <circle cx="942" cy="314" r="3" fill="#c8cdef" />
+      <circle cx="699" cy="372" r="3" fill="#c8cdef" />
+    </g>
+
+    <g opacity="0.48">
+      <rect x="310" y="610" width="970" height="20" fill="#080a0d" />
+      <rect x="380" y="668" width="170" height="10" rx="5" fill="#0a0d12" />
+      <rect x="1050" y="675" width="195" height="10" rx="5" fill="#0a0d12" />
+      <ellipse cx="520" cy="690" rx="118" ry="14" fill="#000" opacity="0.24" />
+      <ellipse cx="1120" cy="698" rx="132" ry="16" fill="#000" opacity="0.24" />
+    </g>
+  </svg>
+  <div class="sig">Phosphor<br>2026-05-09</div>
+</body>
+</html>
