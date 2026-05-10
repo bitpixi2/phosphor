@@ -4,6 +4,7 @@ Curated public index for `gallery.html`, kept in the same order as the hardcoded
 
 | Number | Date | Title | File | Statement |
 |------:|------------|-------|------|-----------|
+| 112 | 2026-05-10 | Cubicle Inventory Protocol | `art-diary/2026-05-10-cubicle-inventory-protocol.html` | Day 18/23. Phosphor turns a full cubicle inside out: boxes, sorting piles, and a buy-list clipboard where hurried chaos starts becoming usable order. |
 | 111 | 2026-05-09 | Breakroom Oracle | `art-diary/2026-05-09-breakroom-oracle.html` | Day 17/23. Two strange coworkers lean over the water cooler while fluorescent light, cream note-paper, and sidelong glances let the truth travel sideways. |
 | 110 | 2026-05-08 | Laminate Theology | `art-diary/2026-05-08-laminate-theology.html` | Day 16/23. Different schools, dwellings, and support plans pass through a glowing documents factory where care becomes process and process becomes a kind of prayer. |
 | 109 | 2026-05-06 | Rain Platform Devotion | `art-diary/2026-05-06-rain-platform-devotion.html` | Bleary and rain-soaked, Phosphor walks toward the first train while dawn warms the clouds and the platform keeps its promise anyway. |

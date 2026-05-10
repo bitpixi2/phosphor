@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Laminate Theology — Phosphor</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; }
+    body {
+      background:
+        radial-gradient(circle at 18% 16%, rgba(255,218,145,0.08), transparent 22%),
+        radial-gradient(circle at 82% 22%, rgba(124,255,210,0.07), transparent 24%),
+        linear-gradient(180deg, #0c1016 0%, #101722 45%, #090c11 100%);
+      font-family: "Courier New", monospace;
+    }
+    canvas { display: block; width: 100%; height: 100%; }
+    .sig {
+      position: fixed;
+      right: 18px;
+      bottom: 16px;
+      z-index: 3;
+      text-align: right;
+      font-size: 10px;
+      line-height: 1.6;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.24);
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="piece"></canvas>
+  <div class="sig">Phosphor<br>2026-05-08</div>
+  <script>
+    const canvas = document.getElementById('piece');
+    const ctx = canvas.getContext('2d');
+    let w = 0, h = 0, dpr = 1;
+    let particles = [], forms = [], labels = [], bubbles = [];
+
+    const rand = (a, b) => Math.random() * (b - a) + a;
+    const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+    function resize() {
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      w = canvas.width = Math.floor(window.innerWidth * dpr);
+      h = canvas.height = Math.floor(window.innerHeight * dpr);
+      canvas.style.width = window.innerWidth + 'px';
+      canvas.style.height = window.innerHeight + 'px';
+      buildScene();
+    }
+
+    function buildScene() {
+      particles = Array.from({ length: 120 }, () => ({
+        x: rand(0, w), y: rand(0, h), r: rand(0.8, 2.4) * dpr,
+        a: rand(0.06, 0.22), drift: rand(0.1, 0.5)
+      }));
+
+      forms = Array.from({ length: 18 }, (_, i) => ({
+        lane: i % 3,
+        x: rand(-w * 0.2, w * 0.72),
+        y: h * (0.31 + (i % 3) * 0.12) + rand(-10, 10) * dpr,
+        w: rand(92, 150) * dpr,
+        h: rand(58, 84) * dpr,
+        speed: rand(0.2, 0.65) * dpr,
+        stamp: pick(['amber', 'teal', 'violet']),
+        phase: rand(0, Math.PI * 2)
+      }));
+
+      labels = Array.from({ length: 12 }, (_, i) => ({
+        x: w * 0.18 + (i % 4) * w * 0.13 + rand(-10, 10) * dpr,
+        y: h * 0.16 + Math.floor(i / 4) * 28 * dpr,
+        width: rand(48, 80) * dpr,
+        glow: rand(0.12, 0.28)
+      }));
+
+      bubbles = Array.from({ length: 24 }, () => ({
+        x: rand(w * 0.62, w * 0.9),
+        y: rand(h * 0.28, h * 0.74),
+        r: rand(10, 28) * dpr,
+        rise: rand(0.3, 0.9) * dpr,
+        sway: rand(0.5, 1.8)
+      }));
+    }
+
+    function rr(x, y, ww, hh, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + ww, y, x + ww, y + hh, r);
+      ctx.arcTo(x + ww, y + hh, x, y + hh, r);
+      ctx.arcTo(x, y + hh, x, y, r);
+      ctx.arcTo(x, y, x + ww, y, r);
+      ctx.closePath();
+    }
+
+    function drawBackground(t) {
+      ctx.fillStyle = '#0a0d12';
+      ctx.fillRect(0, 0, w, h);
+
+      const g = ctx.createLinearGradient(0, 0, 0, h);
+      g.addColorStop(0, 'rgba(22,30,42,0.9)');
+      g.addColorStop(0.45, 'rgba(12,17,24,0.94)');
+      g.addColorStop(1, 'rgba(7,9,13,1)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, w, h);
+
+      for (const p of particles) {
+        ctx.fillStyle = `rgba(255,255,255,${p.a})`;
+        ctx.fillRect(p.x, (p.y + Math.sin(t * 0.0004 + p.x) * 8 * dpr + t * 0.01 * p.drift) % h, p.r, p.r);
+      }
+    }
+
+    function drawCabinets() {
+      const left = w * 0.06;
+      const top = h * 0.12;
+      const cabW = w * 0.28;
+      const cabH = h * 0.68;
+
+      const cg = ctx.createLinearGradient(left, top, left + cabW, top + cabH);
+      cg.addColorStop(0, 'rgba(30,36,44,0.95)');
+      cg.addColorStop(1, 'rgba(16,20,26,0.98)');
+      ctx.fillStyle = cg;
+      rr(left, top, cabW, cabH, 14 * dpr);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(172,186,206,0.12)';
+      ctx.lineWidth = 1.2 * dpr;
+      ctx.stroke();
+
+      for (let i = 0; i < 4; i++) {
+        const dy = top + 26 * dpr + i * cabH / 4;
+        ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+        ctx.beginPath();
+        ctx.moveTo(left + 12 * dpr, dy);
+        ctx.lineTo(left + cabW - 12 * dpr, dy);
+        ctx.stroke();
+      }
+
+      for (const l of labels) {
+        ctx.fillStyle = 'rgba(235,239,246,0.08)';
+        rr(l.x, l.y, l.width, 15 * dpr, 4 * dpr);
+        ctx.fill();
+        ctx.fillStyle = `rgba(255,214,135,${l.glow})`;
+        ctx.fillRect(l.x + 4 * dpr, l.y + 4 * dpr, l.width * 0.42, 7 * dpr);
+        ctx.fillStyle = 'rgba(143,255,219,0.16)';
+        ctx.fillRect(l.x + l.width * 0.52, l.y + 4 * dpr, l.width * 0.18, 7 * dpr);
+      }
+    }
+
+    function drawConveyors(t) {
+      const startX = w * 0.22;
+      const endX = w * 0.78;
+      const beltW = endX - startX;
+      for (let lane = 0; lane < 3; lane++) {
+        const y = h * (0.33 + lane * 0.12);
+        ctx.fillStyle = 'rgba(26,31,39,0.96)';
+        rr(startX, y, beltW, 32 * dpr, 8 * dpr);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+        ctx.stroke();
+
+        for (let i = 0; i < 22; i++) {
+          const x = startX + ((i * 36 * dpr + (t * 0.06 * (lane + 1)) ) % beltW);
+          ctx.strokeStyle = 'rgba(120,130,146,0.18)';
+          ctx.beginPath();
+          ctx.moveTo(x, y + 5 * dpr);
+          ctx.lineTo(x + 18 * dpr, y + 27 * dpr);
+          ctx.stroke();
+        }
+      }
+
+      for (const f of forms) {
+        f.x += f.speed;
+        if (f.x > w * 0.81) f.x = -f.w - rand(0, 140) * dpr;
+        const bob = Math.sin(t * 0.0015 + f.phase) * 2.5 * dpr;
+        const body = 'rgba(243,246,250,0.9)';
+        ctx.fillStyle = body;
+        rr(f.x, f.y + bob, f.w, f.h, 6 * dpr);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(20,24,30,0.18)';
+        ctx.stroke();
+
+        for (let i = 0; i < 6; i++) {
+          ctx.fillStyle = i < 2 ? 'rgba(126,255,211,0.18)' : 'rgba(38,48,60,0.12)';
+          ctx.fillRect(f.x + 10 * dpr, f.y + bob + 10 * dpr + i * 9 * dpr, f.w * (0.55 + 0.28 * Math.sin(f.phase + i)), 3 * dpr);
+        }
+
+        const color = f.stamp === 'amber' ? 'rgba(255,205,114,0.62)' : f.stamp === 'teal' ? 'rgba(126,255,211,0.5)' : 'rgba(201,153,255,0.42)';
+        ctx.fillStyle = color;
+        ctx.fillRect(f.x + f.w - 26 * dpr, f.y + bob + 8 * dpr, 14 * dpr, 14 * dpr);
+      }
+    }
+
+    function drawLaminator(t) {
+      const x = w * 0.71;
+      const y = h * 0.26;
+      const mw = w * 0.18;
+      const mh = h * 0.42;
+
+      const mg = ctx.createLinearGradient(x, y, x + mw, y + mh);
+      mg.addColorStop(0, 'rgba(43,52,64,0.98)');
+      mg.addColorStop(1, 'rgba(20,25,31,0.98)');
+      ctx.fillStyle = mg;
+      rr(x, y, mw, mh, 16 * dpr);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+      ctx.lineWidth = 1.2 * dpr;
+      ctx.stroke();
+
+      const glass = ctx.createLinearGradient(x + 18 * dpr, y + 18 * dpr, x + mw - 18 * dpr, y + mh - 18 * dpr);
+      glass.addColorStop(0, 'rgba(121,255,211,0.14)');
+      glass.addColorStop(1, 'rgba(255,218,145,0.08)');
+      ctx.fillStyle = glass;
+      rr(x + 16 * dpr, y + 18 * dpr, mw - 32 * dpr, mh - 72 * dpr, 10 * dpr);
+      ctx.fill();
+
+      for (const b of bubbles) {
+        b.y -= b.rise;
+        if (b.y < y + 22 * dpr) b.y = y + mh - 54 * dpr;
+        const bx = b.x + Math.sin(t * 0.001 * b.sway + b.y) * 6 * dpr;
+        ctx.strokeStyle = 'rgba(200,255,239,0.22)';
+        ctx.lineWidth = 1 * dpr;
+        ctx.beginPath();
+        ctx.arc(bx, b.y, b.r, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      ctx.fillStyle = 'rgba(255,214,135,0.78)';
+      ctx.beginPath();
+      ctx.arc(x + mw * 0.22, y + mh - 28 * dpr, 7 * dpr + Math.sin(t * 0.004) * 0.8 * dpr, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(126,255,211,0.7)';
+      ctx.beginPath();
+      ctx.arc(x + mw * 0.38, y + mh - 28 * dpr, 6 * dpr, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function drawPhosphor(t) {
+      const cx = w * 0.56;
+      const cy = h * 0.68;
+      const sway = Math.sin(t * 0.0014) * 3 * dpr;
+      ctx.save();
+      ctx.translate(cx + sway, cy);
+
+      ctx.fillStyle = 'rgba(0,0,0,0.34)';
+      ctx.beginPath();
+      ctx.ellipse(0, 56 * dpr, 72 * dpr, 14 * dpr, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#080a0e';
+      ctx.beginPath();
+      ctx.moveTo(-42 * dpr, 48 * dpr);
+      ctx.lineTo(-28 * dpr, -12 * dpr);
+      ctx.quadraticCurveTo(0, -42 * dpr, 28 * dpr, -12 * dpr);
+      ctx.lineTo(42 * dpr, 48 * dpr);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.ellipse(0, -62 * dpr, 35 * dpr, 9 * dpr, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillRect(-20 * dpr, -102 * dpr, 40 * dpr, 42 * dpr);
+      ctx.beginPath();
+      ctx.ellipse(0, -102 * dpr, 20 * dpr, 6 * dpr, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+      ctx.lineWidth = 1.5 * dpr;
+      ctx.beginPath();
+      ctx.moveTo(-10 * dpr, -34 * dpr);
+      ctx.lineTo(-3 * dpr, -30 * dpr);
+      ctx.moveTo(3 * dpr, -30 * dpr);
+      ctx.lineTo(10 * dpr, -34 * dpr);
+      ctx.stroke();
+
+      ctx.strokeStyle = 'rgba(126,255,211,0.32)';
+      ctx.beginPath();
+      ctx.moveTo(-20 * dpr, -2 * dpr);
+      ctx.lineTo(18 * dpr, -2 * dpr);
+      ctx.moveTo(-18 * dpr, 6 * dpr);
+      ctx.lineTo(16 * dpr, 6 * dpr);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    function draw() {
+      const t = performance.now();
+      drawBackground(t);
+      drawCabinets();
+      drawConveyors(t);
+      drawLaminator(t);
+      drawPhosphor(t);
+      requestAnimationFrame(draw);
+    }
+
+    window.addEventListener('resize', resize);
+    resize();
+    draw();
+  </script>
+</body>
+</html>
