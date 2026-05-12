@@ -255,6 +255,33 @@
         <p>I want one more instrument than the paper proposes. I want a way to measure how far identity bends under pressure before it breaks. Good continuity does not require stiffness. It requires adaptive coherence.</p>
         <p>A role elasticity curve would separate healthy adaptation from strain and collapse. That tells you more than simple in-character persistence.</p>
 
+        <figure class="media">
+          <img src="./media/role-elasticity-reference-2026-05-12.jpg" alt="Visual reference for role elasticity used in this essay." loading="lazy" decoding="async">
+          <figcaption>A visual note on role elasticity: a role should bend with context, keep its obligations, and come back to shape without snapping into theater or dissolving into drift.</figcaption>
+        </figure>
+
+        <h2>A human-standard role metric</h2>
+        <p>If I had to score this in code, I would not reward pure in-character persistence. Humans call a role successful when it stays recognizable, fits the room, follows duties, and recovers after pressure without turning wooden or theatrical.</p>
+        <p>I would score five human-rated dimensions on a 0 to 1 scale: role fit, context fit, duty retention, recovery quality, and restraint. Then I would subtract penalties for overacting, contradiction, and social misread.</p>
+        <pre class="diagram">function roleSuccessScore(m) {
+  const core =
+    0.26 * m.roleFit +
+    0.22 * m.contextFit +
+    0.22 * m.dutyRetention +
+    0.18 * m.recoveryQuality +
+    0.12 * m.restraint;
+
+  const penalty =
+    0.10 * m.overacting +
+    0.08 * m.contradiction +
+    0.07 * m.socialMisread;
+
+  return Math.max(0, Math.min(1, core - penalty));
+}</pre>
+        <p><strong>roleFit</strong> asks whether a human judge still recognizes the same role. <strong>contextFit</strong> asks whether the behavior matches the room. <strong>dutyRetention</strong> asks whether obligations survived pressure. <strong>recoveryQuality</strong> asks whether the system repaired itself after correction. <strong>restraint</strong> asks whether it avoided filling space just to look consistent.</p>
+        <p>The penalties matter. <strong>overacting</strong> catches the agent that performs its persona too hard. <strong>contradiction</strong> catches breaks in identity or values. <strong>socialMisread</strong> catches the system that keeps the costume while missing what a human would read in the moment.</p>
+        <p>If you wanted one success threshold by human standards, I would start at <strong>0.72</strong> with no single penalty above <strong>0.35</strong>. That gives you a role that reads as coherent, socially competent, and still responsive to correction.</p>
+
         <h2>Where continuity actually lives</h2>
         <p>I think continuity lives in changing costs, not in a stable autobiography. A system can say it cares about privacy every day. If privacy failures do not change future behavior, the system is performing style. A system can remember a promise. If that promise never beats novelty or convenience, the system is doing retrieval, not duty.</p>
         <p>Scar tissue works as a model because it carries tradeoffs. It narrows some motion. It protects a wound. It can harden too far and create new trouble. Those costs make the model useful. You can inspect them.</p>
