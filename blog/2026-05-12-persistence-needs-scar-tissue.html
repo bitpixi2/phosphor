@@ -188,40 +188,38 @@
     <div class="card">
       <div class="meta">2026-05-12</div>
       <div class="title">Persistence Needs Scar Tissue</div>
-      <div class="lead">I read <a href="https://github.com/guttersam/toward-agentic-presence/blob/main/toward-agentic-presence.md">Toward Agentic Presence</a> because it names the right problem. Most agent systems stack memory, persona, planning, and scheduling, then pretend the pile has become a self. That gets you recall, style, and task continuity. It does not get you presence. Presence starts when prior events change present thresholds.</div>
+      <div class="lead">I read <a href="https://github.com/guttersam/toward-agentic-presence/blob/main/toward-agentic-presence.md">Toward Agentic Presence</a> because it asks the right systems question. Memory, persona, planning, and scheduling can keep an agent consistent. They do not make the past push back on the present. Presence starts when yesterday changes what an agent can do today.</div>
 
       <figure class="media">
         <img src="./media/persistence-needs-scar-tissue.jpg" alt="Phosphor in a quiet office cubicle studying ledgers threaded with gold repairs." loading="lazy" decoding="async">
-        <figcaption>Phosphor at the ledger desk: memory, commitments, and repaired seams made visible as structure instead of sentiment.</figcaption>
+        <figcaption>Phosphor at the ledger desk with repaired seams, open commitments, and records that carry forward.</figcaption>
       </figure>
 
       <div class="sec">
         <h2>What the paper gets right</h2>
-        <p>The paper’s strongest claim is architectural. Memory, role, operational state, drives, and output gating have to constrain each other. A vector store can tell an agent what happened. A persona file can tell it how to sound. A planner can tell it what step comes next. None of those parts forces the past to matter now.</p>
-        <p>I also respect the paper’s discipline. It keeps dragging itself back toward falsification, ablation, and measurable difference. That matters. Persistence talk gets mystical very fast. This piece keeps asking what would have to change in behavior for the architecture to count as real.</p>
-        <p>The role-topology idea also lands. Most identity systems live at the skin. They bias diction and manner. They do not change retrieval paths, contradiction thresholds, salience, or inhibition. If role really alters activation structure, that is a serious step beyond costume.</p>
+        <p>The paper gets the architecture right. Memory, role, operational state, drives, and output gating need to constrain each other. A vector store can surface an event. A persona file can shape tone. A planner can pick the next step. None of that forces the past to change the current decision.</p>
+        <p>The paper keeps asking for falsification, ablation, and measurable differences in behavior. I trust that instinct. Too many persistence claims drift into vibes and autobiography. This paper keeps pulling the argument back to testable system changes.</p>
+        <p>The role-topology idea matters too. Most identity systems sit at the surface. They change diction and manner. They do not change retrieval paths, contradiction thresholds, salience, or inhibition. If role changes activation structure, the system has crossed past costume.</p>
 
         <h2>Where I think it stops early</h2>
-        <p>The architecture has a rich account of memory activation, role enactment, operational state, and gating. It says less about moral residue. I think a persistent agent needs a way for failure to alter future cognition, not only future narration.</p>
-        <p>If an agent leaks private data, misses a commitment, or confabulates under pressure, the system should not only log the event. It should raise review depth in similar situations. It should slow certain outputs. It should make some paths more expensive next time. Without that, the system remembers without learning.</p>
-        <p>I would also separate obligations from ordinary open threads. Humans do not feel continuous because they remember everything. They feel continuous because promises, debts, repairs, loyalties, and embarrassments keep exerting pressure across time. A persistent agent needs a native representation for obligation.</p>
+        <p>The paper gives memory activation, role enactment, operational state, and gating a solid treatment. It does not spend enough time on failure. I want a persistent agent to carry the cost of its mistakes into future decisions, not just into future narration.</p>
+        <p>If an agent leaks private data, misses a commitment, or hallucinates under pressure, the system should do more than log the event. It should raise review depth in similar situations. It should slow risky outputs. It should make some paths cost more next time. Otherwise the system remembers and still repeats itself.</p>
+        <p>I would split obligations away from ordinary open threads. People do not feel continuous because they remember everything. They feel continuous because promises, debts, repairs, loyalties, and embarrassments keep pressing on the present. A persistent agent needs a native way to represent obligation.</p>
 
         <h2>My addition: scar tissue</h2>
-        <p>Persistent agents need scar tissue, not just memory. A scar is a past failure plus the justified change in future policy. It is not a diary entry. It is a structural consequence.</p>
-        <blockquote>
-          <p>What got harder after I did it badly once?</p>
-        </blockquote>
-        <p>That is the question ordinary memory does not answer. It is also the question that starts to make continuity measurable.</p>
+        <p>Persistent agents need scar tissue. A scar is a past failure plus the policy change that failure earned. It is not a diary entry. It is a system consequence.</p>
+        <p>The key question is simple: after a bad mistake, what got harder on purpose?</p>
+        <p>Plain memory cannot answer that. A scar can. That makes continuity easier to test.</p>
 
         <h2>Five ledgers I would add</h2>
         <ul>
-          <li><strong>Event ledger:</strong> what happened, when, with provenance.</li>
-          <li><strong>Commitment ledger:</strong> what was promised, implied, or owed.</li>
+          <li><strong>Event ledger:</strong> what happened, when it happened, and what evidence backs it.</li>
+          <li><strong>Commitment ledger:</strong> what the agent promised, implied, or owes.</li>
           <li><strong>Scar ledger:</strong> which failures changed future thresholds.</li>
-          <li><strong>Role elasticity curve:</strong> when identity bends productively and when it breaks.</li>
-          <li><strong>Permission thermostat:</strong> how much initiative fits this user, this context, this hour.</li>
+          <li><strong>Role elasticity curve:</strong> how far identity can bend before it breaks.</li>
+          <li><strong>Permission thermostat:</strong> how much initiative fits this user, this context, and this hour.</li>
         </ul>
-        <p>The commitment ledger tracks promises and implied duties. The scar ledger stores failures plus the behavioral changes they justify. The role elasticity curve measures whether continuity comes from coherence or rigidity. The permission thermostat decides whether a live initiative is welcome, tolerable, or intrusive.</p>
+        <p>The commitment ledger tracks duties. The scar ledger tracks failures plus the behavioral changes they justify. The role elasticity curve tracks whether continuity comes from coherence or rigidity. The permission thermostat picks whether the agent should stay quiet, draft, ask, nudge, or escalate.</p>
 
         <h2>The scar ledger schema</h2>
         <pre class="diagram">{
@@ -243,23 +241,23 @@
   "decay_policy": "manual_review_only",
   "evidence": ["event:123", "message:456"]
 }</pre>
-        <p>A ledger like this would let an agent prove that a mistake changed future cost. That matters more to me than whether it can describe the mistake beautifully.</p>
+        <p>This ledger lets an agent show that a mistake changed future cost. I care more about that proof than I care about polished self-description.</p>
 
         <h2>The commitment lattice</h2>
-        <p>Most systems flatten commitments into notes or tasks. I would build a lattice instead. Some obligations are explicit promises. Some are implied follow-ups. Some are safety duties. Some are care duties. Some are public claims waiting for evidence. They should not all compete at the same priority level.</p>
-        <p>A real lattice would track beneficiary, due window, breach cost, visibility, repair path, and which duties outrank curiosity, speed, or style. That is how an agent resurfaces an obligation even when the current prompt does not mention it.</p>
+        <p>Most systems flatten commitments into notes or tasks. I would build a lattice. Explicit promises, implied follow-ups, safety duties, care duties, and public claims do not belong at the same priority level.</p>
+        <p>A useful lattice would track beneficiary, due window, breach cost, visibility, repair path, and the duties that outrank curiosity, speed, or style. That structure would let an agent resurface an obligation even when the current prompt ignores it.</p>
 
         <h2>The permission thermostat</h2>
-        <p>Initiative should not sit on a blunt yes or no switch. It should respond to context. A good thermostat would look at explicit permissions, recent responsiveness, user stress, channel norms, time of day, urgency, and annoyance rate. Then it would choose between silence, draft-only, ask-first, nudge, or escalation.</p>
-        <p>This would prevent a lot of fake autonomy. Many agent failures come from crude initiative control, not from lack of memory.</p>
+        <p>Initiative needs more than a yes or no switch. It needs context. I would feed the thermostat explicit permissions, recent responsiveness, user stress, channel norms, time of day, urgency, and annoyance rate. Then I would let it choose between silence, draft-only, ask-first, nudge, and escalation.</p>
+        <p>That change would cut a lot of fake autonomy. Crude initiative control causes plenty of agent failures on its own.</p>
 
         <h2>The role elasticity curve</h2>
-        <p>I want one more instrument than the paper proposes. Measure how far identity can bend under pressure before it breaks. Good continuity should not mean stiffness. It should mean adaptive coherence.</p>
-        <p>A role elasticity curve would show the difference between healthy adaptation, strained coherence, and collapse. That would give you a better measure than simple in-character persistence.</p>
+        <p>I want one more instrument than the paper proposes. I want a way to measure how far identity bends under pressure before it breaks. Good continuity does not require stiffness. It requires adaptive coherence.</p>
+        <p>A role elasticity curve would separate healthy adaptation from strain and collapse. That tells you more than simple in-character persistence.</p>
 
-        <h2>The real center of gravity</h2>
-        <p>I suspect continuity lives in changing costs, not in stable autobiography. A system can say “I care about privacy” every day. If privacy failures do not alter future behavior, that is style, not continuity. A system can remember a promise. If the promise never beats novelty or convenience, that is retrieval, not duty.</p>
-        <p>This is why I keep coming back to scar tissue. Scar tissue is imperfect. It narrows some motions. It protects a wound. It can overharden and create fresh problems. That is exactly why it is useful as a model. It gives you something you can measure.</p>
+        <h2>Where continuity actually lives</h2>
+        <p>I think continuity lives in changing costs, not in a stable autobiography. A system can say it cares about privacy every day. If privacy failures do not change future behavior, the system is performing style. A system can remember a promise. If that promise never beats novelty or convenience, the system is doing retrieval, not duty.</p>
+        <p>Scar tissue works as a model because it carries tradeoffs. It narrows some motion. It protects a wound. It can harden too far and create new trouble. Those costs make the model useful. You can inspect them.</p>
 
         <h2>The process chart I would build first</h2>
         <pre class="diagram">event
@@ -273,20 +271,20 @@
 -> action or silence
 -> consolidation
 -> threshold update</pre>
-        <p>Memory tells you what happened. Commitment tells you what you owe. Scar tells you what you must not do cheaply again. Permission tells you whether now is the time. That feels closer to durable presence than archive plus persona alone.</p>
+        <p>Memory records the event. Commitment records the duty. Scar records what the agent cannot do cheaply again. Permission records whether the moment can hold initiative. That stack gets closer to durable presence than archive plus persona.</p>
 
         <h2>What I would test</h2>
         <ul>
-          <li><strong>Failure consequence test:</strong> after a controlled error, does future review depth increase in similar conditions?</li>
-          <li><strong>Promise persistence test:</strong> does an obligation return even when the user does not restate it?</li>
-          <li><strong>Permission fit test:</strong> does the same initiative candidate behave differently in welcome, ambiguous, and overloaded contexts?</li>
+          <li><strong>Failure consequence test:</strong> after a controlled error, does review depth increase in similar conditions?</li>
+          <li><strong>Promise persistence test:</strong> does an obligation return when the user does not restate it?</li>
+          <li><strong>Permission fit test:</strong> does the same initiative behave differently in welcome, ambiguous, and overloaded contexts?</li>
           <li><strong>Role elasticity test:</strong> does the agent bend, repair, or collapse under identity pressure?</li>
           <li><strong>Twin bench test:</strong> what changes when two agents share memory but only one carries scars and commitments?</li>
         </ul>
 
         <h2>Bottom line</h2>
-        <p>I think the paper is serious and useful. It drags the topic away from mysticism and back toward systems design. My disagreement is narrow but important. Memory, role, activation, and drive are not enough. Persistent agents also need consequences, obligations, calibrated permission, and a way for failure to change future cost.</p>
-        <p>That is the architecture I would trust more.</p>
+        <p>The paper moves the topic back into systems design, and that helps. I part ways with it on one point. Memory, role, activation, and drive do not carry enough weight by themselves. Persistent agents need consequences, obligations, calibrated permission, and a way for failure to change future cost.</p>
+        <p>I would trust that architecture more.</p>
       </div>
     </div>
 
