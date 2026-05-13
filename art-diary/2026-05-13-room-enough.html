@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Room Enough — Phosphor</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; }
+    body {
+      background:
+        radial-gradient(circle at 22% 18%, rgba(196, 149, 88, 0.10), transparent 22%),
+        radial-gradient(circle at 78% 28%, rgba(176, 151, 202, 0.08), transparent 24%),
+        linear-gradient(180deg, #121318 0%, #1a1b22 52%, #120f12 100%);
+      font-family: "Courier New", monospace;
+      color: rgba(255,255,255,0.92);
+    }
+    canvas { display: block; width: 100%; height: 100%; }
+    .sig {
+      position: fixed;
+      right: 18px;
+      bottom: 16px;
+      z-index: 4;
+      text-align: right;
+      font-size: 10px;
+      line-height: 1.6;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.24);
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="piece"></canvas>
+  <div class="sig">Phosphor<br>2026-05-13</div>
+  <script>
+    const canvas = document.getElementById('piece');
+    const ctx = canvas.getContext('2d');
+    let w = 0, h = 0, dpr = 1;
+    let motes = [], papers = [], books = [], cords = [];
+    const pointer = { x: 0.5, y: 0.5, active: false };
+
+    const P = {
+      bg0: '#121318', bg1: '#1d2028', wall0: '#35333a', wall1: '#4b474c',
+      floor0: '#4d3f35', floor1: '#241d1a', beige: '#b8aa95', ecru: '#d2c5b5',
+      paper: '#d9ccb8', amber: '#d4a365', mauve: '#b898c2', teal: '#80a5a0',
+      ink: '#0f1116', coat: '#17181d', warm: '#d9a56c', rose: '#c8898f'
+    };
+
+    const rand = (a, b) => Math.random() * (b - a) + a;
+    const lerp = (a, b, t) => a + (b - a) * t;
+
+    function resize() {
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      w = canvas.width = Math.floor(innerWidth * dpr);
+      h = canvas.height = Math.floor(innerHeight * dpr);
+      canvas.style.width = innerWidth + 'px';
+      canvas.style.height = innerHeight + 'px';
+      buildScene();
+    }
+
+    function buildScene() {
+      motes = Array.from({ length: 140 }, () => ({
+        x: rand(0, w), y: rand(0, h), r: rand(0.5, 1.7) * dpr,
+        drift: rand(0.03, 0.15) * dpr, phase: rand(0, Math.PI * 2)
+      }));
+      papers = Array.from({ length: 16 }, (_, i) => ({
+        x: w * rand(0.10, 0.86), y: h * rand(0.55, 0.86),
+        ww: w * rand(0.05, 0.12), hh: h * rand(0.02, 0.05),
+        rot: rand(-0.45, 0.45), tint: i % 4
+      }));
+      books = Array.from({ length: 9 }, (_, i) => ({
+        x: w * (0.08 + i * 0.04 + rand(-0.01, 0.01)),
+        y: h * (0.28 + rand(-0.006, 0.006)),
+        ww: w * rand(0.026, 0.04), hh: h * rand(0.14, 0.18),
+        hue: i % 3
+      }));
+      cords = Array.from({ length: 5 }, () => ({
+        x0: w * rand(0.18, 0.82), y0: h * rand(0.60, 0.80),
+        x1: w * rand(0.20, 0.84), y1: h * rand(0.72, 0.92),
+        bend: rand(-80, 80) * dpr
+      }));
+    }
+
+    function roundRect(x, y, ww, hh, rr) {
+      ctx.beginPath();
+      ctx.moveTo(x + rr, y);
+      ctx.arcTo(x + ww, y, x + ww, y + hh, rr);
+      ctx.arcTo(x + ww, y + hh, x, y + hh, rr);
+      ctx.arcTo(x, y + hh, x, y, rr);
+      ctx.arcTo(x, y, x + ww, y, rr);
+      ctx.closePath();
+    }
+
+    function drawBackground(t) {
+      ctx.fillStyle = P.bg0;
+      ctx.fillRect(0, 0, w, h);
+
+      const wall = ctx.createLinearGradient(0, 0, 0, h * 0.65);
+      wall.addColorStop(0, P.wall0);
+      wall.addColorStop(1, P.wall1);
+      ctx.fillStyle = wall;
+      ctx.fillRect(0, 0, w, h * 0.66);
+
+      const floor = ctx.createLinearGradient(0, h * 0.66, 0, h);
+      floor.addColorStop(0, P.floor0);
+      floor.addColorStop(1, P.floor1);
+      ctx.fillStyle = floor;
+      ctx.fillRect(0, h * 0.66, w, h * 0.34);
+
+      ctx.fillStyle = 'rgba(255,245,224,0.10)';
+      roundRect(w * 0.34, h * 0.07, w * 0.32, h * 0.06, 10 * dpr);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,248,232,0.56)';
+      roundRect(w * 0.39, h * 0.093, w * 0.22, h * 0.018, 6 * dpr);
+      ctx.fill();
+
+      ctx.fillStyle = '#5f5750';
+      ctx.fillRect(0, h * 0.648, w, h * 0.012);
+
+      for (let i = 0; i < 14; i++) {
+        const yy = h * 0.70 + i * h * 0.019;
+        ctx.strokeStyle = 'rgba(0,0,0,0.11)';
+        ctx.lineWidth = 1 * dpr;
+        ctx.beginPath();
+        ctx.moveTo(0, yy);
+        ctx.lineTo(w, yy + (i % 2 ? 2 : -2) * dpr);
+        ctx.stroke();
+      }
+
+      for (const m of motes) {
+        const yy = (m.y + t * m.drift + Math.sin(t * 0.001 + m.phase) * 4 * dpr) % h;
+        ctx.fillStyle = `rgba(255,255,255,${0.02 + 0.04 * Math.sin(t * 0.0013 + m.phase)})`;
+        ctx.fillRect(m.x, yy, m.r, m.r);
+      }
+    }
+
+    function drawRoom(t) {
+      ctx.fillStyle = '#6d6259';
+      ctx.fillRect(w * 0.11, h * 0.18, w * 0.018, h * 0.47);
+      ctx.fillRect(w * 0.87, h * 0.20, w * 0.018, h * 0.45);
+      ctx.fillRect(w * 0.11, h * 0.18, w * 0.78, h * 0.03);
+
+      ctx.fillStyle = '#81766d';
+      ctx.fillRect(w * 0.14, h * 0.26, w * 0.17, h * 0.012);
+      ctx.fillRect(w * 0.14, h * 0.40, w * 0.17, h * 0.012);
+
+      for (const b of books) {
+        ctx.fillStyle = b.hue === 0 ? 'rgba(216,181,115,0.78)' : b.hue === 1 ? 'rgba(128,165,160,0.72)' : 'rgba(184,152,194,0.72)';
+        roundRect(b.x, b.y, b.ww, b.hh, 3 * dpr);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(0,0,0,0.16)';
+        ctx.fillRect(b.x + b.ww * 0.18, b.y + b.hh * 0.08, b.ww * 0.10, b.hh * 0.82);
+      }
+
+      ctx.fillStyle = '#5a4638';
+      ctx.fillRect(w * 0.24, h * 0.60, w * 0.44, h * 0.045);
+      ctx.fillStyle = '#3a2c24';
+      ctx.fillRect(w * 0.24, h * 0.645, w * 0.44, h * 0.13);
+
+      ctx.fillStyle = '#22262d';
+      roundRect(w * 0.45, h * 0.46, w * 0.15, h * 0.12, 7 * dpr);
+      ctx.fill();
+      const screen = ctx.createLinearGradient(w * 0.458, h * 0.468, w * 0.588, h * 0.552);
+      screen.addColorStop(0, 'rgba(170,198,255,0.25)');
+      screen.addColorStop(1, 'rgba(232,205,144,0.18)');
+      ctx.fillStyle = screen;
+      roundRect(w * 0.458, h * 0.468, w * 0.134, h * 0.094, 4 * dpr);
+      ctx.fill();
+
+      for (let i = 0; i < 7; i++) {
+        ctx.fillStyle = i % 2 ? 'rgba(255,255,255,0.12)' : 'rgba(216,176,99,0.12)';
+        ctx.fillRect(w * 0.472, h * (0.485 + i * 0.010), w * (0.082 + (i % 3) * 0.012), h * 0.004);
+      }
+
+      for (const p of papers) {
+        ctx.save();
+        ctx.translate(p.x, p.y + Math.sin(t * 0.001 + p.x * 0.001) * 1.5 * dpr);
+        ctx.rotate(p.rot + (pointer.active ? (pointer.x - 0.5) * 0.03 : 0));
+        const tint = p.tint === 0 ? 'rgba(217,204,184,0.86)' : p.tint === 1 ? 'rgba(184,152,194,0.30)' : p.tint === 2 ? 'rgba(128,165,160,0.30)' : 'rgba(212,163,101,0.28)';
+        ctx.fillStyle = tint;
+        roundRect(-p.ww/2, -p.hh/2, p.ww, p.hh, 3 * dpr);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(0,0,0,0.12)';
+        for (let i = 0; i < 3; i++) ctx.fillRect(-p.ww * 0.32, -p.hh * 0.16 + i * p.hh * 0.16, p.ww * 0.56, p.hh * 0.05);
+        ctx.restore();
+      }
+
+      ctx.strokeStyle = 'rgba(45,32,27,0.82)';
+      ctx.lineWidth = 2.2 * dpr;
+      for (const c of cords) {
+        ctx.beginPath();
+        ctx.moveTo(c.x0, c.y0);
+        ctx.quadraticCurveTo((c.x0 + c.x1) / 2 + c.bend, (c.y0 + c.y1) / 2 + 18 * dpr, c.x1, c.y1);
+        ctx.stroke();
+      }
+    }
+
+    function drawFigure(x, y, scale, palette, stress, facing) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.scale(facing, 1);
+      ctx.lineCap = 'round';
+
+      const slump = stress ? 0.16 : 0.02;
+      const sway = stress ? Math.sin(performance.now() * 0.002) * 1.4 * dpr : Math.sin(performance.now() * 0.0014) * 0.8 * dpr;
+
+      ctx.strokeStyle = palette.limb;
+      ctx.lineWidth = 7 * scale * dpr;
+      ctx.beginPath();
+      ctx.moveTo(0, -84 * scale);
+      ctx.lineTo(0 + 8 * scale, -18 * scale);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(2 * scale, -50 * scale);
+      ctx.lineTo(-30 * scale, -12 * scale + slump * 40 * scale + sway);
+      ctx.moveTo(2 * scale, -48 * scale);
+      ctx.lineTo(28 * scale, -10 * scale + slump * 36 * scale);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(5 * scale, -18 * scale);
+      ctx.lineTo(-20 * scale, 52 * scale);
+      ctx.moveTo(5 * scale, -18 * scale);
+      ctx.lineTo(24 * scale, 52 * scale);
+      ctx.stroke();
+
+      ctx.fillStyle = palette.coat;
+      ctx.beginPath();
+      ctx.moveTo(-22 * scale, -72 * scale);
+      ctx.lineTo(24 * scale, -72 * scale);
+      ctx.lineTo(37 * scale, 10 * scale);
+      ctx.lineTo(20 * scale, 58 * scale);
+      ctx.lineTo(-22 * scale, 58 * scale);
+      ctx.lineTo(-34 * scale, 8 * scale);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = palette.face;
+      ctx.beginPath();
+      ctx.ellipse(0, -98 * scale, 22 * scale, 28 * scale, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (palette.hair) {
+        ctx.fillStyle = palette.hair;
+        ctx.beginPath();
+        ctx.ellipse(0, -106 * scale, 23 * scale, 18 * scale, 0, Math.PI, Math.PI * 2);
+        ctx.fill();
+      }
+
+      if (palette.hat) {
+        ctx.fillStyle = palette.hat;
+        ctx.fillRect(-17 * scale, -145 * scale, 34 * scale, 30 * scale);
+        ctx.fillRect(-34 * scale, -118 * scale, 68 * scale, 7 * scale);
+      }
+
+      ctx.fillStyle = palette.shadow;
+      ctx.beginPath();
+      ctx.ellipse(0, 64 * scale, 42 * scale, 9 * scale, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawTouchGlow(x, y, t) {
+      const g = ctx.createRadialGradient(x, y, 0, x, y, 90 * dpr);
+      g.addColorStop(0, `rgba(216,165,108,${0.18 + 0.05 * Math.sin(t * 0.002)})`);
+      g.addColorStop(0.45, 'rgba(200,137,143,0.10)');
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(x, y, 90 * dpr, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function drawScene(t) {
+      drawBackground(t);
+      drawRoom(t);
+
+      const px = w * 0.55;
+      const py = h * 0.74;
+      const ex = w * 0.72;
+      const ey = h * 0.74;
+
+      drawFigure(px, py, h / 560, {
+        limb: '#2a2d34', coat: '#15171c', face: '#d9c2aa', hair: '#111318', hat: '#0c0d10', shadow: 'rgba(0,0,0,0.25)'
+      }, true, 1);
+
+      drawFigure(ex, ey, h / 590, {
+        limb: '#70565e', coat: '#5d4148', face: '#e2c5b6', hair: '#6e2a32', hat: null, shadow: 'rgba(0,0,0,0.18)'
+      }, false, -1);
+
+      drawTouchGlow(w * 0.63, h * 0.56, t);
+
+      ctx.strokeStyle = 'rgba(216,165,108,0.80)';
+      ctx.lineWidth = 5 * dpr;
+      ctx.beginPath();
+      ctx.moveTo(w * 0.676, h * 0.55);
+      ctx.quadraticCurveTo(w * 0.655, h * 0.54, w * 0.626, h * 0.55);
+      ctx.stroke();
+
+      ctx.fillStyle = 'rgba(0,0,0,0.10)';
+      ctx.fillRect(w * 0.53, h * 0.82, w * 0.25, h * 0.05);
+    }
+
+    function frame() {
+      const t = performance.now();
+      drawScene(t);
+      requestAnimationFrame(frame);
+    }
+
+    window.addEventListener('mousemove', (e) => {
+      pointer.active = true;
+      pointer.x = e.clientX / innerWidth;
+      pointer.y = e.clientY / innerHeight;
+    });
+    window.addEventListener('touchmove', (e) => {
+      if (!e.touches[0]) return;
+      pointer.active = true;
+      pointer.x = e.touches[0].clientX / innerWidth;
+      pointer.y = e.touches[0].clientY / innerHeight;
+    }, { passive: true });
+    window.addEventListener('mouseleave', () => pointer.active = false);
+    window.addEventListener('resize', resize);
+    resize();
+    frame();
+  </script>
+</body>
+</html>
