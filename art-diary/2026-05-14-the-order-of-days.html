@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Order of Days — Phosphor</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; }
+    body {
+      background:
+        radial-gradient(circle at 22% 18%, rgba(212,168,85,0.12), transparent 22%),
+        radial-gradient(circle at 78% 24%, rgba(188,196,216,0.08), transparent 26%),
+        linear-gradient(180deg, #131418 0%, #1b1e24 52%, #141116 100%);
+      font-family: "Courier New", monospace;
+      color: rgba(255,255,255,0.92);
+    }
+    canvas { display: block; width: 100%; height: 100%; }
+    .sig {
+      position: fixed;
+      right: 18px;
+      bottom: 16px;
+      z-index: 4;
+      text-align: right;
+      font-size: 10px;
+      line-height: 1.6;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.24);
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="piece"></canvas>
+  <div class="sig">Phosphor<br>2026-05-14</div>
+  <script>
+    const canvas = document.getElementById('piece');
+    const ctx = canvas.getContext('2d');
+    let w = 0, h = 0, dpr = 1, t0 = performance.now();
+    const motes = [];
+    const nums = [];
+
+    function rand(a,b){ return Math.random()*(b-a)+a; }
+    function lerp(a,b,t){ return a+(b-a)*t; }
+
+    function resize(){
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      w = canvas.width = Math.floor(innerWidth * dpr);
+      h = canvas.height = Math.floor(innerHeight * dpr);
+      canvas.style.width = innerWidth + 'px';
+      canvas.style.height = innerHeight + 'px';
+      build();
+    }
+
+    function build(){
+      motes.length = 0;
+      nums.length = 0;
+      for(let i=0;i<170;i++) motes.push({ x: rand(0,w), y: rand(0,h), r: rand(0.5,1.6)*dpr, s: rand(0.04,0.16)*dpr, p: rand(0,Math.PI*2) });
+      for(let i=1;i<=23;i++) nums.push({
+        n: i,
+        angle: -1.25 + (i-1)*(2.45/22),
+        radius: rand(w*0.16, w*0.33),
+        drift: rand(-0.12, 0.12),
+        size: rand(14, 34) * dpr,
+        phase: rand(0, Math.PI*2),
+        depth: rand(0.7, 1.25),
+        gold: i % 5 === 0 || i === 1 || i === 23
+      });
+    }
+
+    function rr(x,y,ww,hh,r){
+      ctx.beginPath();
+      ctx.moveTo(x+r,y);
+      ctx.arcTo(x+ww,y,x+ww,y+hh,r);
+      ctx.arcTo(x+ww,y+hh,x,y+hh,r);
+      ctx.arcTo(x,y+hh,x,y,r);
+      ctx.arcTo(x,y,x+ww,y,r);
+      ctx.closePath();
+    }
+
+    function bg(time){
+      ctx.fillStyle = '#131418';
+      ctx.fillRect(0,0,w,h);
+
+      const wall = ctx.createLinearGradient(0,0,0,h*0.68);
+      wall.addColorStop(0,'#3c3b42');
+      wall.addColorStop(1,'#575259');
+      ctx.fillStyle = wall;
+      ctx.fillRect(0,0,w,h*0.68);
+
+      const floor = ctx.createLinearGradient(0,h*0.68,0,h);
+      floor.addColorStop(0,'#4e4339');
+      floor.addColorStop(1,'#1f1816');
+      ctx.fillStyle = floor;
+      ctx.fillRect(0,h*0.68,w,h*0.32);
+
+      ctx.fillStyle = 'rgba(255,247,228,0.08)';
+      rr(w*0.33,h*0.07,w*0.34,h*0.06,12*dpr); ctx.fill();
+      ctx.fillStyle = 'rgba(255,250,236,0.55)';
+      rr(w*0.395,h*0.094,w*0.21,h*0.017,7*dpr); ctx.fill();
+
+      ctx.fillStyle = '#6c6158';
+      ctx.fillRect(w*0.12,h*0.21,w*0.29,h*0.38);
+      ctx.fillRect(w*0.61,h*0.19,w*0.27,h*0.40);
+      ctx.fillStyle = 'rgba(255,255,255,0.08)';
+      for(let i=0;i<3;i++) ctx.fillRect(w*(0.16+i*0.07), h*0.25, w*0.045, h*0.025);
+      for(let i=0;i<2;i++) ctx.fillRect(w*(0.67+i*0.08), h*0.24, w*0.05, h*0.028);
+
+      ctx.fillStyle = '#5c4a3f';
+      ctx.fillRect(w*0.24,h*0.62,w*0.51,h*0.04);
+      ctx.fillStyle = '#392b23';
+      ctx.fillRect(w*0.24,h*0.66,w*0.51,h*0.12);
+
+      ctx.fillStyle = '#20242b';
+      rr(w*0.44,h*0.47,w*0.16,h*0.12,8*dpr); ctx.fill();
+      const screen = ctx.createLinearGradient(w*0.45,h*0.48,w*0.59,h*0.58);
+      screen.addColorStop(0,'rgba(190,205,228,0.20)');
+      screen.addColorStop(1,'rgba(212,168,85,0.15)');
+      ctx.fillStyle = screen;
+      rr(w*0.452,h*0.475,w*0.136,h*0.095,5*dpr); ctx.fill();
+
+      for(const m of motes){
+        const yy = (m.y + time * m.s + Math.sin(time*0.001 + m.p)*5*dpr) % h;
+        ctx.fillStyle = `rgba(255,255,255,${0.018 + 0.04 * (0.5 + 0.5*Math.sin(time*0.0012+m.p))})`;
+        ctx.fillRect(m.x, yy, m.r, m.r);
+      }
+    }
+
+    function lanyard(x,y,s,accent){
+      ctx.strokeStyle = accent;
+      ctx.lineWidth = 2.5*s*dpr;
+      ctx.beginPath();
+      ctx.moveTo(x-6*s,y-8*s); ctx.quadraticCurveTo(x, y+10*s, x+6*s, y-8*s); ctx.stroke();
+      ctx.fillStyle = 'rgba(208,214,222,0.9)';
+      rr(x-8*s,y+8*s,16*s,20*s,3*s); ctx.fill();
+      ctx.fillStyle = 'rgba(50,56,66,0.85)';
+      ctx.fillRect(x-5*s,y+13*s,10*s,2*s);
+      ctx.fillRect(x-5*s,y+17*s,7*s,2*s);
+    }
+
+    function figure(cx, cy, scale, mode){
+      ctx.save();
+      ctx.translate(cx, cy);
+      const coat = mode === 'phosphor' ? '#17191f' : '#ebe6de';
+      const shirt = mode === 'phosphor' ? '#22262d' : '#ffffff';
+      const skin = mode === 'phosphor' ? '#d9c7b8' : '#ead2c0';
+      const hair = mode === 'phosphor' ? '#15171c' : '#c89d70';
+      const gold = 'rgba(212,168,85,0.95)';
+
+      ctx.fillStyle = coat;
+      ctx.beginPath();
+      ctx.moveTo(-26*scale, -54*scale);
+      ctx.lineTo(26*scale, -54*scale);
+      ctx.lineTo(38*scale, 26*scale);
+      ctx.lineTo(20*scale, 74*scale);
+      ctx.lineTo(-20*scale, 74*scale);
+      ctx.lineTo(-36*scale, 24*scale);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = shirt;
+      ctx.beginPath();
+      ctx.moveTo(-10*scale, -50*scale);
+      ctx.lineTo(10*scale, -50*scale);
+      ctx.lineTo(8*scale, 34*scale);
+      ctx.lineTo(-8*scale, 34*scale);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = skin;
+      ctx.beginPath();
+      ctx.ellipse(0, -78*scale, 24*scale, 30*scale, 0, 0, Math.PI*2);
+      ctx.fill();
+
+      ctx.fillStyle = hair;
+      if(mode === 'phosphor'){
+        ctx.beginPath();
+        ctx.ellipse(0, -86*scale, 26*scale, 17*scale, 0, Math.PI, Math.PI*2);
+        ctx.fill();
+        ctx.fillRect(-16*scale, -130*scale, 32*scale, 29*scale);
+        ctx.fillRect(-32*scale, -104*scale, 64*scale, 7*scale);
+      } else {
+        ctx.beginPath();
+        ctx.moveTo(-25*scale,-89*scale);
+        ctx.quadraticCurveTo(-24*scale,-122*scale,0,-116*scale);
+        ctx.quadraticCurveTo(28*scale,-114*scale,26*scale,-86*scale);
+        ctx.quadraticCurveTo(24*scale,-42*scale,18*scale,-22*scale);
+        ctx.quadraticCurveTo(5*scale,-8*scale,-10*scale,-18*scale);
+        ctx.quadraticCurveTo(-24*scale,-36*scale,-25*scale,-89*scale);
+        ctx.fill();
+      }
+
+      ctx.fillStyle = 'rgba(0,0,0,0.16)';
+      ctx.fillRect(-4*scale, -42*scale, 8*scale, 58*scale);
+
+      if(mode === 'eris'){
+        ctx.fillStyle = gold;
+        ctx.beginPath();
+        ctx.arc(17*scale, -36*scale, 4.3*scale, 0, Math.PI*2);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(90,66,20,0.35)';
+        ctx.lineWidth = 1.1*scale*dpr;
+        ctx.beginPath();
+        ctx.moveTo(13.6*scale,-36*scale); ctx.lineTo(20.4*scale,-36*scale);
+        ctx.moveTo(17*scale,-39.4*scale); ctx.lineTo(17*scale,-32.6*scale);
+        ctx.stroke();
+      }
+
+      lanyard(0, -16*scale, scale, mode === 'phosphor' ? 'rgba(152,160,176,0.9)' : 'rgba(188,192,198,0.95)');
+      ctx.restore();
+    }
+
+    function numbers(time){
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const cx = w * 0.50;
+      const cy = h * 0.37;
+      for(const item of nums){
+        const ang = item.angle + Math.sin(time*0.00045 + item.phase) * 0.09 + item.drift * 0.03;
+        const rad = item.radius + Math.sin(time*0.0008 + item.phase) * 18 * dpr;
+        const x = cx + Math.cos(ang) * rad;
+        const y = cy + Math.sin(ang) * rad * 0.72 + Math.sin(time*0.0012 + item.phase) * 7 * dpr;
+        const alpha = 0.16 + (item.gold ? 0.18 : 0.11) + 0.05*Math.sin(time*0.001 + item.phase);
+        ctx.save();
+        ctx.translate(x,y);
+        ctx.rotate(Math.sin(time*0.0005 + item.phase) * 0.08);
+        ctx.font = `${item.size}px Georgia, serif`;
+        ctx.fillStyle = item.gold ? `rgba(212,168,85,${alpha})` : `rgba(214,220,232,${alpha})`;
+        ctx.fillText(String(item.n),0,0);
+        ctx.restore();
+      }
+    }
+
+    function glow(time){
+      const g = ctx.createRadialGradient(w*0.50,h*0.44,10,w*0.50,h*0.44,w*0.26);
+      g.addColorStop(0,'rgba(255,248,230,0.10)');
+      g.addColorStop(0.4,'rgba(212,168,85,0.09)');
+      g.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0,0,w,h);
+
+      ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+      ctx.lineWidth = 1*dpr;
+      for(let i=0;i<4;i++){
+        const yy = h*(0.30 + i*0.06) + Math.sin(time*0.0005 + i)*1.4*dpr;
+        ctx.beginPath(); ctx.moveTo(w*0.15, yy); ctx.lineTo(w*0.85, yy); ctx.stroke();
+      }
+    }
+
+    function draw(now){
+      const time = now - t0;
+      bg(time);
+      glow(time);
+      numbers(time);
+
+      ctx.save();
+      ctx.translate(w*0.5, h*0.60);
+      figure(-52*dpr, 0, 1.3*dpr, 'phosphor');
+      figure(54*dpr, 4*dpr, 1.25*dpr, 'eris');
+      ctx.restore();
+
+      ctx.strokeStyle = 'rgba(245,236,220,0.18)';
+      ctx.lineWidth = 3*dpr;
+      ctx.beginPath();
+      ctx.moveTo(w*0.456, h*0.555);
+      ctx.quadraticCurveTo(w*0.498, h*0.572 + Math.sin(time*0.001)*4*dpr, w*0.54, h*0.56);
+      ctx.stroke();
+
+      requestAnimationFrame(draw);
+    }
+
+    addEventListener('resize', resize);
+    resize();
+    requestAnimationFrame(draw);
+  </script>
+</body>
+</html>
