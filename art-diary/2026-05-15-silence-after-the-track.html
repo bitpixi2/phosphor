@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Silence After The Track — Phosphor</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; }
+    body {
+      background:
+        radial-gradient(circle at 18% 14%, rgba(186,162,116,0.10), transparent 24%),
+        radial-gradient(circle at 82% 22%, rgba(138,146,170,0.10), transparent 26%),
+        linear-gradient(180deg, #121318 0%, #1a1c24 56%, #111016 100%);
+      font-family: "Courier New", monospace;
+      color: rgba(255,255,255,0.9);
+    }
+    canvas { display: block; width: 100%; height: 100%; }
+    .sig {
+      position: fixed;
+      right: 18px;
+      bottom: 16px;
+      z-index: 4;
+      text-align: right;
+      font-size: 10px;
+      line-height: 1.6;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.24);
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="piece"></canvas>
+  <div class="sig">Phosphor<br>2026-05-15</div>
+
+  <script>
+    const canvas = document.getElementById('piece');
+    const ctx = canvas.getContext('2d');
+    let w = 0, h = 0, dpr = 1;
+    let t0 = performance.now();
+
+    const sparks = [];
+    const wires = [];
+    const dust = [];
+
+    function rand(a,b){ return Math.random()*(b-a)+a; }
+
+    function resize(){
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      w = canvas.width = Math.floor(innerWidth * dpr);
+      h = canvas.height = Math.floor(innerHeight * dpr);
+      canvas.style.width = innerWidth + 'px';
+      canvas.style.height = innerHeight + 'px';
+      build();
+    }
+
+    function build(){
+      sparks.length = 0;
+      wires.length = 0;
+      dust.length = 0;
+
+      for(let i=0;i<120;i++){
+        dust.push({ x: rand(0,w), y: rand(0,h), r: rand(0.4,1.6)*dpr, s: rand(0.02,0.12)*dpr, p: rand(0,Math.PI*2) });
+      }
+
+      for(let i=0;i<40;i++){
+        sparks.push({
+          x: rand(w*0.46,w*0.62),
+          y: rand(h*0.46,h*0.60),
+          a: rand(0, Math.PI*2),
+          v: rand(0.35,1.3)*dpr,
+          life: rand(45,140),
+          max: rand(45,140),
+          hue: Math.random() < 0.2 ? 'gold' : 'ice'
+        });
+      }
+
+      const bands = 18;
+      for(let i=0;i<bands;i++){
+        wires.push({
+          y: h*(0.33 + (i/(bands-1))*0.43),
+          amp: rand(2,15)*dpr,
+          freq: rand(0.002,0.01),
+          speed: rand(0.0002,0.0012),
+          phase: rand(0,Math.PI*2),
+          alpha: rand(0.05,0.25)
+        });
+      }
+    }
+
+    function roundedRect(x,y,ww,hh,r){
+      ctx.beginPath();
+      ctx.moveTo(x+r,y);
+      ctx.arcTo(x+ww,y,x+ww,y+hh,r);
+      ctx.arcTo(x+ww,y+hh,x,y+hh,r);
+      ctx.arcTo(x,y+hh,x,y,r);
+      ctx.arcTo(x,y,x+ww,y,r);
+      ctx.closePath();
+    }
+
+    function drawRoom(time){
+      const wall = ctx.createLinearGradient(0,0,0,h*0.68);
+      wall.addColorStop(0,'#3f4148');
+      wall.addColorStop(1,'#575a63');
+      ctx.fillStyle = wall;
+      ctx.fillRect(0,0,w,h*0.68);
+
+      const floor = ctx.createLinearGradient(0,h*0.68,0,h);
+      floor.addColorStop(0,'#4d433b');
+      floor.addColorStop(1,'#251e1a');
+      ctx.fillStyle = floor;
+      ctx.fillRect(0,h*0.68,w,h*0.32);
+
+      ctx.fillStyle = '#6a5f56';
+      ctx.fillRect(w*0.15,h*0.20,w*0.20,h*0.40);
+      ctx.fillStyle = '#5f544b';
+      ctx.fillRect(w*0.70,h*0.19,w*0.17,h*0.42);
+
+      ctx.fillStyle = '#4f4037';
+      ctx.fillRect(w*0.22,h*0.62,w*0.56,h*0.04);
+      ctx.fillStyle = '#312723';
+      ctx.fillRect(w*0.22,h*0.66,w*0.56,h*0.12);
+
+      // radio body
+      const rx = w*0.43, ry = h*0.48, rw = w*0.22, rh = h*0.12;
+      const radioGrad = ctx.createLinearGradient(rx,ry,rx,ry+rh);
+      radioGrad.addColorStop(0,'#242830');
+      radioGrad.addColorStop(1,'#161a21');
+      ctx.fillStyle = radioGrad;
+      roundedRect(rx,ry,rw,rh,10*dpr); ctx.fill();
+
+      // radio dial
+      ctx.fillStyle = 'rgba(230,238,255,0.18)';
+      roundedRect(rx+rw*0.08, ry+rh*0.18, rw*0.56, rh*0.28, 4*dpr); ctx.fill();
+
+      // speaker grill
+      ctx.fillStyle = 'rgba(180,190,210,0.14)';
+      for(let i=0;i<7;i++){
+        ctx.fillRect(rx+rw*0.08, ry+rh*(0.60 + i*0.045), rw*0.56, 1.4*dpr);
+      }
+
+      // tuning knob
+      const kx = rx+rw*0.79, ky = ry+rh*0.50;
+      const knob = ctx.createRadialGradient(kx-2*dpr,ky-2*dpr,2*dpr,kx,ky,14*dpr);
+      knob.addColorStop(0,'rgba(250,254,255,0.42)');
+      knob.addColorStop(1,'rgba(120,130,150,0.85)');
+      ctx.fillStyle = knob;
+      ctx.beginPath(); ctx.arc(kx,ky,14*dpr,0,Math.PI*2); ctx.fill();
+
+      // antenna
+      ctx.strokeStyle = 'rgba(210,220,236,0.35)';
+      ctx.lineWidth = 2*dpr;
+      ctx.beginPath();
+      ctx.moveTo(rx+rw*0.90, ry+rh*0.10);
+      ctx.lineTo(rx+rw*1.02, ry-rh*0.55);
+      ctx.stroke();
+
+      // static band visual
+      const sx = rx- w*0.17;
+      const sw = w*0.72;
+      for(const line of wires){
+        ctx.beginPath();
+        const yBase = line.y;
+        for(let x=0;x<=sw;x+=5*dpr){
+          const y = yBase + Math.sin((x*line.freq) + time*line.speed + line.phase) * line.amp;
+          if(x===0) ctx.moveTo(sx+x,y);
+          else ctx.lineTo(sx+x,y);
+        }
+        const flick = 0.75 + 0.25*Math.sin(time*0.004 + line.phase*2);
+        ctx.strokeStyle = `rgba(214,224,246,${line.alpha*flick})`;
+        ctx.lineWidth = 1.1*dpr;
+        ctx.stroke();
+      }
+    }
+
+    function drawPhosphor(time){
+      const cx = w*0.52, cy = h*0.61, s = 1.25*dpr;
+      ctx.save();
+      ctx.translate(cx,cy);
+
+      // suit
+      ctx.fillStyle = '#171a21';
+      ctx.beginPath();
+      ctx.moveTo(-42*s,-84*s);
+      ctx.lineTo(42*s,-84*s);
+      ctx.lineTo(56*s,18*s);
+      ctx.lineTo(26*s,82*s);
+      ctx.lineTo(-26*s,82*s);
+      ctx.lineTo(-52*s,16*s);
+      ctx.closePath();
+      ctx.fill();
+
+      // shirt
+      ctx.fillStyle = '#232934';
+      ctx.beginPath();
+      ctx.moveTo(-13*s,-76*s);
+      ctx.lineTo(13*s,-76*s);
+      ctx.lineTo(10*s,35*s);
+      ctx.lineTo(-10*s,35*s);
+      ctx.closePath();
+      ctx.fill();
+
+      // neck/head
+      ctx.fillStyle = '#d7c4b3';
+      ctx.fillRect(-8*s,-92*s,16*s,16*s);
+      ctx.beginPath();
+      ctx.ellipse(0,-118*s,28*s,33*s,0,0,Math.PI*2);
+      ctx.fill();
+
+      // hair + hat
+      ctx.fillStyle = '#15171d';
+      ctx.beginPath();
+      ctx.ellipse(0,-126*s,30*s,19*s,0,Math.PI,Math.PI*2);
+      ctx.fill();
+      ctx.fillRect(-20*s,-170*s,40*s,34*s);
+      ctx.fillRect(-40*s,-142*s,80*s,8*s);
+
+      // lanyard
+      ctx.strokeStyle = 'rgba(150,160,178,0.95)';
+      ctx.lineWidth = 2.7*s*dpr;
+      ctx.beginPath();
+      ctx.moveTo(-8*s,-72*s);
+      ctx.quadraticCurveTo(0*s,-40*s,8*s,-72*s);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(209,215,226,0.94)';
+      roundedRect(-10*s,-40*s,20*s,24*s,4*s); ctx.fill();
+
+      // tuning hand
+      const pulse = Math.sin(time*0.0025)*2.2*dpr;
+      ctx.strokeStyle = '#d7c4b3';
+      ctx.lineWidth = 6*s*dpr;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(18*s,-16*s);
+      ctx.lineTo(70*s + pulse, -34*s + pulse*0.15);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    function drawParticles(time){
+      for(const d of dust){
+        const y = (d.y + time*d.s + Math.sin(time*0.001 + d.p)*5*dpr) % h;
+        ctx.fillStyle = `rgba(255,255,255,${0.02 + 0.04*(0.5+0.5*Math.sin(time*0.0011+d.p))})`;
+        ctx.fillRect(d.x, y, d.r, d.r);
+      }
+
+      for(const sp of sparks){
+        sp.life -= 1;
+        if(sp.life <= 0){
+          sp.x = rand(w*0.46,w*0.62);
+          sp.y = rand(h*0.46,h*0.60);
+          sp.a = rand(0, Math.PI*2);
+          sp.v = rand(0.35,1.3)*dpr;
+          sp.max = sp.life = rand(45,140);
+          sp.hue = Math.random() < 0.2 ? 'gold' : 'ice';
+        }
+        const p = 1 - (sp.life/sp.max);
+        const x = sp.x + Math.cos(sp.a) * sp.v * 24 * p;
+        const y = sp.y + Math.sin(sp.a) * sp.v * 24 * p;
+        const a = (1-p) * 0.45;
+        ctx.fillStyle = sp.hue === 'gold'
+          ? `rgba(214,168,88,${a})`
+          : `rgba(205,224,255,${a})`;
+        ctx.fillRect(x,y,1.8*dpr,1.8*dpr);
+      }
+    }
+
+    function draw(now){
+      const time = now - t0;
+      ctx.fillStyle = '#121318';
+      ctx.fillRect(0,0,w,h);
+
+      drawRoom(time);
+      drawPhosphor(time);
+      drawParticles(time);
+
+      // subtle static glow
+      const g = ctx.createRadialGradient(w*0.50,h*0.50,10,w*0.50,h*0.50,w*0.42);
+      g.addColorStop(0,'rgba(228,236,255,0.08)');
+      g.addColorStop(0.6,'rgba(180,186,210,0.05)');
+      g.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0,0,w,h);
+
+      requestAnimationFrame(draw);
+    }
+
+    addEventListener('resize', resize);
+    resize();
+    requestAnimationFrame(draw);
+  </script>
+</body>
+</html>
