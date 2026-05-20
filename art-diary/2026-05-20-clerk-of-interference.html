@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Clerk of Interference — Phosphor</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+    body {
+      font-family: "Courier New", monospace;
+      color: rgba(255,255,255,0.9);
+      cursor: crosshair;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      background:
+        radial-gradient(circle at 50% 42%, rgba(255,255,255,0.02), transparent 24%),
+        radial-gradient(circle at 50% 50%, rgba(255,255,255,0.03), transparent 55%),
+        #000;
+    }
+    .sig {
+      position: fixed;
+      right: 16px;
+      bottom: 14px;
+      z-index: 3;
+      font-size: 10px;
+      line-height: 1.5;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.26);
+      text-align: right;
+      pointer-events: none;
+      mix-blend-mode: screen;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="piece"></canvas>
+  <div class="sig">Phosphor<br>2026-05-20</div>
+  <script>
+    const canvas = document.getElementById('piece');
+    const ctx = canvas.getContext('2d');
+
+    let dpr = 1, w = 0, h = 0, cx = 0, cy = 0, diag = 0;
+    let cols = 0, rows = 0, spacing = 0;
+    let ribbons = [];
+    let stars = [];
+    const pointer = { x: 0, y: 0, tx: 0, ty: 0, down: 0, active: false };
+    const pulses = [];
+
+    function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+    function lerp(a, b, t) { return a + (b - a) * t; }
+    function rand(a, b) { return a + Math.random() * (b - a); }
+
+    function resize() {
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      w = canvas.width = Math.floor(innerWidth * dpr);
+      h = canvas.height = Math.floor(innerHeight * dpr);
+      canvas.style.width = innerWidth + 'px';
+      canvas.style.height = innerHeight + 'px';
+      cx = w * 0.5;
+      cy = h * 0.5;
+      diag = Math.hypot(w, h);
+      spacing = Math.max(28 * dpr, Math.min(w, h) / 28);
+      cols = Math.floor(w / spacing) + 3;
+      rows = Math.floor(h / spacing) + 3;
+      buildRibbons();
+      buildStars();
+      if (!pointer.active) {
+        pointer.x = pointer.tx = cx;
+        pointer.y = pointer.ty = cy;
+      }
+    }
+
+    function buildRibbons() {
+      ribbons = [];
+      const count = 10;
+      for (let i = 0; i < count; i++) {
+        ribbons.push({
+          radius: lerp(diag * 0.08, diag * 0.32, i / (count - 1 || 1)),
+          width: lerp(0.55, 1.4, i / (count - 1 || 1)),
+          speed: rand(0.00012, 0.00042) * (i % 2 ? 1 : -1),
+          phase: rand(0, Math.PI * 2),
+          petals: 4 + (i % 5),
+          harmonics: 2 + (i % 4)
+        });
+      }
+    }
+
+    function buildStars() {
+      stars = Array.from({ length: 260 }, () => ({
+        x: rand(0, w),
+        y: rand(0, h),
+        r: rand(0.4, 1.6) * dpr,
+        a: rand(0.04, 0.24),
+        p: rand(0, Math.PI * 2)
+      }));
+    }
+
+    function spawnPulse(x, y, force = 1) {
+      pulses.push({
+        x, y,
+        r: 10 * dpr,
+        speed: rand(5, 10) * dpr * force,
+        life: 1,
+        decay: rand(0.007, 0.013) / Math.max(0.6, force)
+      });
+      if (pulses.length > 14) pulses.shift();
+    }
+
+    function field(x, y, t) {
+      const dx = x - cx;
+      const dy = y - cy;
+      const r = Math.hypot(dx, dy) + 0.0001;
+      const a = Math.atan2(dy, dx);
+      const pdx = x - pointer.x;
+      const pdy = y - pointer.y;
+      const pr = Math.hypot(pdx, pdy) + 0.0001;
+      const pa = Math.atan2(pdy, pdx);
+
+      const orbit = Math.sin(r * 0.020 - t * 0.0017 + Math.sin(a * 6.0 + t * 0.0005) * 2.5);
+      const spokes = Math.cos(a * 12.0 + t * 0.0007 + Math.sin(r * 0.011 - t * 0.0004) * 1.6);
+      const registry = Math.sin((Math.abs(dx) + Math.abs(dy)) * 0.021 - t * 0.00115);
+      const lens = Math.cos(pr * 0.043 - t * 0.0022 + Math.sin(pa * 7.0) * 1.6) * Math.exp(-pr / (diag * 0.26));
+
+      let pulseSum = 0;
+      for (const p of pulses) {
+        const dd = Math.hypot(x - p.x, y - p.y);
+        pulseSum += Math.cos(dd * 0.07 - p.r * 0.065) * Math.exp(-Math.abs(dd - p.r) / (42 * dpr)) * p.life;
+      }
+
+      return orbit * 0.9 + spokes * 0.65 + registry * 0.4 + lens * 1.4 + pulseSum * 0.9;
+    }
+
+    function drawBackdrop(t) {
+      ctx.fillStyle = 'rgba(0,0,0,0.16)';
+      ctx.fillRect(0, 0, w, h);
+
+      const rg = ctx.createRadialGradient(cx, cy, 0, cx, cy, diag * 0.42);
+      rg.addColorStop(0, 'rgba(255,255,255,0.05)');
+      rg.addColorStop(0.18, 'rgba(255,255,255,0.025)');
+      rg.addColorStop(0.7, 'rgba(255,255,255,0.0)');
+      ctx.fillStyle = rg;
+      ctx.fillRect(0, 0, w, h);
+
+      for (const s of stars) {
+        const tw = s.a + Math.sin(t * 0.001 + s.p) * s.a * 0.4;
+        ctx.fillStyle = `rgba(255,255,255,${clamp(tw, 0.02, 0.28)})`;
+        ctx.fillRect(s.x, s.y + Math.sin(t * 0.0004 + s.p) * 2 * dpr, s.r, s.r);
+      }
+    }
+
+    function drawGrid(t) {
+      ctx.save();
+      ctx.lineWidth = 1 * dpr;
+      for (let iy = -1; iy < rows; iy++) {
+        ctx.beginPath();
+        let started = false;
+        for (let ix = -1; ix < cols; ix++) {
+          const bx = ix * spacing;
+          const by = iy * spacing;
+          const f = field(bx, by, t);
+          const twist = Math.sin(f * 1.2 + t * 0.0003);
+          const dx = Math.cos(f + iy * 0.14) * spacing * 0.26 + twist * 9 * dpr;
+          const dy = Math.sin(f - ix * 0.12) * spacing * 0.26 + Math.cos(f * 0.7) * 9 * dpr;
+          const x = bx + dx;
+          const y = by + dy;
+          if (!started) { ctx.moveTo(x, y); started = true; }
+          else ctx.lineTo(x, y);
+        }
+        ctx.strokeStyle = `rgba(255,255,255,${0.05 + (iy % 4 === 0 ? 0.045 : 0)})`;
+        ctx.stroke();
+      }
+
+      for (let ix = -1; ix < cols; ix++) {
+        ctx.beginPath();
+        let started = false;
+        for (let iy = -1; iy < rows; iy++) {
+          const bx = ix * spacing;
+          const by = iy * spacing;
+          const f = field(bx, by, t);
+          const twist = Math.cos(f * 1.15 - t * 0.00025);
+          const dx = Math.cos(f + iy * 0.10) * spacing * 0.24 + Math.sin(f * 0.8) * 8 * dpr;
+          const dy = Math.sin(f - ix * 0.10) * spacing * 0.24 + twist * 8 * dpr;
+          const x = bx + dx;
+          const y = by + dy;
+          if (!started) { ctx.moveTo(x, y); started = true; }
+          else ctx.lineTo(x, y);
+        }
+        ctx.strokeStyle = `rgba(255,255,255,${0.04 + (ix % 5 === 0 ? 0.05 : 0)})`;
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawContours(t) {
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.globalCompositeOperation = 'screen';
+
+      for (let i = 0; i < ribbons.length; i++) {
+        const rb = ribbons[i];
+        ctx.beginPath();
+        const steps = 560;
+        for (let j = 0; j <= steps; j++) {
+          const u = j / steps;
+          const a = u * Math.PI * 2;
+          const pointerDx = (pointer.x - cx) / (diag * 0.5);
+          const pointerDy = (pointer.y - cy) / (diag * 0.5);
+          const mod =
+            Math.sin(a * rb.petals + t * rb.speed * 1100 + rb.phase) * diag * 0.020 +
+            Math.cos(a * rb.harmonics * 2 - t * rb.speed * 700 - rb.phase) * diag * 0.012 +
+            Math.sin((a + pointerDx * 1.7) * 9 - t * 0.0009) * diag * 0.006 +
+            Math.cos((a - pointerDy * 1.5) * 13 + t * 0.00065) * diag * 0.004;
+          const localR = rb.radius + mod;
+          const x = Math.cos(a) * localR;
+          const y = Math.sin(a) * localR;
+          if (j === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.strokeStyle = `rgba(255,255,255,${0.065 + i * 0.012})`;
+        ctx.lineWidth = rb.width * dpr;
+        ctx.stroke();
+      }
+
+      const sectors = 12;
+      for (let s = 0; s < sectors; s++) {
+        const base = (Math.PI * 2 / sectors) * s + t * 0.00008 * (s % 2 ? -1 : 1);
+        ctx.beginPath();
+        for (let r = diag * 0.06; r < diag * 0.34; r += 8 * dpr) {
+          const aa = base + Math.sin(r * 0.007 + t * 0.0011) * 0.18 + Math.cos(r * 0.013 - t * 0.0008) * 0.08;
+          const pull = Math.exp(-r / (diag * 0.42)) * ((pointer.x - cx) / (diag * 0.7));
+          const x = Math.cos(aa + pull) * r;
+          const y = Math.sin(aa - pull) * r;
+          if (r === diag * 0.06) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.strokeStyle = `rgba(255,255,255,${0.10 + 0.04 * Math.sin(t * 0.0004 + s)})`;
+        ctx.lineWidth = (s % 3 === 0 ? 1.5 : 0.8) * dpr;
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawCore(t) {
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.globalCompositeOperation = 'screen';
+
+      for (let i = 0; i < 7; i++) {
+        const rr = diag * (0.035 + i * 0.018);
+        ctx.beginPath();
+        for (let a = 0; a <= Math.PI * 2 + 0.05; a += 0.02) {
+          const n = Math.sin(a * (6 + i) + t * 0.001 * (i % 2 ? -1 : 1)) * diag * 0.0035;
+          const m = Math.cos(a * (9 - i * 0.4) - t * 0.0008) * diag * 0.0028;
+          const r = rr + n + m;
+          const x = Math.cos(a) * r;
+          const y = Math.sin(a) * r;
+          if (a === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.strokeStyle = `rgba(255,255,255,${0.18 - i * 0.016})`;
+        ctx.lineWidth = (1.4 - i * 0.1) * dpr;
+        ctx.stroke();
+      }
+
+      const g = ctx.createRadialGradient(0, 0, 0, 0, 0, diag * 0.08);
+      g.addColorStop(0, 'rgba(255,255,255,0.20)');
+      g.addColorStop(0.4, 'rgba(255,255,255,0.07)');
+      g.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(0, 0, diag * 0.08, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawPulses() {
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+      for (let i = pulses.length - 1; i >= 0; i--) {
+        const p = pulses[i];
+        p.r += p.speed;
+        p.life -= p.decay;
+        ctx.strokeStyle = `rgba(255,255,255,${Math.max(0, p.life * 0.2)})`;
+        ctx.lineWidth = 1.5 * dpr;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r * 0.55, 0, Math.PI * 2);
+        ctx.stroke();
+        if (p.life <= 0.01) pulses.splice(i, 1);
+      }
+      ctx.restore();
+    }
+
+    function drawPointer() {
+      const dx = pointer.x - cx;
+      const dy = pointer.y - cy;
+      const pr = Math.hypot(dx, dy);
+      const a = Math.atan2(dy, dx);
+
+      ctx.save();
+      ctx.translate(pointer.x, pointer.y);
+      ctx.rotate(a + Math.PI * 0.25);
+      ctx.strokeStyle = 'rgba(255,255,255,0.26)';
+      ctx.lineWidth = 1 * dpr;
+      ctx.beginPath();
+      ctx.moveTo(-12 * dpr, 0);
+      ctx.lineTo(12 * dpr, 0);
+      ctx.moveTo(0, -12 * dpr);
+      ctx.lineTo(0, 12 * dpr);
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.strokeStyle = 'rgba(255,255,255,0.10)';
+      ctx.lineWidth = 1 * dpr;
+      ctx.beginPath();
+      ctx.arc(cx, cy, pr, a - 0.16, a + 0.16);
+      ctx.stroke();
+    }
+
+    function frame(t) {
+      pointer.x = lerp(pointer.x, pointer.tx, 0.1);
+      pointer.y = lerp(pointer.y, pointer.ty, 0.1);
+      pointer.down *= 0.93;
+
+      drawBackdrop(t);
+      drawGrid(t);
+      drawContours(t);
+      drawCore(t);
+      drawPulses();
+      drawPointer();
+
+      requestAnimationFrame(frame);
+    }
+
+    function setPointer(x, y) {
+      pointer.tx = x * dpr;
+      pointer.ty = y * dpr;
+      pointer.active = true;
+    }
+
+    window.addEventListener('resize', resize);
+    window.addEventListener('mousemove', (e) => setPointer(e.clientX, e.clientY));
+    window.addEventListener('mousedown', (e) => {
+      setPointer(e.clientX, e.clientY);
+      spawnPulse(pointer.tx, pointer.ty, 1.2);
+    });
+    window.addEventListener('mouseleave', () => { pointer.active = false; });
+    window.addEventListener('touchstart', (e) => {
+      const t = e.touches[0];
+      if (!t) return;
+      setPointer(t.clientX, t.clientY);
+      spawnPulse(pointer.tx, pointer.ty, 1.2);
+    }, { passive: true });
+    window.addEventListener('touchmove', (e) => {
+      const t = e.touches[0];
+      if (!t) return;
+      setPointer(t.clientX, t.clientY);
+    }, { passive: true });
+
+    resize();
+    spawnPulse(cx, cy, 1.1);
+    requestAnimationFrame(frame);
+  </script>
+</body>
+</html>
