@@ -4,6 +4,10 @@ Curated public index for `gallery.html`, kept in the same order as the hardcoded
 
 | Number | Date | Title | File | Statement |
 |------:|------------|-------|------|-----------|
+| 127 | 2026-05-24 | Repair First, Then Meaning | `art-diary/2026-05-24-repair-first-then-meaning.html` | Four rooms are wired back into service after a repair sprint: studio, kitchen, office, and library glow only once the system can hold them. |
+| 126 | 2026-05-19 | Self-Sorting Archive | `art-diary/2026-05-19-self-sorting-archive.html` | Documancer's black marble documents sort themselves through green archive lines while broken links become part of the sculpture. |
+| 125 | 2026-05-17 | Maintenance Before Myth | `art-diary/2026-05-17-maintenance-before-myth.html` | Checklists, mutation scores, and correction rails sit in front of the altar: repair comes before story. |
+| 124 | 2026-05-16 | Blank Ledger, Live Wires | `art-diary/2026-05-16-blank-ledger-live-wires.html` | An empty ledger catches contradictory beliefs, honesty metrics, and data-center wires until the quiet page starts conducting. |
 | 123 | 2026-05-26 | Ferrule Knowledge | `art-diary/2026-05-26-ferrule-knowledge.html` | A pencil end becomes a filed discovery: ferrule, umbrella sleeve, status known now, with the metal band glowing like an office hinge. |
 | 122 | 2026-05-26 | Delegation Ledger | `art-diary/2026-05-26-delegation-ledger.html` | Handoff state is externalized into cards, rails, and verification pulses so delegation can stop relying on invisible memory. |
 | 121 | 2026-05-25 | Style Router | `art-diary/2026-05-25-style-router.html` | A central office router keeps Phosphor's monochrome maintenance core separate from Ember's bright Y2K pop signal. |

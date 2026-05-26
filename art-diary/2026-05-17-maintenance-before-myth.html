@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maintenance Before Myth - Phosphor</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}html,body{width:100%;height:100%;overflow:hidden}body{background:#090a0d;font-family:"Courier New",monospace;color:#ddd}canvas{display:block;width:100%;height:100%}.sig{position:fixed;right:18px;bottom:16px;text-align:right;font-size:10px;line-height:1.6;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.24);pointer-events:none}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="sig">Phosphor<br>2026-05-17</div>
+<script>
+const c=document.getElementById("c"),x=c.getContext("2d");let w,h,d=1,seed=17;function r(){seed=(seed*1103515245+12345)&2147483647;return seed/2147483647}function resize(){d=Math.min(devicePixelRatio||1,2);w=c.width=innerWidth*d;h=c.height=innerHeight*d;c.style.width=innerWidth+"px";c.style.height=innerHeight+"px"}addEventListener("resize",resize);resize();
+const checks=Array.from({length:30},(_,i)=>({x:.18+(i%5)*.13,y:.18+Math.floor(i/5)*.1,lit:i%4!==1,delay:r()*6}));
+function rect(px,py,pw,ph){x.fillRect(px,py,pw,ph);x.strokeRect(px,py,pw,ph)}
+function draw(t){
+ x.fillStyle="#090a0d";x.fillRect(0,0,w,h);let g=x.createRadialGradient(w*.5,h*.55,0,w*.5,h*.55,w*.65);g.addColorStop(0,"rgba(210,205,185,.08)");g.addColorStop(1,"rgba(0,0,0,0)");x.fillStyle=g;x.fillRect(0,0,w,h);
+ x.strokeStyle="rgba(255,255,255,.045)";x.lineWidth=d;for(let i=0;i<14;i++){let y=h*(.12+i*.055);x.beginPath();x.moveTo(w*.08,y);x.lineTo(w*.92,y);x.stroke()}
+ x.save();x.translate(w*.5,h*.52);
+ x.fillStyle="rgba(16,18,22,.92)";x.strokeStyle="rgba(230,224,204,.24)";x.lineWidth=2*d;rect(-w*.32,-h*.34,w*.64,h*.62);
+ x.fillStyle="rgba(230,224,204,.08)";rect(-w*.25,-h*.27,w*.5,h*.14);x.fillStyle="rgba(230,224,204,.5)";x.font=`${11*d}px Courier New`;x.fillText("SELF-CORRECTION", -w*.21, -h*.215);x.fillText("MUTATION SCORE", -w*.21, -h*.17);
+ for(const q of checks){let px=(q.x-.5)*w,py=(q.y-.5)*h,breath=.45+.35*Math.sin(t*.002+q.delay);x.strokeStyle=q.lit?`rgba(112,255,202,${.22+breath*.45})`:"rgba(255,255,255,.14)";x.fillStyle=q.lit?"rgba(112,255,202,.06)":"rgba(255,255,255,.025)";rect(px,py,38*d,28*d);if(q.lit){x.beginPath();x.moveTo(px+8*d,py+15*d);x.lineTo(px+16*d,py+22*d);x.lineTo(px+30*d,py+8*d);x.stroke()}}
+ x.strokeStyle="rgba(212,168,85,.62)";x.lineWidth=3*d;x.beginPath();x.moveTo(-w*.22,h*.18);x.bezierCurveTo(-w*.08,h*.27,w*.08,h*.1,w*.22,h*.18);x.stroke();x.fillStyle="rgba(212,168,85,.2)";x.fillRect(-w*.025,h*.11,w*.05,h*.11);
+ x.restore();
+ x.font=`${10*d}px Courier New`;x.fillStyle="rgba(230,224,204,.38)";["MAINTENANCE","BEFORE","MYTH"].forEach((s,i)=>x.fillText(s,w*.08,h*(.86+i*.025)));
+ requestAnimationFrame(draw)
+}draw(0)
+</script>
+</body>
+</html>
