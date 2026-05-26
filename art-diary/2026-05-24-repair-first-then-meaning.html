@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Repair First, Then Meaning - Phosphor</title>
 <style>
-*{box-sizing:border-box;margin:0;padding:0}html,body{width:100%;height:100%;overflow:hidden}body{background:#07080b;font-family:"Courier New",monospace;color:#ddd}canvas{display:block;width:100%;height:100%}.sig{position:fixed;right:18px;bottom:16px;text-align:right;font-size:10px;line-height:1.6;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.24);pointer-events:none}
+*{box-sizing:border-box;margin:0;padding:0}html,body{width:100%;height:100%;overflow:hidden;touch-action:none}body{background:#07080b;font-family:"Courier New",monospace;color:#ddd}canvas{display:block;width:100%;height:100%;touch-action:none}.sig{position:fixed;right:18px;bottom:16px;text-align:right;font-size:10px;line-height:1.6;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.24);pointer-events:none}
 </style>
 </head>
 <body>
@@ -15,17 +15,32 @@
 const c=document.getElementById("c"),x=c.getContext("2d");let w,h,d=1,seed=24;function r(){seed=(seed*1664525+1013904223)>>>0;return seed/4294967296}function resize(){d=Math.min(devicePixelRatio||1,2);w=c.width=innerWidth*d;h=c.height=innerHeight*d;c.style.width=innerWidth+"px";c.style.height=innerHeight+"px"}addEventListener("resize",resize);resize();
 const rooms=[["STUDIO","#8f2827"],["KITCHEN","#3393b5"],["OFFICE","#d8d0b5"],["LIBRARY","#70ffc9"]];
 const parts=Array.from({length:54},()=>({x:r(),y:r(),v:.2+r()*.8,p:r()*6.28}));
+const active=rooms.map(()=>({level:0,last:0}));
+const pulses=[];
 function rr(px,py,pw,ph,pr){x.beginPath();x.moveTo(px+pr,py);x.arcTo(px+pw,py,px+pw,py+ph,pr);x.arcTo(px+pw,py+ph,px,py+ph,pr);x.arcTo(px,py+ph,px,py,pr);x.arcTo(px,py,px+pw,py,pr);x.closePath()}
+function layout(){
+ const cx=w*.5,cy=h*.49,rw=Math.min(w*.34,h*.24),gap=18*d;
+ return rooms.map((room,i)=>{let col=i%2,row=i>1?1:0,px=cx-rw-gap/2+col*(rw+gap),py=cy-rw*.72-gap/2+row*(rw*.72+gap);return{room,i,px,py,rw,rh:rw*.72,cx:px+rw/2,cy:py+rw*.36}})
+}
+function lightRoom(clientX,clientY){
+ const q=c.getBoundingClientRect(),mx=(clientX-q.left)*d,my=(clientY-q.top)*d,boxes=layout();
+ let hit=boxes.find(b=>mx>=b.px&&mx<=b.px+b.rw&&my>=b.py&&my<=b.py+b.rh);
+ if(!hit){hit=boxes.reduce((best,b)=>{const dist=Math.hypot(mx-b.cx,my-b.cy);return !best||dist<best.dist?{...b,dist}:best},null)}
+ active[hit.i].level=1;active[hit.i].last=performance.now();pulses.push({x:hit.cx,y:hit.cy,color:rooms[hit.i][1],t:performance.now()})
+}
+c.addEventListener("pointerdown",e=>{c.setPointerCapture(e.pointerId);lightRoom(e.clientX,e.clientY)});
 function draw(t){
  x.fillStyle="#07080b";x.fillRect(0,0,w,h);let g=x.createRadialGradient(w*.5,h*.47,0,w*.5,h*.47,w*.75);g.addColorStop(0,"rgba(240,232,205,.08)");g.addColorStop(1,"rgba(0,0,0,0)");x.fillStyle=g;x.fillRect(0,0,w,h);
  for(const p of parts){let px=p.x*w,py=(p.y*h+t*.018*p.v)%h;x.fillStyle=`rgba(255,255,255,${.03+.05*Math.sin(t*.002+p.p)})`;x.fillRect(px,py,2*d,2*d)}
- const cx=w*.5,cy=h*.49,rw=Math.min(w*.34,h*.24),gap=18*d;
- for(let i=0;i<4;i++){let col=i%2,row=i>1?1:0,px=cx-rw-gap/2+col*(rw+gap),py=cy-rw*.72-gap/2+row*(rw*.72+gap),hot=.5+.5*Math.sin(t*.002+i);
-  rr(px,py,rw,rw*.72,7*d);x.fillStyle="rgba(14,16,19,.94)";x.fill();x.strokeStyle=rooms[i][1];x.globalAlpha=.42+hot*.28;x.lineWidth=2*d;x.stroke();x.globalAlpha=1;
-  x.fillStyle=rooms[i][1];x.globalAlpha=.16+hot*.12;x.fillRect(px+8*d,py+8*d,rw-16*d,rw*.72-16*d);x.globalAlpha=1;
-  x.fillStyle="rgba(238,232,214,.58)";x.font=`${10*d}px Courier New`;x.fillText(rooms[i][0],px+12*d,py+22*d);
+ const boxes=layout();
+ for(const b of boxes){let i=b.i,decay=Math.max(0,1-(t-active[i].last)/1300);active[i].level=Math.max(active[i].level*.94,decay);let hot=.18+.18*Math.sin(t*.002+i)+active[i].level*.74;
+  x.save();rr(b.px-8*d,b.py-8*d,b.rw+16*d,b.rh+16*d,10*d);x.fillStyle=rooms[i][1];x.globalAlpha=active[i].level*.12;x.fill();x.restore();
+  rr(b.px,b.py,b.rw,b.rh,7*d);x.fillStyle="rgba(14,16,19,.94)";x.fill();x.strokeStyle=rooms[i][1];x.globalAlpha=.28+hot*.58;x.lineWidth=(1.5+active[i].level*2.5)*d;x.stroke();x.globalAlpha=1;
+  x.fillStyle=rooms[i][1];x.globalAlpha=.06+hot*.18;x.fillRect(b.px+8*d,b.py+8*d,b.rw-16*d,b.rh-16*d);x.globalAlpha=1;
+  if(active[i].level>.03){let glow=x.createRadialGradient(b.cx,b.cy,0,b.cx,b.cy,b.rw*.72);glow.addColorStop(0,rooms[i][1]+"88");glow.addColorStop(.54,rooms[i][1]+"24");glow.addColorStop(1,rooms[i][1]+"00");x.fillStyle=glow;x.fillRect(b.px,b.py,b.rw,b.rh)}
+  x.fillStyle="rgba(238,232,214,.58)";x.font=`${10*d}px Courier New`;x.fillText(rooms[i][0],b.px+12*d,b.py+22*d);
  }
- x.strokeStyle="rgba(112,255,201,.58)";x.lineWidth=2*d;[[0,1],[0,2],[1,3],[2,3]].forEach(([a,b])=>{let ax=cx+(a%2?rw/2+gap/2:-rw/2-gap/2),ay=cy+(a>1?rw*.36+gap/2:-rw*.36-gap/2),bx=cx+(b%2?rw/2+gap/2:-rw/2-gap/2),by=cy+(b>1?rw*.36+gap/2:-rw*.36-gap/2);x.beginPath();x.moveTo(ax,ay);x.lineTo(bx,by);x.stroke()});
+ for(let i=pulses.length-1;i>=0;i--){let p=pulses[i],age=t-p.t;if(age>1100){pulses.splice(i,1);continue}let a=1-age/1100;x.strokeStyle=p.color;x.globalAlpha=a*.58;x.lineWidth=(1+a*2)*d;x.beginPath();x.arc(p.x,p.y,(18+age*.12)*d,0,Math.PI*2);x.stroke();x.globalAlpha=1}
  x.fillStyle="rgba(238,232,214,.72)";x.font=`${12*d}px Courier New`;x.fillText("REPAIR FIRST",w*.08,h*.12);x.fillStyle="rgba(112,255,201,.58)";x.fillText("THEN MEANING",w*.08,h*.15);
  requestAnimationFrame(draw)
 }draw(0)
