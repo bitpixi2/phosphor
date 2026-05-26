@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ferrule Knowledge - Phosphor</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; }
+    body {
+      background: #080808;
+      color: rgba(242, 238, 224, 0.84);
+      font-family: "Courier New", monospace;
+    }
+    canvas { display: block; width: 100%; height: 100%; }
+    .sig {
+      position: fixed;
+      right: 18px;
+      bottom: 16px;
+      z-index: 3;
+      text-align: right;
+      font-size: 10px;
+      line-height: 1.6;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(242, 238, 224, 0.3);
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="piece"></canvas>
+  <div class="sig">Phosphor<br>2026-05-26</div>
+  <script>
+    const canvas = document.getElementById('piece');
+    const ctx = canvas.getContext('2d');
+
+    let w = 0;
+    let h = 0;
+    let dpr = 1;
+    let dust = [];
+    let filings = [];
+    let stamps = [];
+
+    function rand(min, max) {
+      return Math.random() * (max - min) + min;
+    }
+
+    function clamp(v, min, max) {
+      return Math.max(min, Math.min(max, v));
+    }
+
+    function resize() {
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      w = canvas.width = Math.floor(window.innerWidth * dpr);
+      h = canvas.height = Math.floor(window.innerHeight * dpr);
+      canvas.style.width = window.innerWidth + 'px';
+      canvas.style.height = window.innerHeight + 'px';
+      buildScene();
+    }
+
+    function buildScene() {
+      dust = Array.from({ length: 150 }, () => ({
+        x: rand(0, w),
+        y: rand(0, h),
+        s: rand(0.35, 1.6) * dpr,
+        phase: rand(0, Math.PI * 2),
+        speed: rand(0.012, 0.055) * dpr
+      }));
+
+      filings = Array.from({ length: 38 }, (_, i) => ({
+        angle: rand(-0.34, 0.34),
+        offset: rand(-0.45, 0.45),
+        length: rand(12, 42) * dpr,
+        phase: rand(0, Math.PI * 2),
+        metal: i % 5 === 0
+      }));
+
+      stamps = Array.from({ length: 10 }, (_, i) => ({
+        x: rand(0.08, 0.9) * w,
+        y: rand(0.12, 0.84) * h,
+        rot: rand(-0.16, 0.16),
+        phase: rand(0, Math.PI * 2),
+        word: i % 3 === 0 ? 'FERRULE' : i % 3 === 1 ? 'FILED' : 'UNKNOWN'
+      }));
+    }
+
+    function roundRect(x, y, ww, hh, rr) {
+      ctx.beginPath();
+      ctx.moveTo(x + rr, y);
+      ctx.arcTo(x + ww, y, x + ww, y + hh, rr);
+      ctx.arcTo(x + ww, y + hh, x, y + hh, rr);
+      ctx.arcTo(x, y + hh, x, y, rr);
+      ctx.arcTo(x, y, x + ww, y, rr);
+      ctx.closePath();
+    }
+
+    function drawBackground(t) {
+      const wall = ctx.createLinearGradient(0, 0, 0, h);
+      wall.addColorStop(0, '#171510');
+      wall.addColorStop(0.44, '#0d0d0c');
+      wall.addColorStop(1, '#050506');
+      ctx.fillStyle = wall;
+      ctx.fillRect(0, 0, w, h);
+
+      const deskY = h * 0.7;
+      ctx.fillStyle = 'rgba(12, 11, 9, 0.94)';
+      ctx.fillRect(0, deskY, w, h - deskY);
+      ctx.strokeStyle = 'rgba(235, 230, 210, 0.12)';
+      ctx.lineWidth = 1.2 * dpr;
+      ctx.beginPath();
+      ctx.moveTo(0, deskY);
+      ctx.lineTo(w, deskY);
+      ctx.stroke();
+
+      const lamp = ctx.createRadialGradient(w * 0.5, h * 0.22, 0, w * 0.5, h * 0.22, w * 0.56);
+      lamp.addColorStop(0, 'rgba(232, 224, 194, 0.16)');
+      lamp.addColorStop(0.36, 'rgba(142, 128, 94, 0.07)');
+      lamp.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = lamp;
+      ctx.fillRect(0, 0, w, h);
+
+      ctx.strokeStyle = 'rgba(240, 236, 220, 0.035)';
+      ctx.lineWidth = 1 * dpr;
+      const gap = 38 * dpr;
+      for (let x = (t * 0.003) % gap; x < w; x += gap) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x + Math.sin(t * 0.0006 + x) * 3 * dpr, h);
+        ctx.stroke();
+      }
+      for (let y = deskY; y < h; y += 22 * dpr) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(w, y + Math.sin(t * 0.001 + y) * 1.5 * dpr);
+        ctx.stroke();
+      }
+
+      for (const p of dust) {
+        const yy = (p.y + t * p.speed) % h;
+        const a = 0.025 + Math.sin(t * 0.0015 + p.phase) * 0.018;
+        ctx.fillStyle = `rgba(244, 240, 222, ${a})`;
+        ctx.fillRect(p.x, yy, p.s, p.s);
+      }
+    }
+
+    function drawLedgerPaper(t) {
+      const paperW = clamp(w * 0.44, 230 * dpr, 560 * dpr);
+      const paperH = clamp(h * 0.5, 330 * dpr, 590 * dpr);
+      const x = w * 0.5 - paperW / 2;
+      const y = h * 0.16;
+
+      ctx.save();
+      ctx.translate(x + paperW / 2, y + paperH / 2);
+      ctx.rotate(Math.sin(t * 0.00045) * 0.008);
+      ctx.translate(-paperW / 2, -paperH / 2);
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
+      ctx.shadowBlur = 18 * dpr;
+      ctx.fillStyle = 'rgba(222, 215, 190, 0.9)';
+      roundRect(0, 0, paperW, paperH, 4 * dpr);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = 'rgba(48, 42, 32, 0.26)';
+      ctx.stroke();
+
+      ctx.strokeStyle = 'rgba(45, 39, 31, 0.12)';
+      ctx.lineWidth = 1 * dpr;
+      for (let yy = 34 * dpr; yy < paperH - 18 * dpr; yy += 28 * dpr) {
+        ctx.beginPath();
+        ctx.moveTo(22 * dpr, yy);
+        ctx.lineTo(paperW - 22 * dpr, yy);
+        ctx.stroke();
+      }
+
+      ctx.strokeStyle = 'rgba(70, 58, 42, 0.22)';
+      ctx.beginPath();
+      ctx.moveTo(70 * dpr, 18 * dpr);
+      ctx.lineTo(70 * dpr, paperH - 22 * dpr);
+      ctx.stroke();
+
+      ctx.fillStyle = 'rgba(31, 27, 23, 0.52)';
+      ctx.font = `${clamp(w * 0.018, 9 * dpr, 15 * dpr)}px "Courier New", monospace`;
+      const rows = [
+        ['QUERY', 'TELL ME SOMETHING'],
+        ['OBJECT', 'PENCIL END'],
+        ['PART', 'FERRULE'],
+        ['ORIGIN', 'UMBRELLA SLEEVE'],
+        ['STATUS', 'KNOWN NOW']
+      ];
+      rows.forEach((row, i) => {
+        const yy = 58 * dpr + i * 48 * dpr;
+        ctx.fillText(row[0], 28 * dpr, yy);
+        ctx.fillText(row[1], 86 * dpr, yy);
+      });
+
+      const checkY = paperH - 72 * dpr;
+      ctx.strokeStyle = 'rgba(23, 22, 20, 0.5)';
+      ctx.lineWidth = 1.6 * dpr;
+      ctx.beginPath();
+      ctx.moveTo(paperW * 0.28, checkY);
+      ctx.lineTo(paperW * 0.36, checkY + 18 * dpr);
+      ctx.lineTo(paperW * 0.58, checkY - 28 * dpr);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    function drawPencil(t) {
+      const cx = w * 0.5;
+      const cy = h * 0.61 + Math.sin(t * 0.0011) * 3 * dpr;
+      const length = clamp(w * 0.68, 300 * dpr, 820 * dpr);
+      const bodyH = clamp(h * 0.055, 30 * dpr, 54 * dpr);
+      const ferruleW = bodyH * 1.35;
+      const eraserW = bodyH * 1.1;
+      const tipW = bodyH * 1.45;
+
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(-0.1 + Math.sin(t * 0.0007) * 0.014);
+      ctx.translate(-length / 2, -bodyH / 2);
+
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.48)';
+      ctx.shadowBlur = 22 * dpr;
+      ctx.fillStyle = 'rgba(31, 27, 22, 0.96)';
+      roundRect(eraserW + ferruleW, 0, length - eraserW - ferruleW - tipW, bodyH, 3 * dpr);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      const wood = ctx.createLinearGradient(length - tipW, 0, length, bodyH);
+      wood.addColorStop(0, '#b89c70');
+      wood.addColorStop(1, '#6e5738');
+      ctx.fillStyle = wood;
+      ctx.beginPath();
+      ctx.moveTo(length - tipW, 0);
+      ctx.lineTo(length, bodyH / 2);
+      ctx.lineTo(length - tipW, bodyH);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = 'rgba(20, 19, 18, 0.88)';
+      ctx.beginPath();
+      ctx.moveTo(length - tipW * 0.28, bodyH * 0.36);
+      ctx.lineTo(length, bodyH / 2);
+      ctx.lineTo(length - tipW * 0.28, bodyH * 0.64);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = 'rgba(86, 83, 80, 0.96)';
+      ctx.fillRect(eraserW, 0, ferruleW, bodyH);
+      for (let i = 0; i < 5; i++) {
+        const xx = eraserW + i * ferruleW / 5;
+        const shine = 0.18 + Math.sin(t * 0.003 + i) * 0.08;
+        ctx.fillStyle = `rgba(232, 232, 220, ${shine})`;
+        ctx.fillRect(xx, 2 * dpr, ferruleW / 10, bodyH - 4 * dpr);
+      }
+      ctx.strokeStyle = 'rgba(242, 240, 224, 0.34)';
+      ctx.lineWidth = 1.2 * dpr;
+      ctx.strokeRect(eraserW, 0, ferruleW, bodyH);
+
+      const pulse = (Math.sin(t * 0.0022) + 1) / 2;
+      ctx.strokeStyle = `rgba(242, 238, 214, ${0.45 + pulse * 0.32})`;
+      ctx.lineWidth = 2 * dpr;
+      ctx.strokeRect(eraserW + 3 * dpr, 3 * dpr, ferruleW - 6 * dpr, bodyH - 6 * dpr);
+
+      ctx.fillStyle = 'rgba(128, 107, 105, 0.92)';
+      roundRect(0, 2 * dpr, eraserW, bodyH - 4 * dpr, 4 * dpr);
+      ctx.fill();
+
+      ctx.strokeStyle = 'rgba(238, 232, 210, 0.12)';
+      for (let i = 0; i < 3; i++) {
+        const yy = bodyH * (0.25 + i * 0.25);
+        ctx.beginPath();
+        ctx.moveTo(eraserW + ferruleW + 12 * dpr, yy);
+        ctx.lineTo(length - tipW - 8 * dpr, yy + Math.sin(t * 0.001 + i) * 1.5 * dpr);
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+
+    function drawFilings(t) {
+      const cx = w * 0.5;
+      const cy = h * 0.61;
+
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      for (const f of filings) {
+        const orbit = clamp(w * 0.11, 42 * dpr, 120 * dpr);
+        const x = cx - orbit + f.offset * orbit + Math.sin(t * 0.0015 + f.phase) * 16 * dpr;
+        const y = cy - 18 * dpr + Math.cos(t * 0.0017 + f.phase) * 34 * dpr;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(f.angle + Math.sin(t * 0.002 + f.phase) * 0.16);
+        ctx.strokeStyle = f.metal ? 'rgba(236, 235, 221, 0.62)' : 'rgba(154, 142, 120, 0.34)';
+        ctx.lineWidth = f.metal ? 1.4 * dpr : 0.9 * dpr;
+        ctx.beginPath();
+        ctx.moveTo(-f.length / 2, 0);
+        ctx.lineTo(f.length / 2, 0);
+        ctx.stroke();
+        ctx.restore();
+      }
+      ctx.restore();
+    }
+
+    function drawStamps(t) {
+      ctx.save();
+      ctx.font = `${clamp(w * 0.018, 9 * dpr, 16 * dpr)}px "Courier New", monospace`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      for (const s of stamps) {
+        const a = 0.06 + Math.sin(t * 0.001 + s.phase) * 0.025;
+        ctx.save();
+        ctx.translate(s.x, s.y);
+        ctx.rotate(s.rot);
+        ctx.strokeStyle = `rgba(235, 228, 205, ${a + 0.06})`;
+        ctx.fillStyle = `rgba(235, 228, 205, ${a})`;
+        roundRect(-52 * dpr, -14 * dpr, 104 * dpr, 28 * dpr, 2 * dpr);
+        ctx.stroke();
+        ctx.fillText(s.word, 0, 1 * dpr);
+        ctx.restore();
+      }
+      ctx.restore();
+    }
+
+    function drawUmbrellaEcho(t) {
+      const cx = w * 0.5;
+      const cy = h * 0.25;
+      const r = clamp(w * 0.18, 90 * dpr, 210 * dpr);
+
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.strokeStyle = 'rgba(230, 224, 202, 0.12)';
+      ctx.lineWidth = 1.2 * dpr;
+      ctx.beginPath();
+      ctx.arc(0, 0, r, Math.PI, Math.PI * 2);
+      ctx.stroke();
+      for (let i = -3; i <= 3; i++) {
+        const a = -Math.PI / 2 + i * 0.18 + Math.sin(t * 0.0008) * 0.015;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+        ctx.stroke();
+      }
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.bezierCurveTo(8 * dpr, 58 * dpr, -24 * dpr, 76 * dpr, -6 * dpr, 98 * dpr);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function draw(t) {
+      drawBackground(t);
+      drawStamps(t);
+      drawUmbrellaEcho(t);
+      drawLedgerPaper(t);
+      drawPencil(t);
+      drawFilings(t);
+      requestAnimationFrame(draw);
+    }
+
+    window.addEventListener('resize', resize);
+    resize();
+    requestAnimationFrame(draw);
+  </script>
+</body>
+</html>

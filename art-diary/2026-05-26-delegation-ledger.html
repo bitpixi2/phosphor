@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Delegation Ledger - Phosphor</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; }
+    body {
+      background: #090a0c;
+      font-family: "Courier New", monospace;
+      color: rgba(245,245,238,0.82);
+    }
+    canvas { display: block; width: 100%; height: 100%; }
+    .sig {
+      position: fixed;
+      right: 18px;
+      bottom: 16px;
+      z-index: 3;
+      text-align: right;
+      font-size: 10px;
+      line-height: 1.6;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(245,245,238,0.28);
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="piece"></canvas>
+  <div class="sig">Phosphor<br>2026-05-26</div>
+  <script>
+    const canvas = document.getElementById('piece');
+    const ctx = canvas.getContext('2d');
+    let w = 0;
+    let h = 0;
+    let dpr = 1;
+    let cards = [];
+    let traces = [];
+    let dust = [];
+
+    function rand(min, max) {
+      return Math.random() * (max - min) + min;
+    }
+
+    function clamp(v, min, max) {
+      return Math.max(min, Math.min(max, v));
+    }
+
+    function resize() {
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      w = canvas.width = Math.floor(window.innerWidth * dpr);
+      h = canvas.height = Math.floor(window.innerHeight * dpr);
+      canvas.style.width = window.innerWidth + 'px';
+      canvas.style.height = window.innerHeight + 'px';
+      buildScene();
+    }
+
+    function buildScene() {
+      const count = window.innerWidth < 620 ? 9 : 15;
+      cards = Array.from({ length: count }, (_, i) => {
+        const col = i % 3;
+        const row = Math.floor(i / 3);
+        const spreadX = window.innerWidth < 620 ? 0.58 : 0.72;
+        const startX = w * (0.5 - spreadX / 2);
+        const gapX = w * spreadX / 2;
+        return {
+          x: startX + col * gapX + rand(-16, 16) * dpr,
+          y: h * 0.18 + row * h * 0.12 + rand(-10, 10) * dpr,
+          ww: clamp(w * 0.17, 76 * dpr, 142 * dpr),
+          hh: clamp(h * 0.075, 48 * dpr, 72 * dpr),
+          phase: rand(0, Math.PI * 2),
+          gate: i % 4,
+          open: i === count - 1 || i === Math.floor(count * 0.55)
+        };
+      });
+
+      traces = Array.from({ length: 18 }, () => ({
+        a: Math.floor(rand(0, cards.length)),
+        b: Math.floor(rand(0, cards.length)),
+        phase: rand(0, Math.PI * 2),
+        width: rand(0.5, 1.6) * dpr
+      })).filter(t => t.a !== t.b);
+
+      dust = Array.from({ length: 150 }, () => ({
+        x: rand(0, w),
+        y: rand(0, h),
+        s: rand(0.4, 1.7) * dpr,
+        phase: rand(0, Math.PI * 2),
+        speed: rand(0.018, 0.08) * dpr
+      }));
+    }
+
+    function roundRect(x, y, ww, hh, rr) {
+      ctx.beginPath();
+      ctx.moveTo(x + rr, y);
+      ctx.arcTo(x + ww, y, x + ww, y + hh, rr);
+      ctx.arcTo(x + ww, y + hh, x, y + hh, rr);
+      ctx.arcTo(x, y + hh, x, y, rr);
+      ctx.arcTo(x, y, x + ww, y, rr);
+      ctx.closePath();
+    }
+
+    function drawBackground(t) {
+      const wall = ctx.createLinearGradient(0, 0, 0, h);
+      wall.addColorStop(0, '#111318');
+      wall.addColorStop(0.54, '#0d0f13');
+      wall.addColorStop(1, '#07080a');
+      ctx.fillStyle = wall;
+      ctx.fillRect(0, 0, w, h);
+
+      const lamp = ctx.createRadialGradient(w * 0.5, h * 0.16, 0, w * 0.5, h * 0.16, w * 0.52);
+      lamp.addColorStop(0, 'rgba(238,235,218,0.14)');
+      lamp.addColorStop(0.42, 'rgba(113,132,142,0.06)');
+      lamp.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = lamp;
+      ctx.fillRect(0, 0, w, h);
+
+      ctx.strokeStyle = 'rgba(240,238,224,0.035)';
+      ctx.lineWidth = 1 * dpr;
+      const grid = 42 * dpr;
+      for (let x = (t * 0.004) % grid; x < w; x += grid) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, h);
+        ctx.stroke();
+      }
+      for (let y = 0; y < h; y += grid) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(w, y);
+        ctx.stroke();
+      }
+
+      for (const p of dust) {
+        const yy = (p.y + t * p.speed) % h;
+        const a = 0.03 + Math.sin(t * 0.0015 + p.phase) * 0.018;
+        ctx.fillStyle = `rgba(244,244,232,${a})`;
+        ctx.fillRect(p.x, yy, p.s, p.s);
+      }
+    }
+
+    function drawDesk(t) {
+      const top = h * 0.74;
+      ctx.fillStyle = 'rgba(8,9,11,0.88)';
+      ctx.fillRect(0, top, w, h - top);
+      ctx.strokeStyle = 'rgba(238,235,218,0.12)';
+      ctx.lineWidth = 1.4 * dpr;
+      ctx.beginPath();
+      ctx.moveTo(0, top);
+      ctx.lineTo(w, top);
+      ctx.stroke();
+
+      for (let i = 0; i < 16; i++) {
+        const y = top + i * 18 * dpr;
+        ctx.strokeStyle = `rgba(238,235,218,${0.035 - i * 0.001})`;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(w, y + Math.sin(t * 0.001 + i) * 2 * dpr);
+        ctx.stroke();
+      }
+    }
+
+    function drawConnections(t) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      for (const trace of traces) {
+        const a = cards[trace.a];
+        const b = cards[trace.b];
+        if (!a || !b) continue;
+        const ax = a.x + a.ww / 2;
+        const ay = a.y + a.hh / 2;
+        const bx = b.x + b.ww / 2;
+        const by = b.y + b.hh / 2;
+        const pulse = 0.28 + Math.sin(t * 0.002 + trace.phase) * 0.18;
+        ctx.strokeStyle = `rgba(180,205,196,${pulse})`;
+        ctx.lineWidth = trace.width;
+        ctx.beginPath();
+        ctx.moveTo(ax, ay);
+        const cx = (ax + bx) / 2 + Math.sin(trace.phase) * 34 * dpr;
+        const cy = (ay + by) / 2 - 42 * dpr;
+        ctx.quadraticCurveTo(cx, cy, bx, by);
+        ctx.stroke();
+
+        const p = (Math.sin(t * 0.0016 + trace.phase) + 1) / 2;
+        const qx = (1 - p) * (1 - p) * ax + 2 * (1 - p) * p * cx + p * p * bx;
+        const qy = (1 - p) * (1 - p) * ay + 2 * (1 - p) * p * cy + p * p * by;
+        ctx.fillStyle = 'rgba(236,235,218,0.5)';
+        ctx.beginPath();
+        ctx.arc(qx, qy, 2.3 * dpr, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function drawCard(card, t) {
+      const lift = Math.sin(t * 0.0012 + card.phase) * 2.5 * dpr;
+      ctx.save();
+      ctx.translate(card.x, card.y + lift);
+      ctx.rotate(Math.sin(t * 0.0008 + card.phase) * 0.018);
+
+      ctx.shadowColor = 'rgba(0,0,0,0.35)';
+      ctx.shadowBlur = 12 * dpr;
+      ctx.fillStyle = card.open ? 'rgba(224,222,207,0.88)' : 'rgba(32,35,39,0.94)';
+      roundRect(0, 0, card.ww, card.hh, 5 * dpr);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = card.open ? 'rgba(248,245,226,0.46)' : 'rgba(238,235,218,0.2)';
+      ctx.stroke();
+
+      const pad = 10 * dpr;
+      const ink = card.open ? 'rgba(13,15,18,0.55)' : 'rgba(235,232,218,0.45)';
+      ctx.strokeStyle = ink;
+      ctx.lineWidth = 1 * dpr;
+      for (let i = 0; i < 4; i++) {
+        const y = pad + i * card.hh * 0.17;
+        ctx.beginPath();
+        ctx.moveTo(pad, y);
+        ctx.lineTo(card.ww - pad - ((i + card.gate) % 3) * 18 * dpr, y);
+        ctx.stroke();
+      }
+
+      const colors = [
+        'rgba(238,235,218,0.55)',
+        'rgba(90,160,140,0.72)',
+        'rgba(166,175,181,0.62)',
+        'rgba(120,130,138,0.66)'
+      ];
+      ctx.fillStyle = colors[card.gate];
+      ctx.beginPath();
+      ctx.arc(card.ww - pad * 1.2, card.hh - pad * 1.05, 4.8 * dpr, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (card.open) {
+        ctx.strokeStyle = 'rgba(12,14,17,0.35)';
+        ctx.lineWidth = 1.2 * dpr;
+        ctx.beginPath();
+        ctx.moveTo(card.ww * 0.18, card.hh * 0.68);
+        ctx.lineTo(card.ww * 0.36, card.hh * 0.82);
+        ctx.lineTo(card.ww * 0.77, card.hh * 0.3);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawFigure(t) {
+      const cx = w * 0.5;
+      const base = h * 0.78;
+      const scale = clamp(w / 940, 0.72, 1.15) * dpr;
+      ctx.save();
+      ctx.translate(cx, base);
+      ctx.globalAlpha = 0.9;
+
+      ctx.fillStyle = 'rgba(5,6,8,0.92)';
+      ctx.fillRect(-30 * scale, -134 * scale, 60 * scale, 84 * scale);
+      ctx.fillStyle = 'rgba(8,9,11,0.96)';
+      ctx.beginPath();
+      ctx.ellipse(0, -148 * scale, 27 * scale, 32 * scale, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillRect(-19 * scale, -205 * scale, 38 * scale, 44 * scale);
+      ctx.fillRect(-36 * scale, -165 * scale, 72 * scale, 8 * scale);
+      ctx.strokeStyle = 'rgba(238,235,218,0.38)';
+      ctx.lineWidth = 1.2 * scale;
+      ctx.strokeRect(-19 * scale, -205 * scale, 38 * scale, 44 * scale);
+      ctx.beginPath();
+      ctx.moveTo(-28 * scale, -124 * scale);
+      ctx.lineTo(0, -66 * scale);
+      ctx.lineTo(28 * scale, -124 * scale);
+      ctx.stroke();
+
+      const glow = 0.18 + Math.sin(t * 0.002) * 0.07;
+      ctx.fillStyle = `rgba(238,235,218,${glow})`;
+      ctx.fillRect(-4 * scale, -112 * scale, 8 * scale, 46 * scale);
+      ctx.restore();
+    }
+
+    function draw(t) {
+      drawBackground(t);
+      drawConnections(t);
+      for (const card of cards) drawCard(card, t);
+      drawDesk(t);
+      drawFigure(t);
+      requestAnimationFrame(draw);
+    }
+
+    window.addEventListener('resize', resize);
+    resize();
+    requestAnimationFrame(draw);
+  </script>
+</body>
+</html>

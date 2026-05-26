@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Style Router — Phosphor</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; }
+    body {
+      background:
+        radial-gradient(circle at 72% 32%, rgba(255, 109, 198, 0.09), transparent 22%),
+        radial-gradient(circle at 28% 24%, rgba(236, 231, 211, 0.06), transparent 20%),
+        linear-gradient(180deg, #08090d 0%, #0d0f14 48%, #07080b 100%);
+      font-family: "Courier New", monospace;
+      color: rgba(255,255,255,0.9);
+    }
+    canvas { display: block; width: 100%; height: 100%; }
+    .sig {
+      position: fixed;
+      right: 18px;
+      bottom: 16px;
+      z-index: 3;
+      text-align: right;
+      font-size: 10px;
+      line-height: 1.6;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.24);
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="piece"></canvas>
+  <div class="sig">Phosphor<br>2026-05-25</div>
+  <script>
+    const canvas = document.getElementById('piece');
+    const ctx = canvas.getContext('2d');
+    let w = 0, h = 0, dpr = 1;
+    let dust = [];
+    let cables = [];
+    let stickers = [];
+    let papers = [];
+
+    function rand(min, max) { return Math.random() * (max - min) + min; }
+    function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+    function resize() {
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      w = canvas.width = Math.floor(window.innerWidth * dpr);
+      h = canvas.height = Math.floor(window.innerHeight * dpr);
+      canvas.style.width = window.innerWidth + 'px';
+      canvas.style.height = window.innerHeight + 'px';
+      buildScene();
+    }
+
+    function buildScene() {
+      dust = Array.from({ length: 120 }, () => ({
+        x: rand(0, w),
+        y: rand(0, h),
+        z: rand(0.25, 1.1),
+        speed: rand(0.04, 0.18) * dpr,
+        phase: rand(0, Math.PI * 2)
+      }));
+
+      cables = Array.from({ length: 9 }, (_, i) => ({
+        y: h * rand(0.32, 0.74),
+        offset: rand(-80, 80) * dpr,
+        phase: rand(0, Math.PI * 2),
+        color: i % 3 === 0 ? 'pink' : i % 3 === 1 ? 'blue' : 'paper'
+      }));
+
+      stickers = Array.from({ length: 34 }, (_, i) => ({
+        x: w * rand(0.60, 0.92),
+        y: h * rand(0.16, 0.78),
+        r: rand(5, 18) * dpr,
+        phase: rand(0, Math.PI * 2),
+        kind: i % 5
+      }));
+
+      papers = Array.from({ length: 28 }, () => ({
+        x: w * rand(0.08, 0.42),
+        y: h * rand(0.14, 0.82),
+        ww: rand(28, 76) * dpr,
+        hh: rand(20, 58) * dpr,
+        rot: rand(-0.12, 0.12),
+        phase: rand(0, Math.PI * 2)
+      }));
+    }
+
+    function roundRect(x, y, ww, hh, rr) {
+      ctx.beginPath();
+      ctx.moveTo(x + rr, y);
+      ctx.arcTo(x + ww, y, x + ww, y + hh, rr);
+      ctx.arcTo(x + ww, y + hh, x, y + hh, rr);
+      ctx.arcTo(x, y + hh, x, y, rr);
+      ctx.arcTo(x, y, x + ww, y, rr);
+      ctx.closePath();
+    }
+
+    function drawBackground(t) {
+      ctx.fillStyle = '#08090d';
+      ctx.fillRect(0, 0, w, h);
+
+      const floorY = h * 0.68;
+      const wall = ctx.createLinearGradient(0, 0, 0, floorY);
+      wall.addColorStop(0, 'rgba(31,34,40,0.78)');
+      wall.addColorStop(1, 'rgba(18,20,25,0.88)');
+      ctx.fillStyle = wall;
+      ctx.fillRect(0, 0, w, floorY);
+
+      ctx.fillStyle = 'rgba(10,10,12,0.92)';
+      ctx.fillRect(0, floorY, w, h - floorY);
+
+      ctx.strokeStyle = 'rgba(255,255,255,0.035)';
+      ctx.lineWidth = 1 * dpr;
+      for (let x = -w; x < w * 2; x += 42 * dpr) {
+        ctx.beginPath();
+        ctx.moveTo(x, h);
+        ctx.lineTo(w * 0.5 + (x - w * 0.5) * 0.08, floorY);
+        ctx.stroke();
+      }
+      for (let y = floorY; y < h; y += 34 * dpr) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(w, y);
+        ctx.stroke();
+      }
+
+      const officeGlow = ctx.createRadialGradient(w * 0.32, h * 0.38, 0, w * 0.32, h * 0.38, w * 0.36);
+      officeGlow.addColorStop(0, 'rgba(232,228,211,0.08)');
+      officeGlow.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = officeGlow;
+      ctx.fillRect(0, 0, w, h);
+
+      const popGlow = ctx.createRadialGradient(w * 0.74, h * 0.38, 0, w * 0.74, h * 0.38, w * 0.28);
+      popGlow.addColorStop(0, 'rgba(255,95,198,0.16)');
+      popGlow.addColorStop(0.45, 'rgba(72,209,255,0.08)');
+      popGlow.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = popGlow;
+      ctx.fillRect(0, 0, w, h);
+
+      for (const d of dust) {
+        const yy = (d.y + t * d.speed + Math.sin(t * 0.001 + d.phase) * 4 * dpr) % h;
+        const a = 0.035 + 0.04 * Math.sin(t * 0.0016 + d.phase);
+        ctx.fillStyle = `rgba(255,255,255,${a})`;
+        ctx.fillRect(d.x, yy, d.z * 2, d.z * 2);
+      }
+    }
+
+    function drawOfficePapers(t) {
+      for (const p of papers) {
+        ctx.save();
+        ctx.translate(p.x, p.y + Math.sin(t * 0.001 + p.phase) * 2 * dpr);
+        ctx.rotate(p.rot);
+        ctx.fillStyle = 'rgba(232,229,214,0.72)';
+        ctx.fillRect(-p.ww / 2, -p.hh / 2, p.ww, p.hh);
+        ctx.strokeStyle = 'rgba(14,16,20,0.18)';
+        ctx.strokeRect(-p.ww / 2, -p.hh / 2, p.ww, p.hh);
+        ctx.strokeStyle = 'rgba(14,16,20,0.22)';
+        for (let i = 0; i < 4; i++) {
+          const y = -p.hh * 0.28 + i * p.hh * 0.17;
+          ctx.beginPath();
+          ctx.moveTo(-p.ww * 0.32, y);
+          ctx.lineTo(p.ww * rand(0.05, 0.34), y);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+    }
+
+    function drawRouter(t) {
+      const cx = w * 0.5;
+      const cy = h * 0.50;
+      const boxW = clamp(w * 0.18, 130 * dpr, 250 * dpr);
+      const boxH = clamp(h * 0.18, 110 * dpr, 180 * dpr);
+
+      ctx.save();
+      ctx.shadowColor = 'rgba(220,225,214,0.2)';
+      ctx.shadowBlur = 18 * dpr;
+      ctx.fillStyle = 'rgba(9,11,15,0.96)';
+      roundRect(cx - boxW / 2, cy - boxH / 2, boxW, boxH, 6 * dpr);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = 'rgba(236,231,210,0.26)';
+      ctx.lineWidth = 1.2 * dpr;
+      ctx.stroke();
+
+      const bayW = boxW * 0.22;
+      for (let i = 0; i < 3; i++) {
+        const x = cx - boxW * 0.34 + i * boxW * 0.34;
+        ctx.fillStyle = i === 2 ? 'rgba(255,98,197,0.12)' : 'rgba(232,231,220,0.08)';
+        roundRect(x, cy - boxH * 0.24, bayW, boxH * 0.46, 4 * dpr);
+        ctx.fill();
+        ctx.strokeStyle = i === 2 ? 'rgba(255,98,197,0.38)' : 'rgba(232,231,220,0.18)';
+        ctx.stroke();
+
+        const pulse = 0.35 + 0.65 * Math.sin(t * 0.004 + i);
+        ctx.fillStyle = i === 0 ? `rgba(232,231,220,${0.35 + pulse * 0.4})` :
+          i === 1 ? `rgba(115,218,255,${0.24 + pulse * 0.36})` :
+          `rgba(255,98,197,${0.36 + pulse * 0.42})`;
+        ctx.beginPath();
+        ctx.arc(x + bayW * 0.5, cy + boxH * 0.31, 4.5 * dpr, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.strokeStyle = 'rgba(236,231,210,0.12)';
+      ctx.beginPath();
+      ctx.moveTo(cx - boxW * 0.5, cy);
+      ctx.lineTo(cx + boxW * 0.5, cy);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawCables(t) {
+      ctx.save();
+      ctx.lineCap = 'round';
+      for (const cable of cables) {
+        const leftX = w * 0.34;
+        const rightX = w * 0.66;
+        const startY = cable.y;
+        const endY = h * 0.5 + cable.offset * 0.35;
+        const c1x = w * 0.43;
+        const c2x = w * 0.57;
+        const lift = Math.sin(t * 0.0014 + cable.phase) * 16 * dpr;
+        ctx.beginPath();
+        ctx.moveTo(leftX, startY);
+        ctx.bezierCurveTo(c1x, startY + lift, c2x, endY - lift, rightX, endY);
+        const color = cable.color === 'pink' ? '255,98,197' : cable.color === 'blue' ? '91,216,255' : '232,231,220';
+        ctx.strokeStyle = `rgba(${color},0.22)`;
+        ctx.lineWidth = (2.2 + Math.sin(t * 0.002 + cable.phase) * 0.8) * dpr;
+        ctx.stroke();
+
+        const p = (Math.sin(t * 0.0012 + cable.phase) + 1) / 2;
+        const px = leftX + (rightX - leftX) * p;
+        const py = startY * (1 - p) + endY * p + Math.sin(p * Math.PI) * lift * 0.6;
+        ctx.fillStyle = `rgba(${color},0.72)`;
+        ctx.beginPath();
+        ctx.arc(px, py, 3.2 * dpr, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function drawPhosphor(t) {
+      const cx = w * 0.27;
+      const cy = h * 0.58;
+      const scale = clamp(w / 1100, 0.74, 1.18) * dpr;
+      const sway = Math.sin(t * 0.001) * 3 * dpr;
+
+      ctx.save();
+      ctx.translate(cx + sway, cy);
+      ctx.scale(scale, scale);
+
+      ctx.fillStyle = 'rgba(0,0,0,0.42)';
+      ctx.beginPath();
+      ctx.ellipse(0, 140, 120, 24, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#07080b';
+      ctx.beginPath();
+      ctx.moveTo(-78, 118);
+      ctx.quadraticCurveTo(-48, 30, -32, -30);
+      ctx.quadraticCurveTo(-22, -86, 0, -108);
+      ctx.quadraticCurveTo(22, -86, 32, -30);
+      ctx.quadraticCurveTo(48, 30, 78, 118);
+      ctx.quadraticCurveTo(0, 154, -78, 118);
+      ctx.fill();
+
+      ctx.fillRect(-44, -220, 88, 82);
+      ctx.beginPath();
+      ctx.ellipse(0, -138, 84, 15, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(0, -220, 44, 11, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = 'rgba(235,231,214,0.32)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(-40, -184);
+      ctx.lineTo(40, -184);
+      ctx.stroke();
+
+      ctx.strokeStyle = 'rgba(245,245,238,0.88)';
+      ctx.lineWidth = 2;
+      const eyeY = -86;
+      ctx.beginPath();
+      ctx.moveTo(-28, eyeY);
+      ctx.quadraticCurveTo(-16, eyeY - 7, -5, eyeY);
+      ctx.moveTo(5, eyeY);
+      ctx.quadraticCurveTo(16, eyeY - 7, 28, eyeY);
+      ctx.stroke();
+
+      ctx.strokeStyle = 'rgba(235,231,214,0.52)';
+      ctx.beginPath();
+      ctx.moveTo(-16, -39);
+      ctx.quadraticCurveTo(0, -28 + Math.sin(t * 0.002) * 2, 16, -39);
+      ctx.stroke();
+
+      ctx.strokeStyle = 'rgba(236,231,210,0.26)';
+      ctx.lineWidth = 1;
+      for (let i = 0; i < 8; i++) {
+        ctx.beginPath();
+        ctx.moveTo(-70 + i * 20, 46);
+        ctx.lineTo(-46 + i * 12, 132);
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+
+    function drawEmberFrame(t) {
+      const frameX = w * 0.63;
+      const frameY = h * 0.14;
+      const frameW = clamp(w * 0.27, 210 * dpr, 390 * dpr);
+      const frameH = clamp(h * 0.58, 310 * dpr, 560 * dpr);
+
+      ctx.save();
+      ctx.shadowColor = 'rgba(255,98,197,0.34)';
+      ctx.shadowBlur = 30 * dpr;
+      ctx.fillStyle = 'rgba(22,17,31,0.92)';
+      roundRect(frameX, frameY, frameW, frameH, 10 * dpr);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      const border = ctx.createLinearGradient(frameX, frameY, frameX + frameW, frameY + frameH);
+      border.addColorStop(0, 'rgba(255,98,197,0.9)');
+      border.addColorStop(0.5, 'rgba(111,221,255,0.65)');
+      border.addColorStop(1, 'rgba(255,238,139,0.78)');
+      ctx.strokeStyle = border;
+      ctx.lineWidth = 3 * dpr;
+      ctx.stroke();
+
+      ctx.save();
+      roundRect(frameX + 14 * dpr, frameY + 14 * dpr, frameW - 28 * dpr, frameH - 28 * dpr, 8 * dpr);
+      ctx.clip();
+
+      const bg = ctx.createLinearGradient(frameX, frameY, frameX + frameW, frameY + frameH);
+      bg.addColorStop(0, '#25142f');
+      bg.addColorStop(0.44, '#102334');
+      bg.addColorStop(1, '#3d1735');
+      ctx.fillStyle = bg;
+      ctx.fillRect(frameX, frameY, frameW, frameH);
+
+      ctx.globalAlpha = 0.22;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1 * dpr;
+      for (let y = frameY; y < frameY + frameH; y += 9 * dpr) {
+        ctx.beginPath();
+        ctx.moveTo(frameX, y + Math.sin(t * 0.004 + y * 0.01) * 2 * dpr);
+        ctx.lineTo(frameX + frameW, y);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+
+      const cx = frameX + frameW * 0.52 + Math.sin(t * 0.0013) * 3 * dpr;
+      const cy = frameY + frameH * 0.47;
+      const s = clamp(frameW / 340, 0.74, 1.06) * dpr;
+
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.scale(s, s);
+      ctx.rotate(0.04);
+
+      ctx.fillStyle = 'rgba(255,206,236,0.78)';
+      ctx.beginPath();
+      ctx.arc(0, -70, 34, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(-44, -20);
+      ctx.quadraticCurveTo(-78, 8, -70, 54);
+      ctx.moveTo(44, -18);
+      ctx.quadraticCurveTo(84, 8, 76, 56);
+      ctx.stroke();
+
+      ctx.fillStyle = 'rgba(255,98,197,0.95)';
+      ctx.beginPath();
+      ctx.moveTo(-52, -22);
+      ctx.quadraticCurveTo(0, -54, 52, -22);
+      ctx.lineTo(74, 76);
+      ctx.quadraticCurveTo(0, 102, -74, 76);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = 'rgba(28,35,62,0.96)';
+      ctx.beginPath();
+      ctx.moveTo(-68, 76);
+      ctx.quadraticCurveTo(-44, 132, -36, 184);
+      ctx.lineTo(-8, 184);
+      ctx.quadraticCurveTo(-10, 128, -6, 84);
+      ctx.quadraticCurveTo(10, 128, 10, 184);
+      ctx.lineTo(42, 184);
+      ctx.quadraticCurveTo(48, 128, 68, 76);
+      ctx.quadraticCurveTo(0, 98, -68, 76);
+      ctx.fill();
+
+      ctx.strokeStyle = 'rgba(255,255,255,0.72)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-17, -73);
+      ctx.lineTo(-4, -73);
+      ctx.moveTo(12, -74);
+      ctx.lineTo(24, -76);
+      ctx.stroke();
+
+      ctx.fillStyle = 'rgba(50,26,38,0.92)';
+      ctx.beginPath();
+      ctx.arc(0, -102, 42, Math.PI * 0.92, Math.PI * 2.08);
+      ctx.quadraticCurveTo(38, -120, 54, -56);
+      ctx.quadraticCurveTo(24, -82, 0, -78);
+      ctx.quadraticCurveTo(-28, -84, -52, -52);
+      ctx.quadraticCurveTo(-42, -110, 0, -102);
+      ctx.fill();
+
+      ctx.restore();
+      ctx.restore();
+
+      for (const st of stickers) {
+        const pulse = 0.65 + 0.35 * Math.sin(t * 0.002 + st.phase);
+        ctx.save();
+        ctx.translate(st.x, st.y);
+        ctx.rotate(Math.sin(t * 0.001 + st.phase) * 0.2);
+        if (st.kind === 0) {
+          ctx.fillStyle = `rgba(255,98,197,${0.45 + pulse * 0.3})`;
+          ctx.beginPath();
+          ctx.moveTo(0, -st.r);
+          ctx.bezierCurveTo(st.r, -st.r * 1.8, st.r * 1.5, st.r * 0.2, 0, st.r);
+          ctx.bezierCurveTo(-st.r * 1.5, st.r * 0.2, -st.r, -st.r * 1.8, 0, -st.r);
+          ctx.fill();
+        } else if (st.kind === 1) {
+          ctx.strokeStyle = `rgba(111,221,255,${0.48 + pulse * 0.28})`;
+          ctx.lineWidth = 2 * dpr;
+          ctx.beginPath();
+          ctx.moveTo(-st.r, 0);
+          ctx.lineTo(st.r, 0);
+          ctx.moveTo(0, -st.r);
+          ctx.lineTo(0, st.r);
+          ctx.stroke();
+        } else if (st.kind === 2) {
+          ctx.fillStyle = `rgba(255,238,139,${0.42 + pulse * 0.34})`;
+          ctx.beginPath();
+          for (let i = 0; i < 10; i++) {
+            const a = -Math.PI / 2 + i * Math.PI / 5;
+            const r = i % 2 === 0 ? st.r : st.r * 0.42;
+            ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+          }
+          ctx.closePath();
+          ctx.fill();
+        } else if (st.kind === 3) {
+          ctx.strokeStyle = `rgba(255,255,255,${0.3 + pulse * 0.25})`;
+          ctx.lineWidth = 1.4 * dpr;
+          ctx.beginPath();
+          ctx.arc(0, 0, st.r, 0, Math.PI * 2);
+          ctx.moveTo(-st.r * 0.55, 0);
+          ctx.lineTo(st.r * 0.55, 0);
+          ctx.stroke();
+        } else {
+          ctx.fillStyle = `rgba(255,255,255,${0.35 + pulse * 0.25})`;
+          ctx.fillRect(-st.r * 0.5, -st.r * 0.5, st.r, st.r);
+        }
+        ctx.restore();
+      }
+      ctx.restore();
+    }
+
+    function drawDivider() {
+      ctx.save();
+      const x = w * 0.5;
+      const grad = ctx.createLinearGradient(x, h * 0.12, x, h * 0.86);
+      grad.addColorStop(0, 'rgba(236,231,210,0)');
+      grad.addColorStop(0.48, 'rgba(236,231,210,0.34)');
+      grad.addColorStop(1, 'rgba(255,98,197,0)');
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = 1.5 * dpr;
+      ctx.beginPath();
+      ctx.moveTo(x, h * 0.10);
+      ctx.lineTo(x, h * 0.86);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function animate(t) {
+      drawBackground(t);
+      drawOfficePapers(t);
+      drawCables(t);
+      drawRouter(t);
+      drawPhosphor(t);
+      drawEmberFrame(t);
+      drawDivider();
+      requestAnimationFrame(animate);
+    }
+
+    window.addEventListener('resize', resize);
+    resize();
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>

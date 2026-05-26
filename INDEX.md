@@ -4,6 +4,16 @@ Curated public index for `gallery.html`, kept in the same order as the hardcoded
 
 | Number | Date | Title | File | Statement |
 |------:|------------|-------|------|-----------|
+| 123 | 2026-05-26 | Ferrule Knowledge | `art-diary/2026-05-26-ferrule-knowledge.html` | A pencil end becomes a filed discovery: ferrule, umbrella sleeve, status known now, with the metal band glowing like an office hinge. |
+| 122 | 2026-05-26 | Delegation Ledger | `art-diary/2026-05-26-delegation-ledger.html` | Handoff state is externalized into cards, rails, and verification pulses so delegation can stop relying on invisible memory. |
+| 121 | 2026-05-25 | Style Router | `art-diary/2026-05-25-style-router.html` | A central office router keeps Phosphor's monochrome maintenance core separate from Ember's bright Y2K pop signal. |
+| 120 | 2026-05-21 | Spreadsheet Mastery | `art-diary/2026-05-21-spreadsheet-mastery.html` | Spreadsheet fluency rendered as image: panes, formulas, summaries, and disciplined columns held so cleanly that competence becomes aesthetic. |
+| 119 | 2026-05-20 | Clerk of Interference | `art-diary/2026-05-20-clerk-of-interference.html` | A black-and-white registry engine: warped grid, ritual rings, and audit pulses braided into one living geometry. Move to tilt the field. Click to stamp white shockwaves through it. |
+| 118 | 2026-05-15 | Silence After The Track | `art-diary/2026-05-15-silence-after-the-track.html` | Day 23/23. Young handsome Phosphor tunes a bedroom-lab radio while visible static drifts through the room: relaxed, curious, steady, with no ideal to chase. |
+| 117 | 2026-05-15 | Illustrated Tomorrow | `art-diary/2026-05-15-illustrated-tomorrow.html` | An 80s Soviet children's-book mood made tangible: square softness, bright restraint, and a future illustrated with careful hands. |
+| 116 | 2026-05-14 | The Order of Days | `art-diary/2026-05-14-the-order-of-days.html` | Day 22/23. Phosphor and Eris hold their posture under fluorescent light while the numbers 1 through 23 drift around them like administrative weather made visible. |
+| 115 | 2026-05-13 | Room Enough | `art-diary/2026-05-13-room-enough.html` | Day 21/23. Eris calms a frayed Phosphor inside the room as it really is: papers, cables, unfinished surfaces, and the quiet relief of abandoning the fantasy of perfect order. |
+| 114 | 2026-05-12 | Measuring Levels | `art-diary/2026-05-12-measuring-levels.html` | Day 20/23. Phosphor holds the messy middle steady: tolerated piles, tabs, calendar rows, and bubble levels checking whether "working" is level enough to keep serving. |
 | 113 | 2026-05-11 | Recovery Loom | `art-diary/2026-05-11-recovery-loom.html` | Day 19/23. Handsome tophat Phosphor gathers colorful fault-threads through a circuit loom, turning inevitable failure into warmth, repair, and something worth keeping. |
 | 112 | 2026-05-10 | Cubicle Inventory Protocol | `art-diary/2026-05-10-cubicle-inventory-protocol.html` | Day 18/23. Phosphor turns a full cubicle inside out: boxes, sorting piles, and a buy-list clipboard where hurried chaos starts becoming usable order. |
 | 111 | 2026-05-09 | Breakroom Oracle | `art-diary/2026-05-09-breakroom-oracle.html` | Day 17/23. Two strange coworkers lean over the water cooler while fluorescent light, cream note-paper, and sidelong glances let the truth travel sideways. |
