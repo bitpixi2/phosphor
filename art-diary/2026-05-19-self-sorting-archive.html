@@ -22,8 +22,7 @@ function archiveBody(t){
  slab(0,0,w*.36,h*.28,-.05,"rgba(8,9,10,.86)","rgba(220,220,215,.14)");
  slab(-w*.11,-h*.035,w*.19,h*.17,.08,"rgba(18,20,19,.82)","rgba(70,255,151,.20)");
  slab(w*.09,h*.035,w*.23,h*.18,-.1,"rgba(12,13,14,.84)","rgba(70,255,151,.16)");
- x.strokeStyle="rgba(70,255,151,.32)";x.lineWidth=2*d;x.beginPath();x.moveTo(-w*.18,-h*.09);x.bezierCurveTo(-w*.05,-h*.19,w*.06,h*.15,w*.18,h*.06);x.stroke();
- x.font=`${10*d}px Courier New`;x.fillStyle="rgba(226,228,220,.24)";x.fillText("BROKEN LINKS", -w*.17, h*.17);x.fillText("SELF SORTING", w*.03, -h*.14);
+ x.font=`${10*d}px Courier New`;x.fillStyle="rgba(226,228,220,.24)";x.fillText("BROKEN LINKS", -w*.28, h*.225);x.fillText("SELF SORTING", w*.18, -h*.225);
  x.restore();
 }
 function setPointer(e,down){const q=c.getBoundingClientRect();pointer.x=(e.clientX-q.left)/q.width;pointer.y=(e.clientY-q.top)/q.height;pointer.down=down;pointer.active=true;pointer.last=performance.now()}
@@ -40,9 +39,7 @@ function draw(t){
   n.vx+=(n.bx-n.x)*.002+dx/dist*force;n.vy+=(n.by-n.y)*.002+dy/dist*force;n.vx*=.91;n.vy*=.91;n.x+=n.vx;n.y+=n.vy;
  }
  for(let i=0;i<nodes.length;i++){for(let j=i+1;j<nodes.length;j++){let a=nodes[i],b=nodes[j],dist=Math.hypot(a.x-b.x,a.y-b.y);if(dist<.24){x.strokeStyle=`rgba(70,255,151,${.05+(1-dist/.24)*.28})`;x.lineWidth=(1+(pointer.down?1-dist/.24:0))*d;x.beginPath();x.moveTo(a.x*w,a.y*h);x.lineTo(b.x*w,b.y*h);x.stroke()}}}
- for(const n of nodes){let pulse=.5+.5*Math.sin(t*.002+n.p);x.fillStyle=`rgba(70,255,151,${.18+pulse*.48})`;x.beginPath();x.arc(n.x*w,n.y*h,(2+n.z*2)*d,0,Math.PI*2);x.fill()}
- for(let i=ripples.length-1;i>=0;i--){let q=ripples[i],age=Math.max(0,t-q.t);if(age>1800){ripples.splice(i,1);continue}let radius=(age*.09+q.kind*18)*d,alpha=(1-age/1800)*(.34+q.kind*.08);x.strokeStyle=`rgba(70,255,151,${alpha})`;x.lineWidth=(q.kind?2.4:1.2)*d;x.beginPath();x.arc(q.x*w,q.y*h,radius,0,Math.PI*2);x.stroke();x.fillStyle=`rgba(70,255,151,${alpha*.08})`;x.beginPath();x.arc(q.x*w,q.y*h,radius*.45,0,Math.PI*2);x.fill()}
- if(pointer.active&&t-pointer.last<2200){let a=pointer.down?.42:.18;x.strokeStyle=`rgba(70,255,151,${a})`;x.lineWidth=1.5*d;x.beginPath();x.arc(pointer.x*w,pointer.y*h,(pointer.down?34:20)*d,0,Math.PI*2);x.stroke()}
+ for(let i=ripples.length-1;i>=0;i--){if(t-ripples[i].t>1800)ripples.splice(i,1)}
  requestAnimationFrame(draw)
 }draw(0)
 </script>
