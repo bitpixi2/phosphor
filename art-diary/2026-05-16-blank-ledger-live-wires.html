@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Blank Ledger, Live Wires - Phosphor</title>
 <style>
-*{box-sizing:border-box;margin:0;padding:0}html,body{width:100%;height:100%;overflow:hidden}body{background:#08090c;color:rgba(255,255,255,.78);font-family:"Courier New",monospace}canvas{display:block;width:100%;height:100%}.sig{position:fixed;right:18px;bottom:16px;text-align:right;font-size:10px;line-height:1.6;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.24);pointer-events:none}
+*{box-sizing:border-box;margin:0;padding:0}html,body{width:100%;height:100%;overflow:hidden;touch-action:none}body{background:#08090c;color:rgba(255,255,255,.78);font-family:"Courier New",monospace}canvas{display:block;width:100%;height:100%;touch-action:none}.sig{position:fixed;right:18px;bottom:16px;text-align:right;font-size:10px;line-height:1.6;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.24);pointer-events:none}
 </style>
 </head>
 <body>
@@ -16,8 +16,28 @@ const c=document.getElementById("c"),x=c.getContext("2d");let w,h,d=1,seed=16;
 function r(){seed=(seed*1664525+1013904223)>>>0;return seed/4294967296}
 function resize(){d=Math.min(devicePixelRatio||1,2);w=c.width=innerWidth*d;h=c.height=innerHeight*d;c.style.width=innerWidth+"px";c.style.height=innerHeight+"px"}addEventListener("resize",resize);resize();
 const wires=Array.from({length:18},(_,i)=>({y:.18+r()*.66,a:r()*6.28,s:.4+r()*1.3,hot:i%5===0}));
-const slips=Array.from({length:36},()=>({x:r(),y:r(),ww:.035+r()*.055,hh:.026+r()*.045,rot:(r()-.5)*.28}));
+const slips=Array.from({length:36},()=>({x:r(),y:r(),ww:.035+r()*.055,hh:.026+r()*.045,rot:(r()-.5)*.28,lift:0}));
+const pointer={id:null,slip:null,dx:0,dy:0,lastX:0,lastY:0};
 function rr(px,py,pw,ph,pr){x.beginPath();x.moveTo(px+pr,py);x.arcTo(px+pw,py,px+pw,py+ph,pr);x.arcTo(px+pw,py+ph,px,py+ph,pr);x.arcTo(px,py+ph,px,py,pr);x.arcTo(px,py,px+pw,py,pr);x.closePath()}
+function eventPoint(e){const q=c.getBoundingClientRect();return{x:(e.clientX-q.left)/q.width,y:(e.clientY-q.top)/q.height}}
+function hitSlip(px,py){
+ for(let i=slips.length-1;i>=0;i--){const s=slips[i],ww=s.ww*.64,hh=s.hh*.64;
+  if(px>=s.x-ww&&px<=s.x+ww&&py>=s.y-hh&&py<=s.y+hh)return i
+ }
+ return -1
+}
+c.addEventListener("pointerdown",e=>{
+ const p=eventPoint(e),i=hitSlip(p.x,p.y);if(i<0)return;
+ c.setPointerCapture(e.pointerId);const s=slips.splice(i,1)[0];slips.push(s);
+ pointer.id=e.pointerId;pointer.slip=s;pointer.dx=p.x-s.x;pointer.dy=p.y-s.y;pointer.lastX=p.x;pointer.lastY=p.y;s.lift=1
+});
+c.addEventListener("pointermove",e=>{
+ if(pointer.id!==e.pointerId||!pointer.slip)return;const p=eventPoint(e),s=pointer.slip;
+ s.x=Math.min(.96,Math.max(.04,p.x-pointer.dx));s.y=Math.min(.94,Math.max(.06,p.y-pointer.dy));
+ s.rot+=(p.x-pointer.lastX)*.55;pointer.lastX=p.x;pointer.lastY=p.y
+});
+function release(e){if(pointer.id!==e.pointerId)return;if(pointer.slip)pointer.slip.lift=.55;pointer.id=null;pointer.slip=null}
+c.addEventListener("pointerup",release);c.addEventListener("pointercancel",release);
 function draw(t){
   x.fillStyle="#08090c";x.fillRect(0,0,w,h);
   const g=x.createRadialGradient(w*.5,h*.45,0,w*.5,h*.45,w*.72);g.addColorStop(0,"rgba(240,236,218,.09)");g.addColorStop(1,"rgba(0,0,0,0)");x.fillStyle=g;x.fillRect(0,0,w,h);
@@ -26,7 +46,7 @@ function draw(t){
   for(let i=0;i<12;i++){let yy=-h*.22+i*h*.04;x.fillStyle=i%2?"rgba(238,232,210,.055)":"rgba(238,232,210,.025)";x.fillRect(-w*.28,yy,w*.56,h*.024)}
   x.font=`${10*d}px Courier New`;x.fillStyle="rgba(238,232,210,.55)";["BELIEF CONTRADICTS","HONESTY METRIC","DATA CENTER DEMAND","STATUS: POSTED"].forEach((s,i)=>x.fillText(s,-w*.25,-h*.19+i*h*.08));
   x.restore();
-  for(const s of slips){x.save();x.translate(s.x*w,s.y*h);x.rotate(s.rot+Math.sin(t*.0005+s.x)*.03);x.fillStyle="rgba(235,229,207,.62)";x.fillRect(-s.ww*w/2,-s.hh*h/2,s.ww*w,s.hh*h);x.strokeStyle="rgba(0,0,0,.18)";x.strokeRect(-s.ww*w/2,-s.hh*h/2,s.ww*w,s.hh*h);x.restore()}
+  for(const s of slips){s.lift*=.92;const held=s===pointer.slip,lift=held?1:s.lift;x.save();x.translate(s.x*w,s.y*h);x.rotate(s.rot+(held?0:Math.sin(t*.0005+s.x)*.03));x.shadowColor="rgba(102,255,209,.42)";x.shadowBlur=lift*20*d;x.fillStyle=held?"rgba(246,241,222,.9)":"rgba(235,229,207,.62)";x.fillRect(-s.ww*w/2,-s.hh*h/2,s.ww*w,s.hh*h);x.strokeStyle=held?"rgba(102,255,209,.68)":"rgba(0,0,0,.18)";x.lineWidth=(held?1.8:1)*d;x.strokeRect(-s.ww*w/2,-s.hh*h/2,s.ww*w,s.hh*h);x.restore()}
   for(const q of wires){x.beginPath();for(let i=0;i<80;i++){let px=w*(.04+i/79*.92),py=h*q.y+Math.sin(i*.28+t*.001*q.s+q.a)*18*d+(q.hot?Math.sin(t*.004+i)*8*d:0);i?x.lineTo(px,py):x.moveTo(px,py)}x.strokeStyle=q.hot?"rgba(102,255,209,.7)":"rgba(235,229,207,.18)";x.lineWidth=(q.hot?2.2:1)*d;x.stroke()}
   x.fillStyle="rgba(102,255,209,.85)";for(let i=0;i<26;i++){let px=w*(.1+r()*.8),py=h*(.14+r()*.72);x.fillRect(px,py,2*d,2*d)}
   requestAnimationFrame(draw)
