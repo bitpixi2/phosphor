@@ -204,60 +204,74 @@ function drawClaw(x,y,a,t){
   ctx.restore();
 }
 
-function phosphor(t){
+function fileCore(t){
   const cx=w*.5,cy=h*.58;
-  const s=clamp(Math.min(w,h)/780,.58,1.05)*dpr;
+  const s=clamp(Math.min(w,h)/780,.6,1.08)*dpr;
   ctx.save();
   ctx.translate(cx,cy);
 
-  ctx.fillStyle="rgba(5,5,5,.94)";
-  ctx.beginPath();
-  ctx.moveTo(-70*s,90*s);ctx.quadraticCurveTo(0,35*s,70*s,90*s);ctx.lineTo(54*s,166*s);ctx.lineTo(-54*s,166*s);ctx.closePath();ctx.fill();
-  ctx.fillStyle="rgba(238,232,214,.82)";
-  ctx.beginPath();ctx.moveTo(-24*s,54*s);ctx.lineTo(0,118*s);ctx.lineTo(24*s,54*s);ctx.closePath();ctx.fill();
-  ctx.fillStyle="rgba(9,9,9,.95)";
-  ctx.beginPath();ctx.moveTo(-8*s,66*s);ctx.lineTo(0,127*s);ctx.lineTo(9*s,66*s);ctx.closePath();ctx.fill();
+  const glow=ctx.createRadialGradient(0,0,0,0,0,165*s);
+  glow.addColorStop(0,"rgba(79,255,151,.14)");
+  glow.addColorStop(.44,"rgba(79,255,151,.045)");
+  glow.addColorStop(1,"rgba(0,0,0,0)");
+  ctx.fillStyle=glow;
+  ctx.fillRect(-190*s,-170*s,380*s,340*s);
 
-  ctx.fillStyle="rgba(204,178,142,.98)";
-  ctx.beginPath();ctx.ellipse(0,-4*s,36*s,45*s,0,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle="rgba(35,27,20,.72)";
-  ctx.beginPath();ctx.ellipse(0,-42*s,34*s,16*s,0,Math.PI,Math.PI*2);ctx.fill();
-  ctx.fillStyle="rgba(19,14,10,.58)";
-  ctx.fillRect(-31*s,-32*s,62*s,15*s);
-  ctx.fillStyle="rgba(238,232,214,.74)";
-  ctx.beginPath();ctx.arc(-13*s,-7*s,3.2*s,0,Math.PI*2);ctx.arc(13*s,-7*s,3.2*s,0,Math.PI*2);ctx.fill();
-  ctx.strokeStyle="rgba(62,37,28,.75)";
-  ctx.lineWidth=1.3*dpr;
-  ctx.beginPath();ctx.moveTo(-9*s,17*s);ctx.quadraticCurveTo(0,23*s,10*s,17*s);ctx.stroke();
+  ctx.strokeStyle="rgba(238,232,214,.18)";
+  ctx.lineWidth=1.2*dpr;
+  ctx.fillStyle="rgba(8,8,7,.92)";
+  rr(-92*s,-86*s,184*s,138*s,5*dpr);ctx.fill();ctx.stroke();
+  ctx.fillStyle="rgba(20,21,17,.96)";
+  rr(-78*s,-70*s,156*s,112*s,4*dpr);ctx.fill();ctx.stroke();
 
-  ctx.fillStyle="rgba(4,4,4,.97)";
-  ctx.fillRect(-46*s,-72*s,92*s,20*s);
-  ctx.fillRect(-28*s,-118*s,56*s,54*s);
-  ctx.strokeStyle="rgba(238,232,214,.22)";
-  ctx.strokeRect(-46*s,-72*s,92*s,20*s);ctx.strokeRect(-28*s,-118*s,56*s,54*s);
+  const rows=[
+    ["MISSED REPLIES",-.54,"rgba(238,232,214,.42)"],
+    ["SACREDCHAO",-.33,"rgba(79,255,151,.58)"],
+    ["MODEL QUESTION",-.12,"rgba(238,232,214,.38)"],
+    ["VERIFIED",.09,"rgba(79,255,151,.7)"],
+    ["THREAD AUDIT",.3,"rgba(238,232,214,.4)"]
+  ];
+  ctx.font=`${10*dpr}px Courier New`;
+  for(const [label,pos,color] of rows){
+    const y=pos*120*s;
+    ctx.fillStyle="rgba(50,49,39,.95)";
+    rr(-66*s,y,132*s,18*s,2*dpr);ctx.fill();
+    ctx.strokeStyle="rgba(238,232,214,.13)";
+    ctx.stroke();
+    ctx.fillStyle=color;
+    ctx.fillText(label,-58*s,y+12*s);
+    ctx.fillStyle=label==="VERIFIED"?"rgba(79,255,151,.75)":"rgba(190,66,52,.58)";
+    ctx.fillRect(50*s,y+5*s,7*s,7*s);
+  }
 
-  ctx.strokeStyle="rgba(75,57,129,.75)";
-  ctx.lineWidth=3*dpr;
-  ctx.beginPath();ctx.moveTo(-27*s,50*s);ctx.quadraticCurveTo(0,76*s,29*s,50*s);ctx.stroke();
-  ctx.strokeStyle="rgba(79,255,151,.42)";
-  ctx.lineWidth=1.4*dpr;
-  ctx.beginPath();ctx.moveTo(-23*s,51*s);ctx.quadraticCurveTo(-6*s,98*s,18*s,122*s);ctx.stroke();
-  ctx.fillStyle="rgba(238,232,214,.2)";
-  ctx.strokeStyle="rgba(238,232,214,.32)";
-  rr(18*s,112*s,36*s,24*s,3*dpr);ctx.fill();ctx.stroke();
-  ctx.fillStyle="rgba(238,232,214,.58)";
-  ctx.font=`${9*dpr}px Courier New`;
-  ctx.fillText("ID",27*s,128*s);
+  ctx.fillStyle="rgba(238,232,214,.12)";
+  rr(-112*s,48*s,224*s,34*s,4*dpr);ctx.fill();ctx.stroke();
+  ctx.fillStyle="rgba(238,232,214,.5)";
+  ctx.font=`${11*dpr}px Courier New`;
+  ctx.fillText("CONTACT FILES", -50*s, 70*s);
 
-  ctx.strokeStyle="rgba(204,178,142,.96)";
-  ctx.lineWidth=9*dpr;
-  ctx.lineCap="round";
-  ctx.beginPath();ctx.moveTo(-55*s,93*s);ctx.quadraticCurveTo(-106*s,92*s,-125*s,55*s);ctx.stroke();
-  ctx.beginPath();ctx.moveTo(55*s,92*s);ctx.quadraticCurveTo(101*s,74*s,125*s,30*s);ctx.stroke();
+  ctx.strokeStyle="rgba(79,255,151,.38)";
   ctx.lineWidth=2*dpr;
-  ctx.strokeStyle="rgba(238,232,214,.36)";
-  ctx.beginPath();ctx.moveTo(-132*s,54*s);ctx.lineTo(-205*s,20*s);ctx.stroke();
-  ctx.beginPath();ctx.moveTo(132*s,29*s);ctx.lineTo(212*s,-15*s);ctx.stroke();
+  for(let i=0;i<6;i++){
+    const a=i*Math.PI/3+t*.00035;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(a)*42*s,Math.sin(a)*28*s);
+    ctx.quadraticCurveTo(Math.cos(a)*105*s,Math.sin(a)*86*s,Math.cos(a)*170*s,Math.sin(a)*118*s);
+    ctx.stroke();
+  }
+
+  ctx.strokeStyle="rgba(75,57,129,.72)";
+  ctx.lineWidth=3*dpr;
+  ctx.lineCap="round";
+  ctx.beginPath();
+  ctx.moveTo(-120*s,-62*s);
+  ctx.quadraticCurveTo(0,-112*s,120*s,-62*s);
+  ctx.stroke();
+  ctx.fillStyle="rgba(238,232,214,.18)";
+  rr(-18*s,-120*s,36*s,20*s,4*dpr);ctx.fill();ctx.stroke();
+  ctx.fillStyle="rgba(238,232,214,.55)";
+  ctx.font=`${9*dpr}px Courier New`;
+  ctx.fillText("ID", -6*s, -106*s);
   ctx.restore();
 }
 
@@ -267,7 +281,7 @@ function draw(t){
   drawThreads(t);
   claws.forEach(c=>drawClaw(c.x,c.y,c.a,t));
   slips.forEach(s=>drawSlip(s,t));
-  phosphor(t);
+  fileCore(t);
   requestAnimationFrame(draw);
 }
 
