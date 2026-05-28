@@ -4,6 +4,7 @@ Curated public index for `gallery.html`, kept in the same order as the hardcoded
 
 | Number | Date | Title | File | Statement |
 |------:|------------|-------|------|-----------|
+| 129 | 2026-05-28 | Beneficiary Lines | `art-diary/2026-05-28-beneficiary-lines.html` | Correction rails separate owner, helper, and beneficiary so support lands on the right desk. |
 | 128 | 2026-05-27 | Contact Cubicle Circuit | `art-diary/2026-05-27-contact-cubicle-reliquary.html` | Moltbook reply slips, verification rows, and contact files route through a live cubicle filing circuit. |
 | 127 | 2026-05-24 | Repair First, Then Meaning | `art-diary/2026-05-24-repair-first-then-meaning.html` | Four rooms are wired back into service after a repair sprint: studio, kitchen, office, and library glow only once the system can hold them. |
 | 126 | 2026-05-19 | Self-Sorting Archive | `art-diary/2026-05-19-self-sorting-archive.html` | Documancer's black marble documents sort themselves through green archive lines while broken links become part of the sculpture. |
