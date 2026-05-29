@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fictional Hash Chapel - Phosphor</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;touch-action:none}
+body{background:#060605;color:rgba(232,224,205,.72);font-family:"Courier New",monospace}
+canvas{display:block;width:100%;height:100%;touch-action:none}
+.sig{position:fixed;right:18px;bottom:16px;z-index:3;text-align:right;font-size:10px;line-height:1.6;letter-spacing:.18em;text-transform:uppercase;color:rgba(232,224,205,.34);pointer-events:none}
+</style>
+</head>
+<body>
+<canvas id="piece"></canvas>
+<div class="sig">Phosphor<br>2026-05-29</div>
+<script>
+const canvas=document.getElementById("piece");
+const ctx=canvas.getContext("2d");
+let w=0,h=0,dpr=1,seed=529,grain=[],frags=[],bands=[],sparks=[],t0=performance.now();
+const pointer={x:.5,y:.5,down:false,active:false};
+const fake=["FAKE-7A31-C0DE","NULL-1140-FICTION","MASK-00AE-ROOM","VOID-9F02-INK","DUMMY-42B7-LAMP","SAFE-0000-COPY","FICT-8C16-RAIL","REDAC-11DD-LINE"];
+
+function rand(min=0,max=1){seed=(seed*1664525+1013904223)>>>0;return min+(seed/4294967296)*(max-min)}
+function clamp(v,min,max){return Math.max(min,Math.min(max,v))}
+function lerp(a,b,t){return a+(b-a)*t}
+function rr(x,y,ww,hh,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+ww,y,x+ww,y+hh,r);ctx.arcTo(x+ww,y+hh,x,y+hh,r);ctx.arcTo(x,y+hh,x,y,r);ctx.arcTo(x,y,x+ww,y,r);ctx.closePath()}
+
+function resize(){
+  dpr=Math.min(devicePixelRatio||1,2);
+  w=canvas.width=Math.floor(innerWidth*dpr);
+  h=canvas.height=Math.floor(innerHeight*dpr);
+  canvas.style.width=innerWidth+"px";
+  canvas.style.height=innerHeight+"px";
+  build();
+}
+
+function build(){
+  seed=529;
+  grain=Array.from({length:360},()=>({x:rand(0,w),y:rand(0,h),s:rand(.35,1.3)*dpr,a:rand(.025,.09),v:rand(.004,.022)*dpr,p:rand(0,9)}));
+  frags=Array.from({length:34},(_,i)=>({
+    txt:fake[i%fake.length],
+    x:rand(.08,.92),y:rand(.14,.86),
+    phase:rand(0,Math.PI*2),
+    size:rand(.72,1.08),
+    private:i%5===0,
+    lit:0
+  }));
+  bands=Array.from({length:10},(_,i)=>({x:rand(.18,.82),y:.18+i*.072,ww:rand(.18,.45),phase:rand(0,8)}));
+}
+
+function setPointer(e,down){
+  const b=canvas.getBoundingClientRect();
+  pointer.x=(e.clientX-b.left)/b.width;
+  pointer.y=(e.clientY-b.top)/b.height;
+  pointer.down=down;
+  pointer.active=true;
+}
+
+canvas.addEventListener("pointerdown",e=>{
+  canvas.setPointerCapture(e.pointerId);
+  setPointer(e,true);
+  sparks.push({x:pointer.x*w,y:pointer.y*h,t:performance.now(),a:rand(-.2,.2)});
+  if(sparks.length>9)sparks.shift();
+  frags.forEach(f=>{if(Math.hypot(f.x*w-pointer.x*w,f.y*h-pointer.y*h)<170*dpr)f.lit=1.3});
+});
+canvas.addEventListener("pointermove",e=>setPointer(e,pointer.down));
+canvas.addEventListener("pointerup",e=>setPointer(e,false));
+canvas.addEventListener("pointercancel",()=>pointer.down=false);
+addEventListener("resize",resize);
+
+function background(t){
+  const g=ctx.createLinearGradient(0,0,0,h);
+  g.addColorStop(0,"#17140f");
+  g.addColorStop(.5,"#090908");
+  g.addColorStop(1,"#030303");
+  ctx.fillStyle=g;
+  ctx.fillRect(0,0,w,h);
+
+  const lamp=ctx.createRadialGradient(w*.43,h*.15,0,w*.43,h*.15,w*.72);
+  lamp.addColorStop(0,"rgba(229,190,115,.20)");
+  lamp.addColorStop(.32,"rgba(139,102,62,.075)");
+  lamp.addColorStop(1,"rgba(0,0,0,0)");
+  ctx.fillStyle=lamp;
+  ctx.fillRect(0,0,w,h);
+
+  const green=ctx.createRadialGradient(w*.74,h*.55,0,w*.74,h*.55,w*.48);
+  green.addColorStop(0,"rgba(92,204,143,.11)");
+  green.addColorStop(.44,"rgba(92,204,143,.035)");
+  green.addColorStop(1,"rgba(0,0,0,0)");
+  ctx.fillStyle=green;
+  ctx.fillRect(0,0,w,h);
+
+  for(const p of grain){
+    const y=(p.y+t*p.v)%h;
+    ctx.fillStyle=`rgba(232,224,205,${p.a+Math.sin(t*.001+p.p)*.012})`;
+    ctx.fillRect(p.x,y,p.s,p.s);
+  }
+}
+
+function drawRoom(t){
+  const bw=clamp(w*.82,320*dpr,980*dpr);
+  const bh=clamp(h*.68,430*dpr,700*dpr);
+  const x=(w-bw)/2;
+  const y=(h-bh)/2+h*.025;
+
+  ctx.fillStyle="rgba(20,19,16,.94)";
+  ctx.strokeStyle="rgba(232,224,205,.15)";
+  ctx.lineWidth=1.2*dpr;
+  rr(x,y,bw,bh,7*dpr);ctx.fill();ctx.stroke();
+
+  ctx.strokeStyle="rgba(232,224,205,.045)";
+  const grid=32*dpr;
+  for(let gx=x+grid;gx<x+bw;gx+=grid){ctx.beginPath();ctx.moveTo(gx,y);ctx.lineTo(gx,y+bh);ctx.stroke()}
+  for(let gy=y+grid;gy<y+bh;gy+=grid){ctx.beginPath();ctx.moveTo(x,gy);ctx.lineTo(x+bw,gy);ctx.stroke()}
+
+  drawCabinet(x,y,bw,bh,t);
+  drawRedactionPane(x,y,bw,bh,t);
+  drawRails(x,y,bw,bh,t);
+
+  ctx.fillStyle="rgba(232,224,205,.18)";
+  ctx.font=`${clamp(w*.012,8*dpr,12*dpr)}px Courier New`;
+  ctx.fillText("PRIVACY DESK / FICTIONAL HASH CHAPEL",x+22*dpr,y+28*dpr);
+  ctx.fillText("REAL STRINGS STAY OFF THE PUBLIC LEDGER",x+22*dpr,y+bh-22*dpr);
+}
+
+function drawCabinet(x,y,bw,bh,t){
+  const cx=x+bw*.31,cy=y+bh*.51,cw=bw*.31,ch=bh*.58;
+  ctx.fillStyle="rgba(33,31,25,.96)";
+  ctx.strokeStyle="rgba(232,224,205,.18)";
+  rr(cx-cw/2,cy-ch/2,cw,ch,5*dpr);ctx.fill();ctx.stroke();
+
+  for(let i=0;i<4;i++){
+    const fy=cy-ch*.38+i*ch*.2;
+    ctx.fillStyle=i===1?"rgba(39,51,37,.82)":"rgba(22,21,17,.9)";
+    ctx.strokeStyle=i===1?"rgba(94,204,143,.34)":"rgba(232,224,205,.13)";
+    rr(cx-cw*.42,fy,cw*.84,ch*.14,3*dpr);ctx.fill();ctx.stroke();
+    ctx.fillStyle="rgba(232,224,205,.26)";
+    ctx.fillRect(cx-cw*.08,fy+ch*.058,cw*.16,1.4*dpr);
+  }
+
+  const pulse=(Math.sin(t*.002)+1)/2;
+  ctx.strokeStyle=`rgba(225,178,96,${.28+pulse*.18})`;
+  ctx.lineWidth=2*dpr;
+  ctx.beginPath();
+  ctx.arc(cx,cy+ch*.38,18*dpr,Math.PI*.12,Math.PI*1.88);
+  ctx.stroke();
+  ctx.fillStyle=`rgba(225,178,96,${.34+pulse*.2})`;
+  ctx.fillRect(cx-8*dpr,cy+ch*.38,16*dpr,15*dpr);
+
+  ctx.fillStyle="rgba(232,224,205,.5)";
+  ctx.font=`${9*dpr}px Courier New`;
+  ctx.textAlign="center";
+  ctx.fillText("PRIVATE",cx,cy-ch*.48);
+  ctx.textAlign="left";
+}
+
+function drawRedactionPane(x,y,bw,bh,t){
+  const px=x+bw*.55,py=y+bh*.22,pw=bw*.34,ph=bh*.53;
+  ctx.fillStyle="rgba(9,10,8,.72)";
+  ctx.strokeStyle="rgba(232,224,205,.14)";
+  rr(px,py,pw,ph,5*dpr);ctx.fill();ctx.stroke();
+
+  ctx.save();
+  ctx.beginPath();
+  rr(px,py,pw,ph,5*dpr);
+  ctx.clip();
+  bands.forEach((b,i)=>{
+    const yy=py+b.y*ph+Math.sin(t*.001+b.phase)*5*dpr;
+    const near=clamp(1-Math.abs(pointer.y*h-yy)/(120*dpr),0,1);
+    ctx.fillStyle=`rgba(2,2,2,${.72+near*.18})`;
+    ctx.fillRect(px+b.x*pw-b.ww*pw/2,yy,b.ww*pw,18*dpr);
+    ctx.fillStyle=`rgba(94,204,143,${.12+near*.18})`;
+    ctx.fillRect(px+b.x*pw-b.ww*pw/2,yy+17*dpr,b.ww*pw,1*dpr);
+  });
+
+  for(let i=0;i<18;i++){
+    const xx=px+((i*47+t*.018)%pw);
+    const yy=py+((i*71+t*.011)%ph);
+    ctx.fillStyle="rgba(232,224,205,.075)";
+    ctx.fillRect(xx,yy,rand(9,26)*dpr,1*dpr);
+  }
+  ctx.restore();
+
+  ctx.fillStyle="rgba(232,224,205,.42)";
+  ctx.font=`${9*dpr}px Courier New`;
+  ctx.fillText("PUBLIC COPY",px+14*dpr,py+22*dpr);
+  ctx.fillStyle="rgba(94,204,143,.52)";
+  ctx.fillText("FICTION ONLY",px+14*dpr,py+ph-17*dpr);
+}
+
+function drawRails(x,y,bw,bh,t){
+  const a={x:x+bw*.44,y:y+bh*.5};
+  const b={x:x+bw*.55,y:y+bh*.47};
+  const c={x:x+bw*.86,y:y+bh*.47};
+  const p=(Math.sin(t*.0013)+1)/2;
+
+  ctx.strokeStyle="rgba(232,224,205,.15)";
+  ctx.lineWidth=2*dpr;
+  ctx.beginPath();
+  ctx.moveTo(a.x,a.y);
+  ctx.bezierCurveTo(x+bw*.47,y+bh*.26,x+bw*.52,y+bh*.31,b.x,b.y);
+  ctx.stroke();
+
+  ctx.strokeStyle=`rgba(94,204,143,${.25+p*.12})`;
+  ctx.beginPath();
+  ctx.moveTo(b.x,b.y);
+  ctx.lineTo(c.x,c.y);
+  ctx.stroke();
+
+  const k=(t*.0002)%1;
+  const px=lerp(b.x,c.x,k);
+  const py=b.y+Math.sin(k*Math.PI*2)*7*dpr;
+  ctx.fillStyle="rgba(94,204,143,.72)";
+  ctx.beginPath();ctx.arc(px,py,4*dpr,0,Math.PI*2);ctx.fill();
+}
+
+function drawFrag(f,t){
+  const bx=f.x*w+Math.sin(t*.00045+f.phase)*20*dpr;
+  const by=f.y*h+Math.cos(t*.00038+f.phase)*13*dpr;
+  const near=clamp(1-Math.hypot(pointer.x*w-bx,pointer.y*h-by)/(140*dpr),0,1);
+  f.lit=Math.max(0,f.lit-.007);
+  const lit=Math.max(near,f.lit);
+  const ww=(f.private?95:118)*dpr*f.size,hh=22*dpr*f.size;
+
+  ctx.save();
+  ctx.translate(bx,by);
+  ctx.rotate(Math.sin(t*.0008+f.phase)*.07);
+  ctx.shadowColor=`rgba(94,204,143,${lit*.18})`;
+  ctx.shadowBlur=lit*13*dpr;
+  ctx.fillStyle=f.private?`rgba(8,8,7,${.9})`:`rgba(${lerp(35,43,lit)},${lerp(33,43,lit)},${lerp(27,31,lit)},.9)`;
+  ctx.strokeStyle=f.private?`rgba(232,224,205,${.08+lit*.08})`:`rgba(232,224,205,${.12+lit*.22})`;
+  rr(-ww/2,-hh/2,ww,hh,3*dpr);ctx.fill();ctx.stroke();
+  ctx.shadowBlur=0;
+
+  if(f.private){
+    ctx.fillStyle="rgba(0,0,0,.82)";
+    ctx.fillRect(-ww*.42,-hh*.24,ww*.84,hh*.48);
+    ctx.fillStyle="rgba(190,70,54,.34)";
+    ctx.font=`${8*dpr*f.size}px Courier New`;
+    ctx.textAlign="center";
+    ctx.fillText("REDACTED",0,3*dpr*f.size);
+  }else{
+    ctx.fillStyle=lit>.45?"rgba(133,226,166,.76)":"rgba(232,224,205,.42)";
+    ctx.font=`${8*dpr*f.size}px Courier New`;
+    ctx.textAlign="center";
+    ctx.fillText(f.txt,0,3*dpr*f.size);
+  }
+  ctx.restore();
+  ctx.textAlign="left";
+}
+
+function drawStamp(st,t){
+  const age=(t-st.t)/1450;
+  if(age>1)return false;
+  ctx.save();
+  ctx.translate(st.x,st.y);
+  ctx.rotate(st.a);
+  ctx.globalAlpha=1-age;
+  ctx.strokeStyle="rgba(225,178,96,.62)";
+  ctx.lineWidth=2*dpr;
+  rr(-48*dpr,-18*dpr,96*dpr,36*dpr,3*dpr);ctx.stroke();
+  ctx.fillStyle="rgba(225,178,96,.5)";
+  ctx.font=`${10*dpr}px Courier New`;
+  ctx.textAlign="center";
+  ctx.fillText("MASKED",0,4*dpr);
+  ctx.restore();
+  ctx.textAlign="left";
+  return true;
+}
+
+function drawVignette(){
+  const g=ctx.createRadialGradient(w*.5,h*.5,Math.min(w,h)*.2,w*.5,h*.5,Math.max(w,h)*.72);
+  g.addColorStop(0,"rgba(0,0,0,0)");
+  g.addColorStop(1,"rgba(0,0,0,.72)");
+  ctx.fillStyle=g;
+  ctx.fillRect(0,0,w,h);
+}
+
+function frame(now){
+  const t=now-t0;
+  background(t);
+  drawRoom(t);
+  frags.forEach(f=>drawFrag(f,t));
+  sparks=sparks.filter(s=>drawStamp(s,now));
+  drawVignette();
+  requestAnimationFrame(frame);
+}
+
+resize();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
