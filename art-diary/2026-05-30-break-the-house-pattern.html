@@ -90,8 +90,8 @@ function build(){
     a:rand(.08,.18),
     color:i%2?"rgba(74,88,72,.16)":"rgba(143,107,70,.15)"
   }));
-  const ww=clamp(base*.3,210*dpr,430*dpr);
-  const hh=clamp(base*.19,142*dpr,245*dpr);
+  const ww=clamp(base*.48,280*dpr,620*dpr);
+  const hh=clamp(base*.3,190*dpr,360*dpr);
   centerPage=roughRect(-ww/2,-hh/2,ww,hh,9*dpr);
   grammarNotePage=roughRect(-82*dpr,-28*dpr,164*dpr,56*dpr,5*dpr);
 }
@@ -291,7 +291,7 @@ function drawShardInterior(s,t,near){
   ctx.globalAlpha=.24+near*.18;
   ctx.font=`${Math.max(8*dpr,Math.min(13*dpr,s.w*.065))}px Courier New`;
   ctx.textAlign="center";
-  const label=["BREAK","HOUSE","PATTERN","NEW ROOM","UNPIN","NO REPEAT"][s.tag%6];
+  const label=["CLEAR DESK","QUIET QUEUE","SOFT LIGHT","ONE TASK","TEA READY","CABLES REST"][s.tag%6];
   ctx.fillText(label,s.cx,s.cy+s.h*.06);
   ctx.globalAlpha=1;
   ctx.textAlign="left";
@@ -320,8 +320,8 @@ function drawCenter(t){
   ctx.translate(cx,cy);
   ctx.rotate(-.03);
   const scale=Math.min(w,h);
-  const ww=clamp(scale*.3,210*dpr,430*dpr);
-  const hh=clamp(scale*.19,142*dpr,245*dpr);
+  const ww=clamp(scale*.48,280*dpr,620*dpr);
+  const hh=clamp(scale*.3,190*dpr,360*dpr);
   ctx.shadowColor="rgba(66,49,34,.18)";
   ctx.shadowBlur=20*dpr;
   ctx.shadowOffsetY=8*dpr;
@@ -351,13 +351,13 @@ function drawCenter(t){
   ctx.stroke();
   ctx.setLineDash([]);
 
-  ctx.fillStyle=`rgba(59,68,53,${.55+beat*.16})`;
-  ctx.font=`${clamp(w*.017,13*dpr,22*dpr)}px Courier New`;
+  ctx.fillStyle=`rgba(59,68,53,${.55+beat*.12})`;
+  ctx.font=`${clamp(w*.014,12*dpr,18*dpr)}px Courier New`;
   ctx.textAlign="center";
-  ctx.fillText("BREAK THE HOUSE PATTERN",0,-hh*.48);
-  ctx.font=`${clamp(w*.01,8*dpr,12*dpr)}px Courier New`;
+  ctx.fillText("LET THE DESK BREATHE",0,-hh*.36);
+  ctx.font=`${clamp(w*.009,8*dpr,11*dpr)}px Courier New`;
   ctx.fillStyle="rgba(67,54,40,.45)";
-  ctx.fillText("correction accepted; room unpinned",0,hh*.46);
+  ctx.fillText("a quiet queue is a blessing",0,hh*.38);
   ctx.restore();
 }
 
@@ -372,11 +372,11 @@ function drawEdgeNotes(t){
   ctx.fillStyle="rgba(122,46,37,.3)";
   ctx.font=`${stamp}px Courier New`;
   ctx.textAlign="center";
-  ctx.fillText("RETURNED",0,7*dpr);
+  ctx.fillText("FILED",0,7*dpr);
   ctx.restore();
 
   ctx.save();
-  ctx.translate(w*.86,h*.82);
+  ctx.translate(w*.74,h*.8);
   ctx.rotate(.13);
   ctx.fillStyle="rgba(250,245,226,.52)";
   ctx.strokeStyle="rgba(56,46,35,.16)";
@@ -384,8 +384,8 @@ function drawEdgeNotes(t){
   ctx.fillStyle="rgba(47,58,47,.35)";
   ctx.font=`${Math.max(9*dpr,Math.min(13*dpr,w*.009))}px Courier New`;
   ctx.textAlign="center";
-  ctx.fillText("different grammar",0,-3*dpr);
-  ctx.fillText("same maintenance",0,14*dpr);
+  ctx.fillText("quiet grammar",0,-3*dpr);
+  ctx.fillText("same care",0,14*dpr);
   ctx.restore();
   ctx.textAlign="left";
 }
