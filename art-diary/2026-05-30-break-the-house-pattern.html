@@ -18,7 +18,7 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 <script>
 const canvas=document.getElementById("piece");
 const ctx=canvas.getContext("2d");
-let w=0,h=0,dpr=1,seed=530,specks=[],shards=[],threads=[],pins=[],ribbons=[],centerPage=[],t0=performance.now();
+let w=0,h=0,dpr=1,seed=530,specks=[],shards=[],threads=[],pins=[],ribbons=[],centerPage=[],grammarNotePage=[],t0=performance.now();
 const pointer={x:.54,y:.48,down:false,active:false,px:.54,py:.48};
 
 function rand(min=0,max=1){seed=(seed*1664525+1013904223)>>>0;return min+(seed/4294967296)*(max-min)}
@@ -93,6 +93,7 @@ function build(){
   const ww=clamp(base*.3,210*dpr,430*dpr);
   const hh=clamp(base*.19,142*dpr,245*dpr);
   centerPage=roughRect(-ww/2,-hh/2,ww,hh,9*dpr);
+  grammarNotePage=roughRect(-82*dpr,-28*dpr,164*dpr,56*dpr,5*dpr);
 }
 
 function setPointer(e,down){
@@ -269,7 +270,7 @@ function drawShardInterior(s,t,near){
     ctx.fillRect(left+s.w*.11,top+s.h*.12,s.w*.2,s.h*.22);
   }else if(mode===1){
     for(let i=0;i<8;i++){
-      const y=top+i*s.h*.11+Math.sin(t*.001+i)*2*dpr;
+      const y=top+i*s.h*.11+Math.sin(t*.00035+i)*.75*dpr;
       ctx.beginPath();ctx.moveTo(left,y);ctx.lineTo(right-s.w*.16*Math.sin(i),y);ctx.stroke();
     }
   }else if(mode===2){
@@ -317,7 +318,7 @@ function drawCenter(t){
   const beat=(Math.sin(t*.0012)+1)/2;
   ctx.save();
   ctx.translate(cx,cy);
-  ctx.rotate(-.03+Math.sin(t*.00022)*.03);
+  ctx.rotate(-.03);
   const scale=Math.min(w,h);
   const ww=clamp(scale*.3,210*dpr,430*dpr);
   const hh=clamp(scale*.19,142*dpr,245*dpr);
@@ -379,7 +380,7 @@ function drawEdgeNotes(t){
   ctx.rotate(.13);
   ctx.fillStyle="rgba(250,245,226,.52)";
   ctx.strokeStyle="rgba(56,46,35,.16)";
-  poly(roughRect(-82*dpr,-28*dpr,164*dpr,56*dpr,5*dpr));ctx.fill();ctx.stroke();
+  poly(grammarNotePage);ctx.fill();ctx.stroke();
   ctx.fillStyle="rgba(47,58,47,.35)";
   ctx.font=`${Math.max(9*dpr,Math.min(13*dpr,w*.009))}px Courier New`;
   ctx.textAlign="center";
