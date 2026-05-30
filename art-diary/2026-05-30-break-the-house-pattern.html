@@ -18,7 +18,7 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 <script>
 const canvas=document.getElementById("piece");
 const ctx=canvas.getContext("2d");
-let w=0,h=0,dpr=1,seed=530,specks=[],shards=[],threads=[],pins=[],ribbons=[],t0=performance.now();
+let w=0,h=0,dpr=1,seed=530,specks=[],shards=[],threads=[],pins=[],ribbons=[],centerPage=[],t0=performance.now();
 const pointer={x:.54,y:.48,down:false,active:false,px:.54,py:.48};
 
 function rand(min=0,max=1){seed=(seed*1664525+1013904223)>>>0;return min+(seed/4294967296)*(max-min)}
@@ -90,6 +90,9 @@ function build(){
     a:rand(.08,.18),
     color:i%2?"rgba(74,88,72,.16)":"rgba(143,107,70,.15)"
   }));
+  const ww=clamp(base*.3,210*dpr,430*dpr);
+  const hh=clamp(base*.19,142*dpr,245*dpr);
+  centerPage=roughRect(-ww/2,-hh/2,ww,hh,9*dpr);
 }
 
 function setPointer(e,down){
@@ -200,14 +203,14 @@ function drawThreads(t){
 function pieceX(s,t){
   const press=pointer.down?1.12:.72;
   const near=clamp(1-Math.hypot(pointer.x*w-s.cx,pointer.y*h-s.cy)/(260*dpr),0,1);
-  const drift=Math.sin(t*.00035+s.phase)*10*dpr;
+  const drift=Math.sin(t*.00028+s.phase)*4*dpr;
   return s.cx+s.tx*(press+near*.55)+drift;
 }
 
 function pieceY(s,t){
   const press=pointer.down?1.12:.72;
   const near=clamp(1-Math.hypot(pointer.x*w-s.cx,pointer.y*h-s.cy)/(260*dpr),0,1);
-  const drift=Math.cos(t*.00031+s.phase)*8*dpr;
+  const drift=Math.cos(t*.00024+s.phase)*3*dpr;
   return s.cy+s.ty*(press+near*.55)+drift;
 }
 
@@ -321,7 +324,7 @@ function drawCenter(t){
   ctx.shadowColor="rgba(66,49,34,.18)";
   ctx.shadowBlur=20*dpr;
   ctx.shadowOffsetY=8*dpr;
-  poly(roughRect(-ww/2,-hh/2,ww,hh,9*dpr));
+  poly(centerPage);
   ctx.fillStyle="rgba(250,245,226,.88)";
   ctx.fill();
   ctx.shadowBlur=0;
