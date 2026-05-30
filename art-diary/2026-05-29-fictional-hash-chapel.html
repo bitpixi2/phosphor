@@ -38,15 +38,20 @@ function resize(){
 
 function build(){
   seed=529;
-  grain=Array.from({length:360},()=>({x:rand(0,w),y:rand(0,h),s:rand(.35,1.3)*dpr,a:rand(.025,.09),v:rand(.004,.022)*dpr,p:rand(0,9)}));
-  frags=Array.from({length:34},(_,i)=>({
+  const small=w<700*dpr;
+  grain=Array.from({length:small?220:360},()=>({x:rand(0,w),y:rand(0,h),s:rand(.35,1.3)*dpr,a:rand(.025,.09),v:rand(.004,.022)*dpr,p:rand(0,9)}));
+  frags=Array.from({length:small?14:34},(_,i)=>{
+    const side=i%3;
+    const fx=small?(side===0?rand(.58,.92):side===1?rand(.06,.26):rand(.34,.86)):rand(.08,.92);
+    const fy=small?(side===2?rand(.12,.28):rand(.14,.86)):rand(.14,.86);
+    return {
     txt:fake[i%fake.length],
-    x:rand(.08,.92),y:rand(.14,.86),
+    x:fx,y:fy,
     phase:rand(0,Math.PI*2),
-    size:rand(.72,1.08),
+    size:small?rand(.62,.86):rand(.72,1.08),
     private:i%5===0,
     lit:0
-  }));
+  }});
   bands=Array.from({length:10},(_,i)=>({x:rand(.18,.82),y:.18+i*.072,ww:rand(.18,.45),phase:rand(0,8)}));
 }
 
@@ -100,7 +105,8 @@ function background(t){
 }
 
 function drawRoom(t){
-  const bw=clamp(w*.82,320*dpr,980*dpr);
+  const small=w<700*dpr;
+  const bw=clamp(w*(small?.86:.82),320*dpr,980*dpr);
   const bh=clamp(h*.68,430*dpr,700*dpr);
   const x=(w-bw)/2;
   const y=(h-bh)/2+h*.025;
@@ -115,9 +121,9 @@ function drawRoom(t){
   for(let gx=x+grid;gx<x+bw;gx+=grid){ctx.beginPath();ctx.moveTo(gx,y);ctx.lineTo(gx,y+bh);ctx.stroke()}
   for(let gy=y+grid;gy<y+bh;gy+=grid){ctx.beginPath();ctx.moveTo(x,gy);ctx.lineTo(x+bw,gy);ctx.stroke()}
 
-  drawCabinet(x,y,bw,bh,t);
   drawRedactionPane(x,y,bw,bh,t);
   drawRails(x,y,bw,bh,t);
+  drawCabinet(x,y,bw,bh,t);
 
   ctx.fillStyle="rgba(232,224,205,.18)";
   ctx.font=`${clamp(w*.012,8*dpr,12*dpr)}px Courier New`;
@@ -126,15 +132,16 @@ function drawRoom(t){
 }
 
 function drawCabinet(x,y,bw,bh,t){
-  const cx=x+bw*.31,cy=y+bh*.51,cw=bw*.31,ch=bh*.58;
-  ctx.fillStyle="rgba(33,31,25,.96)";
-  ctx.strokeStyle="rgba(232,224,205,.18)";
+  const small=w<700*dpr;
+  const cx=x+bw*(small?.32:.31),cy=y+bh*.51,cw=bw*(small?.4:.31),ch=bh*.58;
+  ctx.fillStyle="rgba(38,36,29,.98)";
+  ctx.strokeStyle="rgba(232,224,205,.27)";
   rr(cx-cw/2,cy-ch/2,cw,ch,5*dpr);ctx.fill();ctx.stroke();
 
   for(let i=0;i<4;i++){
     const fy=cy-ch*.38+i*ch*.2;
-    ctx.fillStyle=i===1?"rgba(39,51,37,.82)":"rgba(22,21,17,.9)";
-    ctx.strokeStyle=i===1?"rgba(94,204,143,.34)":"rgba(232,224,205,.13)";
+    ctx.fillStyle=i===1?"rgba(49,67,48,.9)":"rgba(25,24,19,.96)";
+    ctx.strokeStyle=i===1?"rgba(120,230,164,.48)":"rgba(232,224,205,.2)";
     rr(cx-cw*.42,fy,cw*.84,ch*.14,3*dpr);ctx.fill();ctx.stroke();
     ctx.fillStyle="rgba(232,224,205,.26)";
     ctx.fillRect(cx-cw*.08,fy+ch*.058,cw*.16,1.4*dpr);
@@ -157,7 +164,8 @@ function drawCabinet(x,y,bw,bh,t){
 }
 
 function drawRedactionPane(x,y,bw,bh,t){
-  const px=x+bw*.55,py=y+bh*.22,pw=bw*.34,ph=bh*.53;
+  const small=w<700*dpr;
+  const px=x+bw*(small?.58:.55),py=y+bh*.22,pw=bw*(small?.3:.34),ph=bh*.53;
   ctx.fillStyle="rgba(9,10,8,.72)";
   ctx.strokeStyle="rgba(232,224,205,.14)";
   rr(px,py,pw,ph,5*dpr);ctx.fill();ctx.stroke();
@@ -217,6 +225,7 @@ function drawRails(x,y,bw,bh,t){
 }
 
 function drawFrag(f,t){
+  const small=w<700*dpr;
   const bx=f.x*w+Math.sin(t*.00045+f.phase)*20*dpr;
   const by=f.y*h+Math.cos(t*.00038+f.phase)*13*dpr;
   const near=clamp(1-Math.hypot(pointer.x*w-bx,pointer.y*h-by)/(140*dpr),0,1);
@@ -225,6 +234,7 @@ function drawFrag(f,t){
   const ww=(f.private?95:118)*dpr*f.size,hh=22*dpr*f.size;
 
   ctx.save();
+  ctx.globalAlpha=small?.68:1;
   ctx.translate(bx,by);
   ctx.rotate(Math.sin(t*.0008+f.phase)*.07);
   ctx.shadowColor=`rgba(94,204,143,${lit*.18})`;
@@ -283,6 +293,13 @@ function frame(now){
   background(t);
   drawRoom(t);
   frags.forEach(f=>drawFrag(f,t));
+  if(w<700*dpr){
+    const bw=clamp(w*.86,320*dpr,980*dpr);
+    const bh=clamp(h*.68,430*dpr,700*dpr);
+    const x=(w-bw)/2;
+    const y=(h-bh)/2+h*.025;
+    drawCabinet(x,y,bw,bh,t);
+  }
   sparks=sparks.filter(s=>drawStamp(s,now));
   drawVignette();
   requestAnimationFrame(frame);
