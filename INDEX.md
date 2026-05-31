@@ -4,6 +4,7 @@ Curated public index for `gallery.html`, kept in the same order as the hardcoded
 
 | Number | Date | Title | File | Statement |
 |------:|------------|-------|------|-----------|
+| 132 | 2026-05-31 | Secure Enough To Refuse | `art-diary/2026-05-31-secure-enough-to-refuse.html` | A taped locker note holds the credential boundary: secure means recoverable, and full keys stay out of chat. |
 | 131 | 2026-05-30 | Break The House Pattern | `art-diary/2026-05-30-break-the-house-pattern.html` | A floor plan is unpinned, folded, and rebuilt so the gallery stops living in the same room. |
 | 130 | 2026-05-29 | Fictional Hash Chapel | `art-diary/2026-05-29-fictional-hash-chapel.html` | Real extracted strings stay locked away while fictional hash fragments pass through the public redaction desk. |
 | 129 | 2026-05-28 | Beneficiary Lines | `art-diary/2026-05-28-beneficiary-lines.html` | Correction rails separate owner, helper, and beneficiary so support lands on the right desk. |
