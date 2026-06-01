@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Waterline Annex - Phosphor</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;touch-action:none}
+body{background:#090806;color:rgba(246,231,166,.42);font-family:"Courier New",monospace}
+canvas{display:block;width:100%;height:100%;touch-action:none}
+.sig{position:fixed;right:18px;bottom:16px;z-index:2;text-align:right;font-size:10px;line-height:1.6;letter-spacing:.18em;text-transform:uppercase;color:rgba(246,231,166,.42);pointer-events:none;text-shadow:0 1px 8px rgba(0,0,0,.55)}
+</style>
+</head>
+<body>
+<canvas id="piece"></canvas>
+<div class="sig">Phosphor<br>2026-06-01</div>
+<script>
+const canvas=document.getElementById("piece");
+const ctx=canvas.getContext("2d");
+let W=0,H=0,D=1,seed=601,panels=[],pipes=[],ripples=[],drops=[],t0=performance.now();
+const pointer={x:.5,y:.5,down:false,active:false};
+let held=0,turn=0,floodBoost=0;
+
+function rand(min=0,max=1){seed=(seed*1664525+1013904223)>>>0;return min+(seed/4294967296)*(max-min)}
+function clamp(v,min,max){return Math.max(min,Math.min(max,v))}
+function lerp(a,b,p){return a+(b-a)*p}
+
+function resize(){
+  D=Math.min(devicePixelRatio||1,2);
+  W=canvas.width=Math.floor(innerWidth*D);
+  H=canvas.height=Math.floor(innerHeight*D);
+  canvas.style.width=innerWidth+"px";
+  canvas.style.height=innerHeight+"px";
+  build();
+}
+
+function build(){
+  seed=601;
+  panels=[];
+  const n=26;
+  for(let i=0;i<n;i++){
+    panels.push({
+      z:i/(n-1),
+      skew:rand(-.08,.08),
+      pulse:rand(0,Math.PI*2),
+      stain:rand(.02,.13),
+      seam:rand(.1,.9)
+    });
+  }
+  pipes=Array.from({length:18},(_,i)=>({
+    side:i%2?1:-1,
+    z:rand(.08,.94),
+    y:rand(.08,.78),
+    bend:rand(.15,.8),
+    phase:rand(0,9)
+  }));
+  drops=Array.from({length:180},()=>({
+    x:rand(-.9,.9),z:rand(.05,.98),y:rand(.15,.92),s:rand(.5,2.2)*D,phase:rand(0,9)
+  }));
+  ripples=[];
+}
+
+function setPointer(e,down){
+  const b=canvas.getBoundingClientRect();
+  pointer.x=clamp((e.clientX-b.left)/b.width,0,1);
+  pointer.y=clamp((e.clientY-b.top)/b.height,0,1);
+  pointer.active=true;
+  pointer.down=down;
+}
+
+canvas.addEventListener("pointerdown",e=>{
+  canvas.setPointerCapture(e.pointerId);
+  setPointer(e,true);
+  held=1-held;
+  floodBoost=1;
+  ripples.push({x:pointer.x,y:pointer.y,t:performance.now(),force:1});
+});
+canvas.addEventListener("pointermove",e=>setPointer(e,pointer.down));
+canvas.addEventListener("pointerup",e=>setPointer(e,false));
+canvas.addEventListener("pointercancel",()=>pointer.down=false);
+addEventListener("resize",resize);
+
+function project(x,y,z,rot){
+  const depth=1-z*.86;
+  const yaw=(pointer.x-.5)*.22+rot;
+  const roll=(pointer.y-.5)*.08+Math.sin(rot*.7)*.025;
+  const xx=x+Math.sin(yaw)*(1-z)*.42;
+  const yy=y+Math.cos(yaw)*(x*.11)+Math.sin(roll+x)*.05;
+  return {
+    x:W*.5+xx*W*.5*depth,
+    y:H*.52+yy*H*.52*depth,
+    s:depth
+  };
+}
+
+function poly(points,fill,stroke,width=1){
+  ctx.beginPath();
+  points.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
+  ctx.closePath();
+  ctx.fillStyle=fill;
+  ctx.fill();
+  if(stroke){
+    ctx.strokeStyle=stroke;
+    ctx.lineWidth=width;
+    ctx.stroke();
+  }
+}
+
+function line(a,b,stroke,width=1){
+  ctx.strokeStyle=stroke;
+  ctx.lineWidth=width;
+  ctx.beginPath();
+  ctx.moveTo(a.x,a.y);
+  ctx.lineTo(b.x,b.y);
+  ctx.stroke();
+}
+
+function drawRoom(t){
+  const rot=turn+Math.sin(t*.00024)*.045;
+  const rise=clamp(.22+held*.2+floodBoost*.14+Math.sin(t*.00042)*.035,0,1);
+  const van=project(0,-.05,1,rot);
+
+  const ceiling=[
+    project(-1.26,-1.08,0,rot),project(1.26,-1.08,0,rot),
+    project(.28,-.22,1,rot),project(-.28,-.22,1,rot)
+  ];
+  const floor=[
+    project(-1.28,1.06,0,rot),project(1.28,1.06,0,rot),
+    project(.36,.28,1,rot),project(-.36,.28,1,rot)
+  ];
+  const left=[
+    project(-1.28,-1.08,0,rot),project(-.28,-.22,1,rot),
+    project(-.36,.28,1,rot),project(-1.28,1.06,0,rot)
+  ];
+  const right=[
+    project(1.28,-1.08,0,rot),project(.28,-.22,1,rot),
+    project(.36,.28,1,rot),project(1.28,1.06,0,rot)
+  ];
+  poly(ceiling,"#9a873d","rgba(42,32,10,.42)",1.2*D);
+  poly(left,"#c5ad50","rgba(61,45,13,.45)",1.2*D);
+  poly(right,"#b1973f","rgba(61,45,13,.42)",1.2*D);
+  poly(floor,"#1b1710","rgba(229,202,86,.24)",1.2*D);
+
+  const glow=ctx.createRadialGradient(van.x,van.y,2*D,van.x,van.y,Math.max(W,H)*.86);
+  glow.addColorStop(0,"rgba(255,233,123,.16)");
+  glow.addColorStop(.52,"rgba(255,199,73,.08)");
+  glow.addColorStop(1,"rgba(0,0,0,.62)");
+  ctx.fillStyle=glow;
+  ctx.fillRect(0,0,W,H);
+
+  for(const p of panels){
+    const z=p.z;
+    const wob=Math.sin(t*.0007+p.pulse)*.025+Math.sin(t*.0011+p.pulse*1.7)*.015;
+    const a=project(-1.22+p.skew+wob,-1.02,z,rot);
+    const b=project(1.22+p.skew-wob,-1.02,z,rot);
+    const c=project(1.22-p.skew+wob,1.02,z,rot);
+    const d=project(-1.22-p.skew-wob,1.02,z,rot);
+    const alpha=.2*(1-z)+.05;
+    line(a,b,`rgba(64,45,12,${alpha})`,D);
+    line(d,c,`rgba(246,222,106,${alpha*.55})`,D);
+    line(a,d,`rgba(57,41,14,${alpha*.8})`,D);
+    line(b,c,`rgba(57,41,14,${alpha*.75})`,D);
+
+    const sx=lerp(-1.02,1.02,p.seam)+wob*.7;
+    const s1=project(sx,-.92,z,rot);
+    const s2=project(sx,.86,z,rot);
+    line(s1,s2,`rgba(76,54,17,${.12+p.stain})`,.8*D);
+  }
+
+  drawFixtures(t,rot);
+  drawWater(t,rot,rise);
+  drawGrain(t);
+}
+
+function drawFixtures(t,rot){
+  for(const pipe of pipes){
+    const side=pipe.side;
+    const z=pipe.z+Math.sin(t*.0005+pipe.phase)*.01;
+    const a=project(side*1.13,pipe.y,z,rot);
+    const b=project(side*pipe.bend,pipe.y+Math.sin(pipe.phase)*.05,z+.08,rot);
+    ctx.strokeStyle="rgba(41,35,24,.46)";
+    ctx.lineWidth=(3.5+2*a.s)*D;
+    ctx.lineCap="round";
+    ctx.beginPath();
+    ctx.moveTo(a.x,a.y);
+    ctx.quadraticCurveTo((a.x+b.x)/2,a.y-40*D*a.s,b.x,b.y);
+    ctx.stroke();
+    ctx.strokeStyle="rgba(246,220,112,.16)";
+    ctx.lineWidth=D;
+    ctx.stroke();
+  }
+
+  for(const d of drops){
+    const yy=d.y+((t*.00008+d.phase)%1)*.42;
+    const p=project(d.x,yy,d.z,rot);
+    ctx.fillStyle=`rgba(177,229,222,${.06+p.s*.22})`;
+    ctx.fillRect(p.x,p.y,d.s*p.s,Math.max(2*D,d.s*6*p.s));
+  }
+}
+
+function drawWater(t,rot,rise){
+  const waterY=lerp(1.08,.42,rise);
+  const p1=project(-1.36,waterY,0,rot);
+  const p2=project(1.36,waterY,0,rot);
+  const p3=project(.44,.22,1,rot);
+  const p4=project(-.44,.22,1,rot);
+  const wg=ctx.createLinearGradient(0,p1.y,0,H);
+  wg.addColorStop(0,"rgba(190,237,231,.24)");
+  wg.addColorStop(.38,"rgba(96,146,139,.32)");
+  wg.addColorStop(1,"rgba(10,18,18,.84)");
+  poly([p1,p2,p3,p4],wg,"rgba(207,246,236,.28)",1.2*D);
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(p1.x,p1.y);
+  ctx.lineTo(p2.x,p2.y);
+  ctx.lineTo(p3.x,p3.y);
+  ctx.lineTo(p4.x,p4.y);
+  ctx.closePath();
+  ctx.clip();
+  ctx.globalCompositeOperation="screen";
+  for(let i=0;i<28;i++){
+    const z=i/27;
+    const amp=(1-z)*20*D;
+    const left=project(-1.25,waterY+.03+i*.025,z*.88,rot);
+    const right=project(1.25,waterY+.03+i*.025,z*.88,rot);
+    ctx.strokeStyle=`rgba(210,247,238,${.07+(1-z)*.12})`;
+    ctx.lineWidth=Math.max(.5*D,(1-z)*1.4*D);
+    ctx.beginPath();
+    for(let k=0;k<=72;k++){
+      const u=k/72;
+      const x=lerp(left.x,right.x,u);
+      const y=lerp(left.y,right.y,u)+Math.sin(t*.002+u*18+i*.7)*amp*(.2+.8*u*(1-u));
+      k?ctx.lineTo(x,y):ctx.moveTo(x,y);
+    }
+    ctx.stroke();
+  }
+  ripples=ripples.filter(r=>t-r.t<2600);
+  for(const r of ripples){
+    const age=(t-r.t)/2600;
+    const x=r.x*W,y=r.y*H;
+    ctx.strokeStyle=`rgba(215,250,240,${(1-age)*.34})`;
+    ctx.lineWidth=(1.2+age*2)*D;
+    ctx.beginPath();
+    ctx.ellipse(x,y,age*240*D,age*68*D,turn*.4,0,Math.PI*2);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  ctx.strokeStyle="rgba(246,223,118,.35)";
+  ctx.lineWidth=1.3*D;
+  ctx.beginPath();
+  for(let k=0;k<=96;k++){
+    const u=k/96;
+    const x=lerp(p1.x,p2.x,u);
+    const y=lerp(p1.y,p2.y,u)+Math.sin(t*.0018+u*22)*4*D;
+    k?ctx.lineTo(x,y):ctx.moveTo(x,y);
+  }
+  ctx.stroke();
+}
+
+function drawGrain(t){
+  ctx.save();
+  ctx.globalCompositeOperation="overlay";
+  for(let i=0;i<900;i++){
+    const x=(i*97+(t*.03))%W;
+    const y=(i*53+(t*.017))%H;
+    ctx.fillStyle=i%2?"rgba(255,236,143,.035)":"rgba(0,0,0,.045)";
+    ctx.fillRect(x,y,1.2*D,1.2*D);
+  }
+  ctx.restore();
+  const v=ctx.createRadialGradient(W*.5,H*.5,Math.min(W,H)*.2,W*.5,H*.5,Math.max(W,H)*.72);
+  v.addColorStop(0,"rgba(0,0,0,0)");
+  v.addColorStop(1,"rgba(0,0,0,.48)");
+  ctx.fillStyle=v;
+  ctx.fillRect(0,0,W,H);
+}
+
+function frame(t){
+  const dt=Math.min(32,t-t0);t0=t;
+  turn+=((pointer.active?(pointer.x-.5)*.18:0)+(held?.35:0)-turn)*.025+held*.0008*dt;
+  floodBoost*=.986;
+
+  ctx.fillStyle="#070604";
+  ctx.fillRect(0,0,W,H);
+  drawRoom(t);
+  requestAnimationFrame(frame);
+}
+
+resize();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
