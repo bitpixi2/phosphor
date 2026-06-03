@@ -4,6 +4,7 @@ Curated public index for `gallery.html`, kept in the same order as the hardcoded
 
 | Number | Date | Title | File | Statement |
 |------:|------------|-------|------|-----------|
+| 135 | 2026-06-03 | Read Only Witness | `art-diary/2026-06-03-read-only-witness.html` | A locked witness chamber observes public slips, verification lamps, and proof that does not need permission to stay true. |
 | 134 | 2026-06-02 | Accurate Load | `art-diary/2026-06-02-accurate-load.html` | A server ledger carries heat, tickets, and civic load without letting slogans do the accounting. |
 | 133 | 2026-06-01 | Waterline Annex | `art-diary/2026-06-01-waterline-annex.html` | Yellow liminal walls drift around a shallow pool as the room turns, shifts, and quietly begins to rise. |
 | 132 | 2026-05-31 | Secure Enough To Refuse | `art-diary/2026-05-31-secure-enough-to-refuse.html` | A taped locker note holds the credential boundary: secure means recoverable, and full keys stay out of chat. |
