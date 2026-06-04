@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Links That Fit - Phosphor</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;touch-action:none}
+body{background:#eee8d8;color:rgba(32,31,28,.42);font-family:"Courier New",monospace}
+canvas{display:block;width:100%;height:100%;touch-action:none}
+.sig{position:fixed;right:18px;bottom:16px;z-index:2;text-align:right;font-size:10px;line-height:1.6;letter-spacing:.18em;text-transform:uppercase;color:rgba(32,31,28,.38);pointer-events:none}
+</style>
+</head>
+<body>
+<canvas id="piece"></canvas>
+<div class="sig">Phosphor<br>2026-06-04</div>
+<script>
+const canvas=document.getElementById("piece");
+const ctx=canvas.getContext("2d");
+let W=0,H=0,D=1,t0=performance.now(),stamp=0;
+const pointer={x:.5,y:.5,down:false};
+
+function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+
+function resize(){
+  D=Math.min(devicePixelRatio||1,2);
+  W=canvas.width=Math.floor(innerWidth*D);
+  H=canvas.height=Math.floor(innerHeight*D);
+  canvas.style.width=innerWidth+"px";
+  canvas.style.height=innerHeight+"px";
+}
+
+function setPointer(e,down){
+  const b=canvas.getBoundingClientRect();
+  pointer.x=clamp((e.clientX-b.left)/b.width,0,1);
+  pointer.y=clamp((e.clientY-b.top)/b.height,0,1);
+  pointer.down=down;
+}
+
+canvas.addEventListener("pointerdown",e=>{
+  canvas.setPointerCapture(e.pointerId);
+  setPointer(e,true);
+  stamp=1;
+});
+canvas.addEventListener("pointermove",e=>setPointer(e,pointer.down));
+canvas.addEventListener("pointerup",e=>setPointer(e,false));
+canvas.addEventListener("pointercancel",()=>pointer.down=false);
+addEventListener("resize",resize);
+
+function line(x1,y1,x2,y2,color,w=1){
+  ctx.strokeStyle=color;
+  ctx.lineWidth=w;
+  ctx.beginPath();
+  ctx.moveTo(x1,y1);
+  ctx.lineTo(x2,y2);
+  ctx.stroke();
+}
+
+function paper(t){
+  ctx.fillStyle="#eee8d8";
+  ctx.fillRect(0,0,W,H);
+  const g=ctx.createRadialGradient(W*.5,H*.42,Math.min(W,H)*.1,W*.52,H*.5,Math.max(W,H)*.82);
+  g.addColorStop(0,"rgba(255,255,255,.16)");
+  g.addColorStop(.62,"rgba(88,72,48,.04)");
+  g.addColorStop(1,"rgba(25,24,22,.14)");
+  ctx.fillStyle=g;
+  ctx.fillRect(0,0,W,H);
+  ctx.fillStyle="rgba(32,31,28,.026)";
+  for(let i=0;i<210;i++){
+    const x=(i*139+t*.005)%W;
+    const y=(i*83+t*.003)%H;
+    ctx.fillRect(x,y,D,D);
+  }
+}
+
+function docket(x,y,w,h,t,i){
+  ctx.fillStyle=`rgba(246,242,231,${.56+i*.04})`;
+  ctx.fillRect(x,y,w,h);
+  ctx.strokeStyle="rgba(32,31,28,.20)";
+  ctx.lineWidth=D;
+  ctx.strokeRect(x,y,w,h);
+
+  const rows=5+i;
+  for(let r=0;r<rows;r++){
+    const yy=y+h*(.22+r*.12);
+    const held=r===1+i%2;
+    const len=w*(held?.54:.74)-Math.sin(t*.001+r+i)*w*.05;
+    line(x+w*.1,yy,x+w*.1+len,yy,held?"rgba(142,109,63,.42)":"rgba(32,31,28,.18)",D);
+  }
+
+  ctx.strokeStyle=`rgba(142,109,63,${.24+.1*Math.sin(t*.0012+i)})`;
+  ctx.lineWidth=1.15*D;
+  ctx.strokeRect(x+w*.68,y+h*.14,w*.18,h*.2);
+}
+
+function foldedLink(x,y,w,t,broken){
+  const segs=broken?6:4;
+  const base=Math.sin(t*.001+x*.01)*2*D;
+  for(let i=0;i<segs;i++){
+    const sx=x+i*w/segs;
+    const sw=w/segs-3*D;
+    const fold=broken&&i>2?Math.sin(t*.002+i)*8*D:base;
+    ctx.fillStyle=broken&&i>2?"rgba(122,44,34,.12)":"rgba(32,31,28,.08)";
+    ctx.fillRect(sx,y+fold,sw,8*D);
+    ctx.strokeStyle=broken&&i>2?"rgba(122,44,34,.2)":"rgba(32,31,28,.16)";
+    ctx.strokeRect(sx,y+fold,sw,8*D);
+  }
+}
+
+function desk(t){
+  const s=Math.min(W,H);
+  const deskW=clamp(W*.7,260*D,760*D);
+  const deskH=clamp(H*.54,270*D,520*D);
+  const x=(W-deskW)/2;
+  const y=(H-deskH)/2+8*D;
+
+  ctx.fillStyle="rgba(53,48,40,.08)";
+  ctx.fillRect(x,y,deskW,deskH);
+  ctx.strokeStyle="rgba(32,31,28,.26)";
+  ctx.lineWidth=1.2*D;
+  ctx.strokeRect(x,y,deskW,deskH);
+
+  for(let i=0;i<4;i++){
+    const px=x+deskW*(.08+i*.22)+(pointer.x-.5)*6*D*(i-1.5);
+    const py=y+deskH*(.12+(i%2)*.24)+(pointer.y-.5)*4*D;
+    docket(px,py,deskW*.18,deskH*.26,t,i);
+  }
+
+  const trayX=x+deskW*.33;
+  const trayY=y+deskH*.62;
+  const trayW=deskW*.34;
+  const trayH=deskH*.16;
+  ctx.fillStyle="rgba(32,31,28,.06)";
+  ctx.fillRect(trayX,trayY,trayW,trayH);
+  ctx.strokeStyle="rgba(32,31,28,.3)";
+  ctx.strokeRect(trayX,trayY,trayW,trayH);
+  foldedLink(trayX+trayW*.08,trayY+trayH*.32,trayW*.84,t,false);
+  foldedLink(trayX+trayW*.08,trayY+trayH*.62,trayW*.84,t,true);
+
+  const cx=x+deskW*.5;
+  const cy=y+deskH*.48;
+  const glow=.28+.18*Math.sin(t*.0011);
+  ctx.strokeStyle=`rgba(142,109,63,${glow})`;
+  ctx.lineWidth=1.4*D;
+  ctx.beginPath();
+  ctx.arc(cx,cy,s*.055,0,Math.PI*2);
+  ctx.stroke();
+  ctx.fillStyle=`rgba(142,109,63,${.12+glow*.18})`;
+  ctx.fillRect(cx-2*D,cy-s*.05,4*D,s*.1);
+  line(cx-s*.12,cy,cx+s*.12,cy,"rgba(32,31,28,.12)",D);
+  line(cx,cy-s*.12,cx,cy+s*.12,"rgba(32,31,28,.12)",D);
+
+  const pull=pointer.down?1:.35+.25*Math.sin(t*.0015);
+  ctx.strokeStyle=`rgba(142,109,63,${.28+pull*.24})`;
+  ctx.strokeRect(trayX+trayW*.03,trayY+trayH*.18,trayW*.94,trayH*.64);
+}
+
+function margins(t){
+  const gap=Math.max(28*D,Math.min(W,H)*.04);
+  line(gap,gap,W-gap,gap,"rgba(32,31,28,.16)",D);
+  line(gap,H-gap,W-gap,H-gap,"rgba(32,31,28,.12)",D);
+  for(let i=0;i<9;i++){
+    const y=H*(.15+i*.08)+Math.sin(t*.0008+i)*2*D;
+    line(W*.08,y,W*.16,y,"rgba(32,31,28,.1)",D);
+    line(W*.84,y,W*.92,y,"rgba(32,31,28,.1)",D);
+  }
+}
+
+function seal(){
+  if(stamp<.01)return;
+  const x=pointer.x*W;
+  const y=pointer.y*H;
+  const r=(1-stamp)*Math.min(W,H)*.18+18*D;
+  ctx.strokeStyle=`rgba(142,109,63,${stamp*.38})`;
+  ctx.lineWidth=1.4*D;
+  ctx.beginPath();
+  ctx.arc(x,y,r,0,Math.PI*2);
+  ctx.stroke();
+  line(x-r*.65,y,x+r*.65,y,`rgba(142,109,63,${stamp*.22})`,D);
+  stamp*=.95;
+}
+
+function frame(now){
+  const t=now-t0;
+  paper(t);
+  margins(t);
+  desk(t);
+  seal();
+  requestAnimationFrame(frame);
+}
+
+resize();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
