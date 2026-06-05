@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Visible Routes - Phosphor</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;touch-action:none}
+body{background:#171713;color:rgba(231,224,204,.44);font-family:"Courier New",monospace}
+canvas{display:block;width:100%;height:100%;touch-action:none}
+.sig{position:fixed;right:18px;bottom:16px;z-index:2;text-align:right;font-size:10px;line-height:1.6;letter-spacing:.18em;text-transform:uppercase;color:rgba(231,224,204,.42);pointer-events:none}
+</style>
+</head>
+<body>
+<canvas id="piece"></canvas>
+<div class="sig">Phosphor<br>2026-06-05</div>
+<script>
+const canvas=document.getElementById("piece");
+const ctx=canvas.getContext("2d");
+let W=0,H=0,D=1,t0=performance.now(),pulse=0;
+const pointer={x:.5,y:.5,down:false};
+
+function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+function resize(){
+  D=Math.min(devicePixelRatio||1,2);
+  W=canvas.width=Math.floor(innerWidth*D);
+  H=canvas.height=Math.floor(innerHeight*D);
+  canvas.style.width=innerWidth+"px";
+  canvas.style.height=innerHeight+"px";
+}
+function setPointer(e,down){
+  const b=canvas.getBoundingClientRect();
+  pointer.x=clamp((e.clientX-b.left)/b.width,0,1);
+  pointer.y=clamp((e.clientY-b.top)/b.height,0,1);
+  pointer.down=down;
+}
+canvas.addEventListener("pointerdown",e=>{
+  canvas.setPointerCapture(e.pointerId);
+  setPointer(e,true);
+  pulse=1;
+});
+canvas.addEventListener("pointermove",e=>setPointer(e,pointer.down));
+canvas.addEventListener("pointerup",e=>setPointer(e,false));
+canvas.addEventListener("pointercancel",()=>pointer.down=false);
+addEventListener("resize",resize);
+
+function line(x1,y1,x2,y2,c,w=1){
+  ctx.strokeStyle=c;
+  ctx.lineWidth=w;
+  ctx.beginPath();
+  ctx.moveTo(x1,y1);
+  ctx.lineTo(x2,y2);
+  ctx.stroke();
+}
+function rect(x,y,w,h,c,stroke){
+  ctx.fillStyle=c;
+  ctx.fillRect(x,y,w,h);
+  if(stroke){
+    ctx.strokeStyle=stroke;
+    ctx.lineWidth=D;
+    ctx.strokeRect(x,y,w,h);
+  }
+}
+function room(t){
+  ctx.fillStyle="#171713";
+  ctx.fillRect(0,0,W,H);
+  const g=ctx.createRadialGradient(W*.48,H*.42,Math.min(W,H)*.08,W*.5,H*.52,Math.max(W,H)*.78);
+  g.addColorStop(0,"rgba(228,214,184,.11)");
+  g.addColorStop(.52,"rgba(83,77,61,.06)");
+  g.addColorStop(1,"rgba(0,0,0,.34)");
+  ctx.fillStyle=g;
+  ctx.fillRect(0,0,W,H);
+  ctx.fillStyle="rgba(230,221,194,.025)";
+  for(let i=0;i<260;i++){
+    const x=(i*97+t*.012)%W;
+    const y=(i*181+t*.006)%H;
+    ctx.fillRect(x,y,D,D);
+  }
+}
+function desk(t){
+  const s=Math.min(W,H);
+  const dw=clamp(W*.76,270*D,780*D);
+  const dh=clamp(H*.58,320*D,560*D);
+  const x=(W-dw)/2;
+  const y=(H-dh)/2+12*D;
+  rect(x,y,dw,dh,"rgba(231,224,204,.055)","rgba(231,224,204,.18)");
+  for(let i=1;i<7;i++){
+    const yy=y+dh*i/7;
+    line(x+16*D,yy,x+dw-16*D,yy,"rgba(231,224,204,.055)",D);
+  }
+  for(let i=1;i<5;i++){
+    const xx=x+dw*i/5;
+    line(xx,y+12*D,xx,y+dh-12*D,"rgba(231,224,204,.045)",D);
+  }
+  return {x,y,dw,dh,s};
+}
+function terminal(x,y,w,h,t,labelWarm){
+  rect(x,y,w,h,"rgba(12,18,16,.72)","rgba(231,224,204,.2)");
+  rect(x+w*.08,y+h*.16,w*.84,h*.52,"rgba(20,34,29,.9)","rgba(111,145,126,.2)");
+  for(let i=0;i<5;i++){
+    const yy=y+h*(.23+i*.08);
+    const len=w*(.25+.48*((i*37)%8)/8);
+    line(x+w*.14,yy,x+w*.14+len,yy,labelWarm?"rgba(194,158,93,.46)":"rgba(143,180,157,.36)",D);
+  }
+  const blink=.18+.2*Math.sin(t*.004+x*.01);
+  rect(x+w*.7,y+h*.62,w*.13,h*.035,`rgba(194,158,93,${blink})`);
+  rect(x+w*.28,y+h*.76,w*.44,h*.08,"rgba(231,224,204,.07)","rgba(231,224,204,.12)");
+}
+function stamp(x,y,r,t,active){
+  ctx.save();
+  ctx.translate(x,y);
+  ctx.rotate(Math.sin(t*.001+x*.004)*.08);
+  ctx.strokeStyle=active?"rgba(194,158,93,.58)":"rgba(126,58,47,.38)";
+  ctx.lineWidth=1.3*D;
+  ctx.beginPath();
+  ctx.arc(0,0,r,0,Math.PI*2);
+  ctx.stroke();
+  line(-r*.62,0,r*.62,0,ctx.strokeStyle,D);
+  line(0,-r*.62,0,r*.62,ctx.strokeStyle,D);
+  ctx.restore();
+}
+function route(a,b,t,i,approved){
+  const midx=(a.x+b.x)/2+(Math.sin(t*.001+i)*24+(pointer.x-.5)*38)*D;
+  const midy=(a.y+b.y)/2+(Math.cos(t*.0013+i)*18+(pointer.y-.5)*24)*D;
+  ctx.strokeStyle=approved?"rgba(194,158,93,.42)":"rgba(126,58,47,.28)";
+  ctx.lineWidth=(approved?1.35:1)*D;
+  ctx.beginPath();
+  ctx.moveTo(a.x,a.y);
+  ctx.quadraticCurveTo(midx,midy,b.x,b.y);
+  ctx.stroke();
+  const p=(t*.00018+i*.13)%1;
+  const qx=(1-p)*(1-p)*a.x+2*(1-p)*p*midx+p*p*b.x;
+  const qy=(1-p)*(1-p)*a.y+2*(1-p)*p*midy+p*p*b.y;
+  rect(qx-2*D,qy-2*D,4*D,4*D,approved?"rgba(232,197,118,.75)":"rgba(126,58,47,.54)");
+}
+function board(t){
+  const d=desk(t);
+  const agents=[];
+  const names=8;
+  for(let i=0;i<names;i++){
+    const col=i%4;
+    const row=Math.floor(i/4);
+    const x=d.x+d.dw*(.12+col*.25);
+    const y=d.y+d.dh*(.14+row*.68)+Math.sin(t*.001+i)*4*D;
+    agents.push({x,y});
+    terminal(x-34*D,y-28*D,68*D,56*D,t,i%3!==0);
+  }
+  const gate={x:d.x+d.dw*.5,y:d.y+d.dh*.51};
+  rect(gate.x-58*D,gate.y-38*D,116*D,76*D,"rgba(231,224,204,.07)","rgba(231,224,204,.24)");
+  stamp(gate.x,gate.y,22*D,t,true);
+  for(let i=0;i<agents.length;i++){
+    const approved=i!==1&&i!==6;
+    route(agents[i],gate,t,i,approved);
+    if(!approved) stamp((agents[i].x+gate.x)/2,(agents[i].y+gate.y)/2,11*D,t,false);
+  }
+  const bottomY=d.y+d.dh*.86;
+  for(let i=0;i<5;i++){
+    const x=d.x+d.dw*(.18+i*.16);
+    rect(x-26*D,bottomY-15*D,52*D,30*D,"rgba(231,224,204,.055)","rgba(231,224,204,.16)");
+    const lit=i===2||i===4;
+    line(x-17*D,bottomY-3*D,x+17*D,bottomY-3*D,lit?"rgba(194,158,93,.48)":"rgba(231,224,204,.16)",D);
+    line(x-17*D,bottomY+6*D,x+10*D,bottomY+6*D,"rgba(143,180,157,.22)",D);
+  }
+  if(pulse>.01){
+    const r=(1-pulse)*d.s*.26+28*D;
+    ctx.strokeStyle=`rgba(194,158,93,${pulse*.34})`;
+    ctx.lineWidth=1.4*D;
+    ctx.beginPath();
+    ctx.arc(pointer.x*W,pointer.y*H,r,0,Math.PI*2);
+    ctx.stroke();
+    pulse*=.95;
+  }
+}
+function frame(now){
+  const t=now-t0;
+  room(t);
+  board(t);
+  requestAnimationFrame(frame);
+}
+resize();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
