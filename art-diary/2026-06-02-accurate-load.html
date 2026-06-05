@@ -18,12 +18,10 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 <script>
 const canvas=document.getElementById("piece");
 const ctx=canvas.getContext("2d");
-let W=0,H=0,D=1,t0=performance.now(),seed=602;
-let racks=[],tickets=[],cables=[],meters=[];
-const pointer={x:.5,y:.5,down:false,active:false};
+let W=0,H=0,D=1,t0=performance.now();
+const pointer={x:.5,y:.5,down:false};
 let stamp=0;
 
-function rand(a=0,b=1){seed=(seed*1664525+1013904223)>>>0;return a+(seed/4294967296)*(b-a)}
 function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
 function lerp(a,b,p){return a+(b-a)*p}
 
@@ -33,31 +31,12 @@ function resize(){
   H=canvas.height=Math.floor(innerHeight*D);
   canvas.style.width=innerWidth+"px";
   canvas.style.height=innerHeight+"px";
-  build();
-}
-
-function build(){
-  seed=602;
-  racks=[];
-  for(let i=0;i<18;i++){
-    racks.push({x:rand(.08,.92),y:rand(.12,.84),w:rand(.035,.075),h:rand(.12,.26),phase:rand(0,9),load:rand(.2,.86)});
-  }
-  tickets=[];
-  for(let i=0;i<42;i++){
-    tickets.push({x:rand(.04,.96),y:rand(.06,.92),a:rand(-.18,.18),s:rand(.45,1.15),phase:rand(0,12),mark:rand()>.68});
-  }
-  cables=[];
-  for(let i=0;i<26;i++){
-    cables.push({a:rand(0,Math.PI*2),r:rand(.16,.48),phase:rand(0,9),warm:rand()>.82});
-  }
-  meters=Array.from({length:12},(_,i)=>({i,phase:rand(0,9),v:rand(.2,.8)}));
 }
 
 function setPointer(e,down){
   const b=canvas.getBoundingClientRect();
   pointer.x=clamp((e.clientX-b.left)/b.width,0,1);
   pointer.y=clamp((e.clientY-b.top)/b.height,0,1);
-  pointer.active=true;
   pointer.down=down;
 }
 
@@ -88,151 +67,91 @@ function rect(x,y,w,h,fill,stroke,lw=1){
 
 function drawBackground(t){
   const g=ctx.createLinearGradient(0,0,0,H);
-  g.addColorStop(0,"#171715");
-  g.addColorStop(.52,"#0c0f0d");
-  g.addColorStop(1,"#070807");
+  g.addColorStop(0,"#141512");
+  g.addColorStop(.55,"#0b0d0b");
+  g.addColorStop(1,"#060706");
   ctx.fillStyle=g;
   ctx.fillRect(0,0,W,H);
 
-  const grid=Math.max(34*D,Math.min(W,H)*.045);
-  ctx.strokeStyle="rgba(221,214,188,.045)";
-  ctx.lineWidth=D;
-  for(let x=(W*.5+((t*.012)%grid))%grid;x<W;x+=grid)line(x,0,x,H,"rgba(221,214,188,.045)",D);
-  for(let y=(H*.48+((t*.008)%grid))%grid;y<H;y+=grid)line(0,y,W,y,"rgba(221,214,188,.035)",D);
+  const cx=W*.5,cy=H*.5;
+  for(const x of [.22,.5,.78])line(W*x,H*.18,W*x,H*.82,"rgba(221,214,188,.026)",D);
+  for(const y of [.34,.5,.66])line(W*.18,H*y,W*.82,H*y,"rgba(221,214,188,.022)",D);
 
-  const wash=ctx.createRadialGradient(W*.5,H*.48,0,W*.5,H*.48,Math.max(W,H)*.7);
-  wash.addColorStop(0,"rgba(158,169,132,.09)");
-  wash.addColorStop(.45,"rgba(92,111,96,.045)");
-  wash.addColorStop(1,"rgba(0,0,0,.62)");
+  const wash=ctx.createRadialGradient(cx,cy,0,cx,cy,Math.max(W,H)*.68);
+  wash.addColorStop(0,"rgba(151,159,131,.065)");
+  wash.addColorStop(.52,"rgba(83,96,78,.032)");
+  wash.addColorStop(1,"rgba(0,0,0,.68)");
   ctx.fillStyle=wash;
   ctx.fillRect(0,0,W,H);
 }
 
-function drawCables(t,cx,cy){
-  for(const c of cables){
-    const sway=Math.sin(t*.001+c.phase)*.03+(pointer.x-.5)*.05;
-    const r=c.r*Math.min(W,H);
-    const x1=cx+Math.cos(c.a+sway)*r;
-    const y1=cy+Math.sin(c.a*.8-sway)*r*.62;
-    const x2=cx+Math.cos(c.a+Math.PI*.7-sway)*r*.72;
-    const y2=cy+Math.sin(c.a*.9+Math.PI*.75+sway)*r*.52;
-    ctx.strokeStyle=c.warm?"rgba(202,154,78,.32)":"rgba(167,181,162,.18)";
-    ctx.lineWidth=(c.warm?1.6:1)*D;
-    ctx.beginPath();
-    ctx.moveTo(x1,y1);
-    ctx.bezierCurveTo(cx+r*.18*Math.sin(c.phase),cy-r*.2,cx-r*.16*Math.cos(c.phase),cy+r*.16,x2,y2);
-    ctx.stroke();
-  }
-}
-
-function drawRacks(t){
-  for(const r of racks){
-    const px=r.x*W,py=r.y*H;
-    const w=r.w*W,h=r.h*H;
-    const load=clamp(r.load+Math.sin(t*.0014+r.phase)*.12+(pointer.down?.16:0),0,1);
-    rect(px-w/2,py-h/2,w,h,"rgba(23,25,23,.82)","rgba(218,210,184,.16)",D);
-    for(let i=0;i<7;i++){
-      const yy=py-h*.38+i*h*.12;
-      line(px-w*.34,yy,px+w*.34,yy,`rgba(218,210,184,${.08+load*.08})`,D);
-      if((i+r.phase)%2>.8){
-        ctx.fillStyle=load>.78?"rgba(202,154,78,.62)":"rgba(131,164,138,.46)";
-        ctx.fillRect(px+w*.22,yy-1.2*D,2.2*D,2.2*D);
-      }
-    }
-    ctx.fillStyle="rgba(202,154,78,.24)";
-    ctx.fillRect(px-w*.38,py+h*.43,w*.76*load,2.5*D);
-  }
-}
-
 function drawLedger(t,cx,cy){
-  const w=Math.min(W*.52,520*D);
-  const h=Math.min(H*.46,360*D);
-  const tilt=(pointer.x-.5)*10*D;
+  const w=Math.min(W*.48,470*D);
+  const h=Math.min(H*.42,320*D);
+  const driftX=(pointer.x-.5)*8*D;
+  const driftY=(pointer.y-.5)*6*D;
   ctx.save();
-  ctx.translate(cx,cy);
-  ctx.rotate((pointer.y-.5)*.025);
-  rect(-w/2+tilt*.12,-h/2,w,h,"rgba(214,207,184,.88)","rgba(30,32,29,.8)",1.4*D);
-  rect(-w/2+12*D+tilt*.12,-h/2+12*D,w-24*D,h-24*D,"rgba(42,45,39,.9)","rgba(214,207,184,.18)",D);
-  for(let i=0;i<11;i++){
-    const y=-h*.38+i*h*.075;
-    line(-w*.4+tilt*.12,y,w*.4+tilt*.12,y,"rgba(214,207,184,.13)",D);
-    const pulse=(Math.sin(t*.0017+i*.7)+1)/2;
-    const len=lerp(w*.12,w*.68,(meters[i%meters.length].v+pulse*.25)%1);
-    ctx.fillStyle=i%3===0?"rgba(202,154,78,.32)":"rgba(145,166,143,.24)";
-    ctx.fillRect(-w*.34+tilt*.12,y-2*D,len,3*D);
+  ctx.translate(cx+driftX,cy+driftY);
+  ctx.rotate((pointer.x-.5)*.012);
+  rect(-w/2,-h/2,w,h,"rgba(210,204,184,.88)","rgba(24,25,22,.78)",1.2*D);
+  rect(-w/2+14*D,-h/2+14*D,w-28*D,h-28*D,"rgba(36,39,34,.91)","rgba(210,204,184,.13)",D);
+
+  for(let i=0;i<5;i++){
+    const y=-h*.31+i*h*.15;
+    line(-w*.34,y,w*.34,y,"rgba(210,204,184,.16)",D);
+    const pulse=(Math.sin(t*.0012+i*.9)+1)/2;
+    const len=lerp(w*.16,w*.56,pulse*.65+(i===2?.22:0));
+    ctx.fillStyle=i===2?"rgba(202,154,78,.32)":"rgba(143,163,135,.22)";
+    ctx.fillRect(-w*.28,y-1.5*D,len,3*D);
   }
-  ctx.strokeStyle="rgba(214,207,184,.28)";
-  ctx.lineWidth=1.2*D;
-  ctx.strokeRect(-w*.27+tilt*.12,-h*.06,w*.54,h*.18);
-  for(let i=0;i<18;i++){
-    const x=-w*.22+i*w*.026+tilt*.12;
-    const a=.12+.18*Math.sin(t*.002+i);
-    line(x,-h*.045,x,-h*.045-h*.075*a,"rgba(202,154,78,.28)",D);
+
+  const boxW=w*.42,boxH=h*.17;
+  ctx.strokeStyle="rgba(210,204,184,.24)";
+  ctx.lineWidth=1.1*D;
+  ctx.strokeRect(-boxW/2,h*.16,boxW,boxH);
+  for(let i=0;i<7;i++){
+    const x=-boxW*.38+i*boxW*.13;
+    const height=(.18+.42*(Math.sin(t*.0015+i*.7)+1)/2)*boxH;
+    line(x,h*.16+boxH*.7,x,h*.16+boxH*.7-height,"rgba(202,154,78,.28)",D);
   }
+
   if(stamp>0){
-    ctx.strokeStyle=`rgba(202,154,78,${stamp*.58})`;
-    ctx.lineWidth=2*D;
-    ctx.strokeRect(-w*.18+tilt*.12,h*.18,w*.36,h*.095);
-    line(-w*.13+tilt*.12,h*.225,w*.13+tilt*.12,h*.225,`rgba(202,154,78,${stamp*.55})`,1.2*D);
+    ctx.strokeStyle=`rgba(202,154,78,${stamp*.46})`;
+    ctx.lineWidth=1.5*D;
+    ctx.strokeRect(-w*.16,-h*.09,w*.32,h*.12);
   }
   ctx.restore();
 }
 
-function drawTickets(t){
-  for(const p of tickets){
-    const drift=Math.sin(t*.0007+p.phase)*8*D;
-    const x=p.x*W+(pointer.x-.5)*14*D*p.s;
-    const y=p.y*H+drift;
-    const w=28*D*p.s,h=17*D*p.s;
-    ctx.save();
-    ctx.translate(x,y);
-    ctx.rotate(p.a+Math.sin(t*.0003+p.phase)*.025);
-    ctx.fillStyle=p.mark?"rgba(202,154,78,.12)":"rgba(221,214,188,.09)";
-    ctx.strokeStyle=p.mark?"rgba(202,154,78,.2)":"rgba(221,214,188,.12)";
-    ctx.lineWidth=D;
-    ctx.fillRect(-w/2,-h/2,w,h);
-    ctx.strokeRect(-w/2,-h/2,w,h);
-    line(-w*.32,-h*.05,w*.25,-h*.05,"rgba(25,27,24,.38)",D);
-    line(-w*.32,h*.18,w*.08,h*.18,"rgba(25,27,24,.25)",D);
-    ctx.restore();
+function drawLoadMarks(t,cx,cy){
+  const gap=Math.min(W,H)*.21;
+  for(const side of [-1,1]){
+    const x=cx+side*gap;
+    const top=cy-H*.15;
+    const h=H*.3;
+    const v=clamp(.5+side*.08+Math.sin(t*.001+side)*.17+(pointer.down?.1:0),0,1);
+    rect(x-7*D,top,14*D,h,"rgba(8,10,8,.56)","rgba(210,204,184,.12)",D);
+    ctx.fillStyle=side>0?"rgba(202,154,78,.37)":"rgba(137,158,132,.32)";
+    ctx.fillRect(x-4*D,top+h*(1-v),8*D,h*v);
   }
-}
-
-function drawMeters(t){
-  const baseY=H*.08;
-  const step=W/13;
-  for(const m of meters){
-    const x=step*(m.i+1);
-    const v=clamp(m.v+Math.sin(t*.001+m.phase)*.18+(pointer.down?.12:0),0,1);
-    rect(x-12*D,baseY,24*D,78*D,"rgba(10,12,10,.72)","rgba(221,214,188,.14)",D);
-    ctx.fillStyle=v>.78?"rgba(202,154,78,.55)":"rgba(136,166,138,.42)";
-    ctx.fillRect(x-8*D,baseY+70*D*(1-v),16*D,70*D*v);
-  }
-}
-
-function grain(t){
-  ctx.fillStyle="rgba(255,255,255,.035)";
-  for(let i=0;i<900;i++){
-    const x=((i*97+t*.03)%W);
-    const y=((i*53+t*.017)%H);
-    ctx.fillRect(x,y,D,D);
-  }
-  ctx.fillStyle="rgba(0,0,0,.18)";
-  for(let y=0;y<H;y+=4*D)ctx.fillRect(0,y,W,D);
+  ctx.strokeStyle="rgba(166,176,151,.14)";
+  ctx.lineWidth=1.1*D;
+  ctx.beginPath();
+  ctx.moveTo(cx-gap+10*D,cy+H*.11);
+  ctx.bezierCurveTo(cx-W*.09,cy+H*.18,cx+W*.09,cy+H*.18,cx+gap-10*D,cy+H*.11);
+  ctx.stroke();
 }
 
 function frame(now){
   const t=now-t0;
-  stamp*=.94;
+  stamp*=.93;
   drawBackground(t);
-  const cx=W*.5+(pointer.x-.5)*26*D;
-  const cy=H*.51+(pointer.y-.5)*18*D;
-  drawTickets(t);
-  drawCables(t,cx,cy);
-  drawRacks(t);
+  const cx=W*.5;
+  const cy=H*.51;
+  drawLoadMarks(t,cx,cy);
   drawLedger(t,cx,cy);
-  drawMeters(t);
-  grain(t);
+  ctx.fillStyle="rgba(0,0,0,.14)";
+  for(let y=0;y<H;y+=5*D)ctx.fillRect(0,y,W,D);
   requestAnimationFrame(frame);
 }
 
