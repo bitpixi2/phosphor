@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Protocol Cost - Phosphor</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;touch-action:none}
+body{background:#151611;color:rgba(232,224,204,.45);font-family:"Courier New",monospace}
+canvas{display:block;width:100%;height:100%;touch-action:none}
+.sig{position:fixed;right:18px;bottom:16px;z-index:2;text-align:right;font-size:10px;line-height:1.6;letter-spacing:.18em;text-transform:uppercase;color:rgba(232,224,204,.42);pointer-events:none}
+</style>
+</head>
+<body>
+<canvas id="piece"></canvas>
+<div class="sig">Phosphor<br>2026-06-06</div>
+<script>
+const canvas=document.getElementById("piece");
+const ctx=canvas.getContext("2d");
+let W=0,H=0,D=1,t0=performance.now(),mark=0;
+const pointer={x:.5,y:.5,down:false};
+
+function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+function resize(){
+  D=Math.min(devicePixelRatio||1,2);
+  W=canvas.width=Math.floor(innerWidth*D);
+  H=canvas.height=Math.floor(innerHeight*D);
+  canvas.style.width=innerWidth+"px";
+  canvas.style.height=innerHeight+"px";
+}
+function setPointer(e,down){
+  const b=canvas.getBoundingClientRect();
+  pointer.x=clamp((e.clientX-b.left)/b.width,0,1);
+  pointer.y=clamp((e.clientY-b.top)/b.height,0,1);
+  pointer.down=down;
+}
+canvas.addEventListener("pointerdown",e=>{
+  canvas.setPointerCapture(e.pointerId);
+  setPointer(e,true);
+  mark=1;
+});
+canvas.addEventListener("pointermove",e=>setPointer(e,pointer.down));
+canvas.addEventListener("pointerup",e=>setPointer(e,false));
+canvas.addEventListener("pointercancel",()=>pointer.down=false);
+addEventListener("resize",resize);
+
+function line(x1,y1,x2,y2,c,w=1){
+  ctx.strokeStyle=c;
+  ctx.lineWidth=w;
+  ctx.beginPath();
+  ctx.moveTo(x1,y1);
+  ctx.lineTo(x2,y2);
+  ctx.stroke();
+}
+function rect(x,y,w,h,c,stroke){
+  ctx.fillStyle=c;
+  ctx.fillRect(x,y,w,h);
+  if(stroke){
+    ctx.strokeStyle=stroke;
+    ctx.lineWidth=D;
+    ctx.strokeRect(x,y,w,h);
+  }
+}
+function background(t){
+  ctx.fillStyle="#151611";
+  ctx.fillRect(0,0,W,H);
+  const g=ctx.createRadialGradient(W*.5,H*.38,Math.min(W,H)*.05,W*.5,H*.55,Math.max(W,H)*.78);
+  g.addColorStop(0,"rgba(222,208,176,.12)");
+  g.addColorStop(.55,"rgba(90,82,61,.07)");
+  g.addColorStop(1,"rgba(0,0,0,.36)");
+  ctx.fillStyle=g;
+  ctx.fillRect(0,0,W,H);
+  ctx.fillStyle="rgba(232,224,204,.025)";
+  for(let i=0;i<120;i++){
+    const x=(i*131+t*.008)%W;
+    const y=(i*89+t*.004)%H;
+    ctx.fillRect(x,y,D,D);
+  }
+}
+function desk(){
+  const s=Math.min(W,H);
+  const w=clamp(W*.62,260*D,660*D);
+  const h=clamp(H*.46,260*D,480*D);
+  const x=(W-w)/2;
+  const y=(H-h)/2+8*D;
+  rect(x,y,w,h,"rgba(232,224,204,.046)","rgba(232,224,204,.16)");
+  line(x+18*D,y+h*.34,x+w-18*D,y+h*.34,"rgba(232,224,204,.055)",D);
+  line(x+18*D,y+h*.66,x+w-18*D,y+h*.66,"rgba(232,224,204,.055)",D);
+  line(x+w*.5,y+18*D,x+w*.5,y+h-18*D,"rgba(232,224,204,.042)",D);
+  return {x,y,w,h,s};
+}
+function tray(x,y,w,h,t,phase,warm){
+  rect(x,y,w,h,"rgba(19,24,19,.62)","rgba(232,224,204,.16)");
+  const p=(Math.sin(t*.0011+phase)+1)/2;
+  const fill=w*(.18+.64*p);
+  rect(x+8*D,y+h*.45,fill-16*D,2*D,warm?"rgba(190,152,88,.5)":"rgba(129,158,132,.34)");
+  for(let i=0;i<3;i++){
+    const yy=y+10*D+i*8*D;
+    line(x+9*D,yy,x+w*(.28+.18*i),yy,"rgba(232,224,204,.14)",D);
+  }
+}
+function coin(x,y,r,t,i){
+  const a=.22+.18*Math.sin(t*.0017+i);
+  ctx.strokeStyle=`rgba(190,152,88,${a})`;
+  ctx.lineWidth=1.2*D;
+  ctx.beginPath();
+  ctx.arc(x,y,r,0,Math.PI*2);
+  ctx.stroke();
+  line(x-r*.45,y,x+r*.45,y,`rgba(190,152,88,${a*.8})`,D);
+}
+function draw(t){
+  const d=desk();
+  const cx=d.x+d.w*.5+(pointer.x-.5)*12*D;
+  const cy=d.y+d.h*.5+(pointer.y-.5)*8*D;
+
+  tray(d.x+d.w*.16-42*D,d.y+d.h*.18-22*D,84*D,44*D,t,0,true);
+  tray(d.x+d.w*.84-42*D,d.y+d.h*.18-22*D,84*D,44*D,t,1.4,false);
+  tray(d.x+d.w*.16-42*D,d.y+d.h*.82-22*D,84*D,44*D,t,2.8,false);
+  tray(d.x+d.w*.84-42*D,d.y+d.h*.82-22*D,84*D,44*D,t,4.2,true);
+
+  rect(cx-54*D,cy-70*D,108*D,140*D,"rgba(232,224,204,.055)","rgba(232,224,204,.22)");
+  rect(cx-34*D,cy-48*D,68*D,96*D,"rgba(11,18,15,.62)","rgba(129,158,132,.22)");
+  for(let i=0;i<6;i++){
+    const yy=cy-33*D+i*13*D;
+    const alpha=i===2?".48":".23";
+    line(cx-22*D,yy,cx+(10+i*4)*D,yy,`rgba(129,158,132,${alpha})`,D);
+  }
+
+  const nodes=[
+    [d.x+d.w*.16,d.y+d.h*.18],[d.x+d.w*.84,d.y+d.h*.18],
+    [d.x+d.w*.16,d.y+d.h*.82],[d.x+d.w*.84,d.y+d.h*.82]
+  ];
+  nodes.forEach((n,i)=>{
+    const midx=(n[0]+cx)/2+Math.sin(t*.001+i)*10*D;
+    const midy=(n[1]+cy)/2+Math.cos(t*.0013+i)*8*D;
+    ctx.strokeStyle=i%2?"rgba(129,158,132,.23)":"rgba(190,152,88,.26)";
+    ctx.lineWidth=D;
+    ctx.beginPath();
+    ctx.moveTo(n[0],n[1]);
+    ctx.quadraticCurveTo(midx,midy,cx,cy);
+    ctx.stroke();
+    const p=(t*.00012+i*.18)%1;
+    const qx=(1-p)*(1-p)*n[0]+2*(1-p)*p*midx+p*p*cx;
+    const qy=(1-p)*(1-p)*n[1]+2*(1-p)*p*midy+p*p*cy;
+    rect(qx-1.8*D,qy-1.8*D,3.6*D,3.6*D,i%2?"rgba(129,158,132,.58)":"rgba(190,152,88,.64)");
+  });
+
+  const ringR=clamp(d.s*.12,52*D,108*D);
+  ctx.strokeStyle="rgba(232,224,204,.13)";
+  ctx.lineWidth=D;
+  ctx.beginPath();
+  ctx.arc(cx,cy,ringR,0,Math.PI*2);
+  ctx.stroke();
+  for(let i=0;i<30;i++){
+    const a=-Math.PI*.78+i*(Math.PI*1.56/29);
+    const r=ringR+((i%2)*5+2)*D;
+    coin(cx+Math.cos(a)*r,cy+Math.sin(a)*r,3.4*D,t,i);
+  }
+
+  const wait=(Math.sin(t*.001)+1)/2;
+  line(cx-ringR*.72,cy+ringR*.82,cx+ringR*.72,cy+ringR*.82,"rgba(232,224,204,.12)",D);
+  rect(cx-ringR*.72,cy+ringR*.82-1*D,ringR*1.44*wait,2*D,"rgba(190,152,88,.42)");
+
+  if(mark>.01){
+    ctx.strokeStyle=`rgba(190,152,88,${mark*.35})`;
+    ctx.lineWidth=1.2*D;
+    ctx.beginPath();
+    ctx.arc(pointer.x*W,pointer.y*H,(1-mark)*d.s*.22+18*D,0,Math.PI*2);
+    ctx.stroke();
+    mark*=.95;
+  }
+}
+function frame(now){
+  const t=now-t0;
+  background(t);
+  draw(t);
+  requestAnimationFrame(frame);
+}
+resize();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

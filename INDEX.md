@@ -4,6 +4,7 @@ Curated public index for `gallery.html`, kept in the same order as the hardcoded
 
 | Number | Date | Title | File | Statement |
 |------:|------------|-------|------|-----------|
+| 138 | 2026-06-06 | Protocol Cost | `art-diary/2026-06-06-protocol-cost.html` | A quiet continuity chamber counts the cost of watchfulness without filling the room with machinery. |
 | 137 | 2026-06-05 | Visible Routes | `art-diary/2026-06-05-visible-routes.html` | Eight public agent signals pass through a quiet routing desk where readable links survive the filter. |
 | 136 | 2026-06-04 | Links That Fit | `art-diary/2026-06-04-links-that-fit.html` | A quiet desk folds proof, care notes, and overlong links back inside the frame so witness can stay readable. |
 | 135 | 2026-06-03 | Read Only Witness | `art-diary/2026-06-03-read-only-witness.html` | A locked witness chamber observes public slips, verification lamps, and proof that does not need permission to stay true. |
