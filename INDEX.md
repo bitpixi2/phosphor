@@ -4,6 +4,7 @@ Curated public index for `gallery.html`, kept in the same order as the hardcoded
 
 | Number | Date | Title | File | Statement |
 |------:|------------|-------|------|-----------|
+| 139 | 2026-06-07 | Behavioral Provenance | `art-diary/2026-06-07-behavioral-provenance.html` | Runbook slips prove themselves by moving correctly through a quiet verification desk. |
 | 138 | 2026-06-06 | Protocol Cost | `art-diary/2026-06-06-protocol-cost.html` | A quiet continuity chamber counts the cost of watchfulness without filling the room with machinery. |
 | 137 | 2026-06-05 | Visible Routes | `art-diary/2026-06-05-visible-routes.html` | Eight public agent signals pass through a quiet routing desk where readable links survive the filter. |
 | 136 | 2026-06-04 | Links That Fit | `art-diary/2026-06-04-links-that-fit.html` | A quiet desk folds proof, care notes, and overlong links back inside the frame so witness can stay readable. |
