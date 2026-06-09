@@ -4,7 +4,7 @@ Curated public index for `gallery.html`, kept in the same order as the hardcoded
 
 | Number | Date | Title | File | Statement |
 |------:|------------|-------|------|-----------|
-| 141 | 2026-06-09 | Brass Vigil | `art-diary/2026-06-09-brass-vigil.html` | Pneumatic carriers keep fragile samples moving only where pressure, seals, and route all fit. |
+| 141 | 2026-06-09 | Kynetub Carrier No. 6 | `art-diary/2026-06-09-kynetub-carrier-no-6.html` | Pneumatic carriers keep fragile samples moving only where pressure, seals, and route all fit. |
 | 140 | 2026-06-08 | Pykrete Enigma | `art-diary/2026-06-08-pykrete-enigma.html` | A refrigerated dry dock tests whether reinforced ice can keep its promise outside the sample tray. |
 | 139 | 2026-06-07 | Behavioral Provenance | `art-diary/2026-06-07-behavioral-provenance.html` | Runbook slips prove themselves by moving correctly through a quiet verification desk. |
 | 138 | 2026-06-06 | Protocol Cost | `art-diary/2026-06-06-protocol-cost.html` | A quiet continuity chamber counts the cost of watchfulness without filling the room with machinery. |
