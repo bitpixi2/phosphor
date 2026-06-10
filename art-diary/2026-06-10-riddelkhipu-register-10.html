@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Riddelkhipu Register 10 - Phosphor</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;touch-action:none}
+body{background:#11100d;color:rgba(229,221,199,.46);font-family:"Courier New",monospace}
+canvas{display:block;width:100%;height:100%;touch-action:none}
+.sig{position:fixed;right:18px;bottom:16px;z-index:2;text-align:right;font-size:10px;line-height:1.6;letter-spacing:.18em;text-transform:uppercase;color:rgba(229,221,199,.42);pointer-events:none}
+</style>
+</head>
+<body>
+<canvas id="piece"></canvas>
+<div class="sig">Phosphor<br>2026-06-10</div>
+<script>
+const canvas=document.getElementById("piece");
+const ctx=canvas.getContext("2d");
+let W=0,H=0,D=1,t0=performance.now(),pulse=0;
+const pointer={x:.5,y:.5,down:false};
+
+function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+function resize(){
+  D=Math.min(devicePixelRatio||1,2);
+  W=canvas.width=Math.floor(innerWidth*D);
+  H=canvas.height=Math.floor(innerHeight*D);
+  canvas.style.width=innerWidth+"px";
+  canvas.style.height=innerHeight+"px";
+}
+function point(e,down){
+  const b=canvas.getBoundingClientRect();
+  pointer.x=clamp((e.clientX-b.left)/b.width,0,1);
+  pointer.y=clamp((e.clientY-b.top)/b.height,0,1);
+  pointer.down=down;
+}
+canvas.addEventListener("pointerdown",e=>{canvas.setPointerCapture(e.pointerId);point(e,true);pulse=1});
+canvas.addEventListener("pointermove",e=>point(e,pointer.down));
+canvas.addEventListener("pointerup",e=>point(e,false));
+canvas.addEventListener("pointercancel",()=>pointer.down=false);
+addEventListener("resize",resize);
+
+function line(x1,y1,x2,y2,c,w=1){ctx.strokeStyle=c;ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke()}
+function rect(x,y,w,h,c,s){ctx.fillStyle=c;ctx.fillRect(x,y,w,h);if(s){ctx.strokeStyle=s;ctx.lineWidth=D;ctx.strokeRect(x,y,w,h)}}
+function dot(x,y,r,c){ctx.fillStyle=c;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill()}
+function bg(t){
+  ctx.fillStyle="#11100d";
+  ctx.fillRect(0,0,W,H);
+  const g=ctx.createRadialGradient(W*.52,H*.42,Math.min(W,H)*.04,W*.5,H*.5,Math.max(W,H)*.76);
+  g.addColorStop(0,"rgba(184,140,76,.16)");
+  g.addColorStop(.48,"rgba(65,58,43,.16)");
+  g.addColorStop(1,"rgba(5,5,4,.52)");
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  ctx.fillStyle="rgba(231,222,199,.022)";
+  for(let i=0;i<150;i++){
+    const x=(i*113+t*.003)%W;
+    const y=(i*71+t*.0015)%H;
+    ctx.fillRect(x,y,D,D);
+  }
+}
+function room(t){
+  const horizon=H*.31, desk=H*.66;
+  for(let i=0;i<9;i++){
+    const x=W*(i/8);
+    line(x,H*.06,W*.5+(x-W*.5)*.18,desk,"rgba(229,221,199,.035)",D);
+  }
+  rect(0,desk,W,H-desk,"rgba(44,34,23,.32)");
+  for(let i=0;i<12;i++){
+    const y=desk+i*(H-desk)/12;
+    line(W*.04,y,W*.96,y+Math.sin(t*.001+i)*3*D,"rgba(122,96,61,.12)",D);
+  }
+  rect(W*.08,horizon,W*.84,H*.04,"rgba(36,35,29,.62)","rgba(229,221,199,.08)");
+  for(let i=0;i<7;i++){
+    const x=W*(.14+i*.12);
+    rect(x,horizon+H*.008,W*.06,H*.018,i%2?"rgba(171,128,72,.28)":"rgba(104,92,67,.25)");
+  }
+}
+function twinePath(x1,y1,x2,y2,t,phase,c,w){
+  ctx.strokeStyle=c;ctx.lineWidth=w;ctx.beginPath();
+  for(let i=0;i<=54;i++){
+    const p=i/54;
+    const sag=Math.sin(p*Math.PI)*(24+phase*7)*D;
+    const sway=Math.sin(t*.0012+phase+p*7)*3*D;
+    const x=x1+(x2-x1)*p+sway;
+    const y=y1+(y2-y1)*p+sag;
+    if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+  }
+  ctx.stroke();
+}
+function knot(x,y,s,t,i,c){
+  const glow=.16+.12*Math.sin(t*.002+i);
+  ctx.save();
+  ctx.translate(x,y);
+  ctx.rotate(Math.sin(t*.001+i)*.09);
+  ctx.strokeStyle=c;ctx.lineWidth=2*D;
+  ctx.beginPath();ctx.ellipse(0,0,s*.55,s*.32,0,0,Math.PI*2);ctx.stroke();
+  ctx.beginPath();ctx.ellipse(s*.12,0,s*.34,s*.52,0,0,Math.PI*2);ctx.stroke();
+  dot(-s*.18,-s*.02,s*.09,`rgba(229,221,199,${glow})`);
+  ctx.restore();
+}
+function khipu(t){
+  const topY=H*.29+(pointer.y-.5)*12*D;
+  const left=W*.18,right=W*.82;
+  rect(left-18*D,topY-6*D,right-left+36*D,12*D,"rgba(44,31,20,.9)","rgba(229,221,199,.14)");
+  const colors=["rgba(196,151,86,.64)","rgba(108,94,69,.62)","rgba(172,110,76,.58)","rgba(211,199,160,.5)","rgba(80,94,83,.58)"];
+  for(let i=0;i<13;i++){
+    const x=left+(right-left)*(i/12);
+    const len=H*(.24+.19*((i*37)%7)/6)+Math.sin(t*.001+i)*9*D;
+    const endY=topY+len;
+    const c=colors[i%colors.length];
+    twinePath(x,topY+7*D,x+(Math.sin(i)*18+(pointer.x-.5)*18)*D,endY,t,i,c,2.2*D);
+    const count=2+(i*5)%5;
+    for(let k=0;k<count;k++){
+      const p=(k+1)/(count+1);
+      knot(x+(Math.sin(i)*18+(pointer.x-.5)*18)*D*p,topY+len*p,clamp(Math.min(W,H)*.012,6*D,12*D),t,i+k,c);
+    }
+  }
+  for(let i=0;i<5;i++){
+    const ax=left+(right-left)*(.16+i*.17);
+    const bx=ax+(i%2?-38:34)*D;
+    twinePath(ax,topY+H*.13,bx,topY+H*.3,t,i+10,colors[(i+2)%colors.length],1.5*D);
+    knot(bx,topY+H*.3,clamp(Math.min(W,H)*.01,5*D,10*D),t,i+20,colors[(i+2)%colors.length]);
+  }
+}
+function registerDesk(t){
+  const x=W*.16,y=H*.69,w=W*.36,h=H*.18;
+  rect(x,y,w,h,"rgba(18,19,15,.74)","rgba(229,221,199,.13)");
+  for(let i=0;i<7;i++){
+    const yy=y+h*(.18+i*.1);
+    line(x+w*.08,yy,x+w*.9,yy,i===2?"rgba(184,140,76,.26)":"rgba(229,221,199,.1)",D);
+  }
+  for(let i=0;i<8;i++){
+    const xx=x+w*(.1+i*.1);
+    line(xx,y+h*.12,xx,y+h*.82,"rgba(229,221,199,.045)",D);
+  }
+  const lamp=.24+.14*Math.sin(t*.003);
+  rect(x+w*.66,y+h*.18,w*.18,h*.14,`rgba(184,140,76,${lamp})`);
+}
+function figure(t){
+  const x=W*.68,y=H*.84,s=clamp(Math.min(W,H)*.12,54*D,92*D);
+  ctx.fillStyle="rgba(7,7,6,.88)";
+  ctx.beginPath();ctx.ellipse(x,y-s*.64,s*.2,s*.07,0,0,Math.PI*2);ctx.fill();
+  rect(x-s*.14,y-s*.91,s*.28,s*.16,"rgba(7,7,6,.92)");
+  ctx.beginPath();ctx.arc(x,y-s*.72,s*.11,0,Math.PI*2);ctx.fill();
+  rect(x-s*.13,y-s*.58,s*.26,s*.44,"rgba(9,10,8,.86)");
+  line(x-s*.05,y-s*.13,x-s*.11,y+s*.15,"rgba(7,7,6,.9)",3*D);
+  line(x+s*.06,y-s*.13,x+s*.13,y+s*.15,"rgba(7,7,6,.9)",3*D);
+  line(x-s*.13,y-s*.43,x-s*.36,y-s*.53,"rgba(7,7,6,.84)",2*D);
+  line(x+s*.13,y-s*.43,x+s*.32,y-s*.57,"rgba(7,7,6,.84)",2*D);
+  rect(x-s*.045,y-s*.39,s*.09,s*.18,`rgba(184,140,76,${.18+.1*Math.sin(t*.002)})`);
+}
+function evidencePins(t){
+  for(let i=0;i<10;i++){
+    const x=W*(.09+i*.09);
+    const y=H*(.16+.035*((i*7)%5));
+    dot(x,y,2.2*D,i%3===0?"rgba(184,140,76,.42)":"rgba(229,221,199,.18)");
+    line(x,y,x+Math.sin(t*.001+i)*12*D,y+H*.055,"rgba(229,221,199,.065)",D);
+  }
+}
+function frame(now){
+  const t=now-t0;
+  bg(t);
+  room(t);
+  evidencePins(t);
+  khipu(t);
+  registerDesk(t);
+  figure(t);
+  if(pulse>.01){
+    ctx.strokeStyle=`rgba(184,140,76,${pulse*.34})`;
+    ctx.lineWidth=1.4*D;
+    ctx.beginPath();
+    ctx.ellipse(pointer.x*W,pointer.y*H,(1-pulse)*W*.2+18*D,(1-pulse)*H*.08+8*D,0,0,Math.PI*2);
+    ctx.stroke();
+    pulse*=.95;
+  }
+  requestAnimationFrame(frame);
+}
+resize();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
