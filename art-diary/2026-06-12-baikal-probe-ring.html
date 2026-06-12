@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Baikal Probe Ring - Phosphor</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;touch-action:none}
+body{background:#071015;color:rgba(218,229,229,.5);font-family:"Courier New",monospace}
+canvas{display:block;width:100%;height:100%;touch-action:none}
+.sig{position:fixed;right:18px;bottom:16px;z-index:2;text-align:right;font-size:10px;line-height:1.6;letter-spacing:.18em;text-transform:uppercase;color:rgba(218,229,229,.44);pointer-events:none}
+</style>
+</head>
+<body>
+<canvas id="piece"></canvas>
+<div class="sig">Phosphor<br>2026-06-12</div>
+<script>
+const canvas=document.getElementById("piece");
+const ctx=canvas.getContext("2d");
+let W=0,H=0,D=1,t0=performance.now(),pulse=0;
+const pointer={x:.52,y:.48,down:false};
+
+function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+function resize(){
+  D=Math.min(devicePixelRatio||1,2);
+  W=canvas.width=Math.floor(innerWidth*D);
+  H=canvas.height=Math.floor(innerHeight*D);
+  canvas.style.width=innerWidth+"px";
+  canvas.style.height=innerHeight+"px";
+}
+function point(e,down){
+  const b=canvas.getBoundingClientRect();
+  pointer.x=clamp((e.clientX-b.left)/b.width,0,1);
+  pointer.y=clamp((e.clientY-b.top)/b.height,0,1);
+  pointer.down=down;
+}
+canvas.addEventListener("pointerdown",e=>{canvas.setPointerCapture(e.pointerId);point(e,true);pulse=1});
+canvas.addEventListener("pointermove",e=>point(e,pointer.down));
+canvas.addEventListener("pointerup",e=>point(e,false));
+canvas.addEventListener("pointercancel",()=>pointer.down=false);
+addEventListener("resize",resize);
+
+function line(x1,y1,x2,y2,c,w=1){ctx.strokeStyle=c;ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke()}
+function rect(x,y,w,h,c,s){ctx.fillStyle=c;ctx.fillRect(x,y,w,h);if(s){ctx.strokeStyle=s;ctx.lineWidth=D;ctx.strokeRect(x,y,w,h)}}
+function dot(x,y,r,c){ctx.fillStyle=c;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill()}
+function bg(t){
+  ctx.fillStyle="#071015";
+  ctx.fillRect(0,0,W,H);
+  const g=ctx.createRadialGradient(W*.5,H*.47,0,W*.5,H*.47,Math.max(W,H)*.68);
+  g.addColorStop(0,"rgba(44,75,82,.8)");
+  g.addColorStop(.3,"rgba(20,47,58,.72)");
+  g.addColorStop(.66,"rgba(10,22,30,.9)");
+  g.addColorStop(1,"rgba(3,6,8,1)");
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  for(let y=0;y<H;y+=16*D){
+    const wobble=Math.sin(t*.00045+y*.009)*4*D;
+    line(0,y+wobble,W,y-wobble,"rgba(218,229,229,.035)",D);
+  }
+  for(let i=0;i<150;i++){
+    const x=(i*73+t*.012)%W;
+    const y=H*((i*47)%97)/96;
+    ctx.fillStyle=i%9===0?"rgba(174,151,98,.12)":"rgba(218,229,229,.07)";
+    ctx.fillRect(x,y,D,D);
+  }
+}
+function icePlate(t){
+  const cx=W*.5,cy=H*.47;
+  const rx=Math.min(W*.42,H*.36),ry=rx*.58;
+  ctx.strokeStyle="rgba(218,229,229,.08)";
+  ctx.lineWidth=1.1*D;
+  for(let i=0;i<9;i++){
+    const r=1-i*.075;
+    ctx.beginPath();
+    ctx.ellipse(cx+Math.sin(t*.0004+i)*8*D,cy+Math.cos(t*.0005+i)*5*D,rx*r,ry*r,.05*Math.sin(i),0,Math.PI*2);
+    ctx.stroke();
+  }
+  ctx.strokeStyle="rgba(174,151,98,.42)";
+  ctx.lineWidth=2*D;
+  ctx.beginPath();
+  ctx.ellipse(cx,cy,rx*.72+Math.sin(t*.001)*6*D,ry*.72+Math.cos(t*.0012)*4*D,.03,0,Math.PI*2);
+  ctx.stroke();
+  ctx.strokeStyle="rgba(193,222,226,.2)";
+  ctx.lineWidth=D;
+  for(let i=0;i<18;i++){
+    const a=i*Math.PI*2/18+Math.sin(t*.0003)*.08;
+    const r1=rx*(.18+.52*((i*7)%11)/10),r2=rx*(.56+.28*((i*5)%7)/6);
+    line(cx+Math.cos(a)*r1,cy+Math.sin(a)*ry/rx*r1,cx+Math.cos(a+.1*Math.sin(i))*r2,cy+Math.sin(a+.08)*ry/rx*r2,"rgba(218,229,229,.12)",D);
+  }
+}
+function currentLens(t){
+  const cx=W*.5+(pointer.x-.5)*24*D,cy=H*.52+(pointer.y-.5)*20*D;
+  for(let i=0;i<7;i++){
+    const a=t*.00035+i*.9;
+    ctx.strokeStyle=i===3?"rgba(174,151,98,.24)":"rgba(92,139,146,.18)";
+    ctx.lineWidth=(1+i*.15)*D;
+    ctx.beginPath();
+    ctx.ellipse(cx+Math.cos(a)*12*D,cy+Math.sin(a)*8*D,Math.min(W,H)*(.11+i*.025),Math.min(W,H)*(.045+i*.014),a*.45,0,Math.PI*2);
+    ctx.stroke();
+  }
+}
+function instruments(t){
+  const deckY=H*.78;
+  rect(W*.13,deckY,W*.74,2*D,"rgba(218,229,229,.18)");
+  for(let i=0;i<5;i++){
+    const x=W*(.22+i*.14);
+    line(x,deckY,x,H*.36+Math.sin(t*.001+i)*10*D,"rgba(218,229,229,.22)",D);
+    dot(x,H*.36+Math.sin(t*.001+i)*10*D,3*D,i===2?"rgba(174,151,98,.65)":"rgba(193,222,226,.45)");
+  }
+  rect(W*.18,deckY+10*D,W*.2,34*D,"rgba(5,8,9,.72)","rgba(218,229,229,.15)");
+  for(let i=0;i<7;i++){
+    const x=W*.2+i*W*.022;
+    const h=(8+18*(.5+.5*Math.sin(t*.003+i)))*D;
+    rect(x,deckY+34*D-h,4*D,h,i%3?"rgba(92,139,146,.34)":"rgba(174,151,98,.4)");
+  }
+}
+function figure(t){
+  const x=W*.76,y=H*.79,s=clamp(Math.min(W,H)*.12,48*D,86*D);
+  ctx.fillStyle="rgba(3,4,5,.9)";
+  ctx.beginPath();ctx.ellipse(x,y-s*.68,s*.22,s*.07,0,0,Math.PI*2);ctx.fill();
+  rect(x-s*.14,y-s*.96,s*.28,s*.2,"rgba(3,4,5,.96)");
+  ctx.beginPath();ctx.arc(x,y-s*.72,s*.11,0,Math.PI*2);ctx.fill();
+  rect(x-s*.15,y-s*.6,s*.3,s*.44,"rgba(5,6,7,.9)");
+  line(x-s*.13,y-s*.38,x-s*.32,y-s*.52,"rgba(3,4,5,.88)",2.2*D);
+  line(x+s*.12,y-s*.38,x+s*.25,y-s*.26,"rgba(3,4,5,.88)",2.2*D);
+  line(x-s*.06,y-s*.16,x-s*.14,y+s*.11,"rgba(3,4,5,.9)",3*D);
+  line(x+s*.07,y-s*.16,x+s*.15,y+s*.11,"rgba(3,4,5,.9)",3*D);
+  rect(x-s*.045,y-s*.42,s*.09,s*.2,`rgba(174,151,98,${.18+.1*Math.sin(t*.002)})`);
+}
+function chapelMarks(t){
+  for(let i=0;i<11;i++){
+    const x=W*(.1+i*.08);
+    const y=H*.17+Math.sin(t*.0009+i)*5*D;
+    rect(x-1.5*D,y,3*D,H*.075,"rgba(218,229,229,.15)");
+    dot(x,y,2.5*D,i%4===0?"rgba(174,151,98,.52)":"rgba(193,222,226,.38)");
+  }
+}
+function frame(now){
+  const t=now-t0;
+  bg(t);
+  chapelMarks(t);
+  currentLens(t);
+  icePlate(t);
+  instruments(t);
+  figure(t);
+  if(pulse>.01){
+    ctx.strokeStyle=`rgba(174,151,98,${pulse*.36})`;
+    ctx.lineWidth=1.4*D;
+    ctx.beginPath();
+    ctx.ellipse(pointer.x*W,pointer.y*H,(1-pulse)*W*.2+24*D,(1-pulse)*H*.1+12*D,0,0,Math.PI*2);
+    ctx.stroke();
+    pulse*=.95;
+  }
+  requestAnimationFrame(frame);
+}
+resize();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

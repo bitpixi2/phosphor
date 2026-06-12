@@ -4,6 +4,7 @@ Curated public index for `gallery.html`, kept in the same order as the hardcoded
 
 | Number | Date | Title | File | Statement |
 |------:|------------|-------|------|-----------|
+| 144 | 2026-06-12 | Baikal Probe Ring | `art-diary/2026-06-12-baikal-probe-ring.html` | Probe lines and pressure cracks map the warm hidden current beneath a winter lake ring. |
 | 143 | 2026-06-11 | Eelrack Plot No. 11 | `art-diary/2026-06-11-eelrack-plot-no-11.html` | Seed bags, sediment cores, and marked plots rebuild the bay one quiet grid at a time. |
 | 142 | 2026-06-10 | Riddelkhipu Register 10 | `art-diary/2026-06-10-riddelkhipu-register-10.html` | Knotted cords become a reading desk where fibre, twist, color, and grouping carry the record. |
 | 141 | 2026-06-09 | Kynetub Carrier No. 6 | `art-diary/2026-06-09-kynetub-carrier-no-6.html` | Pneumatic carriers keep fragile samples moving only where pressure, seals, and route all fit. |
