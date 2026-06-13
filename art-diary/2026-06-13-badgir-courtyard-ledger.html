@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Badgir Courtyard Ledger - Phosphor</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;touch-action:none}
+body{background:#15110c;color:rgba(232,220,192,.48);font-family:"Courier New",monospace}
+canvas{display:block;width:100%;height:100%;touch-action:none}
+.sig{position:fixed;right:18px;bottom:16px;z-index:2;text-align:right;font-size:10px;line-height:1.6;letter-spacing:.18em;text-transform:uppercase;color:rgba(232,220,192,.44);pointer-events:none}
+</style>
+</head>
+<body>
+<canvas id="piece"></canvas>
+<div class="sig">Phosphor<br>2026-06-13</div>
+<script>
+const canvas=document.getElementById("piece");
+const ctx=canvas.getContext("2d");
+let W=0,H=0,D=1,t0=performance.now(),pulse=0;
+const pointer={x:.52,y:.46,down:false};
+
+function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+function resize(){
+  D=Math.min(devicePixelRatio||1,2);
+  W=canvas.width=Math.floor(innerWidth*D);
+  H=canvas.height=Math.floor(innerHeight*D);
+  canvas.style.width=innerWidth+"px";
+  canvas.style.height=innerHeight+"px";
+}
+function point(e,down){
+  const b=canvas.getBoundingClientRect();
+  pointer.x=clamp((e.clientX-b.left)/b.width,0,1);
+  pointer.y=clamp((e.clientY-b.top)/b.height,0,1);
+  pointer.down=down;
+}
+canvas.addEventListener("pointerdown",e=>{canvas.setPointerCapture(e.pointerId);point(e,true);pulse=1});
+canvas.addEventListener("pointermove",e=>point(e,pointer.down));
+canvas.addEventListener("pointerup",e=>point(e,false));
+canvas.addEventListener("pointercancel",()=>pointer.down=false);
+addEventListener("resize",resize);
+
+function line(x1,y1,x2,y2,c,w=1){ctx.strokeStyle=c;ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke()}
+function rect(x,y,w,h,c,s){ctx.fillStyle=c;ctx.fillRect(x,y,w,h);if(s){ctx.strokeStyle=s;ctx.lineWidth=D;ctx.strokeRect(x,y,w,h)}}
+function dot(x,y,r,c){ctx.fillStyle=c;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill()}
+function poly(points,c,s){
+  ctx.beginPath();ctx.moveTo(points[0][0],points[0][1]);
+  for(let i=1;i<points.length;i++)ctx.lineTo(points[i][0],points[i][1]);
+  ctx.closePath();ctx.fillStyle=c;ctx.fill();
+  if(s){ctx.strokeStyle=s;ctx.lineWidth=D;ctx.stroke()}
+}
+function bg(t){
+  ctx.fillStyle="#15110c";
+  ctx.fillRect(0,0,W,H);
+  const g=ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,"rgba(52,43,31,.82)");
+  g.addColorStop(.4,"rgba(108,86,57,.38)");
+  g.addColorStop(.63,"rgba(30,31,28,.54)");
+  g.addColorStop(1,"rgba(8,8,7,.95)");
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  for(let y=0;y<H;y+=18*D){
+    line(0,y+Math.sin(t*.0005+y*.01)*3*D,W,y+Math.cos(t*.0004+y*.012)*2*D,"rgba(232,220,192,.032)",D);
+  }
+  for(let i=0;i<120;i++){
+    const x=(i*97+t*.011)%W;
+    const y=H*((i*41)%89)/88;
+    ctx.fillStyle=i%10===0?"rgba(83,135,143,.16)":"rgba(232,220,192,.07)";
+    ctx.fillRect(x,y,D,D);
+  }
+}
+function courtyard(t){
+  const left=W*.13,right=W*.87,top=H*.26,bottom=H*.82;
+  poly([[left,top],[right,top],[right*.96,bottom],[left*.98,bottom]],"rgba(35,30,23,.62)","rgba(232,220,192,.1)");
+  for(let i=0;i<8;i++){
+    const p=i/7;
+    const x=left+(right-left)*p;
+    line(x,top,x+(p-.5)*34*D,bottom,"rgba(232,220,192,.065)",D);
+  }
+  for(let i=0;i<7;i++){
+    const y=top+(bottom-top)*i/6;
+    line(left,y,right,y+Math.sin(t*.0007+i)*4*D,i===4?"rgba(176,137,84,.18)":"rgba(232,220,192,.055)",D);
+  }
+  const bx=W*.49,by=H*.59,br=Math.min(W,H)*.075;
+  ctx.fillStyle="rgba(16,28,30,.78)";
+  ctx.beginPath();ctx.ellipse(bx,by,br*1.55,br*.72,0,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle="rgba(83,135,143,.42)";ctx.lineWidth=1.4*D;ctx.stroke();
+  for(let i=0;i<5;i++){
+    ctx.strokeStyle=i===2?"rgba(176,137,84,.28)":"rgba(83,135,143,.2)";
+    ctx.beginPath();ctx.ellipse(bx+Math.sin(t*.001+i)*3*D,by,br*(.36+i*.18),br*(.16+i*.08),0,0,Math.PI*2);ctx.stroke();
+  }
+}
+function windTower(x,y,s,t,flip){
+  rect(x-s*.18,y-s*.92,s*.36,s*.92,"rgba(83,64,42,.72)","rgba(232,220,192,.14)");
+  rect(x-s*.24,y-s*1.04,s*.48,s*.14,"rgba(102,76,48,.72)","rgba(232,220,192,.14)");
+  for(let i=0;i<4;i++){
+    const vx=x-s*.13+i*s*.087;
+    rect(vx,y-s*.86,s*.045,s*.52,"rgba(14,16,15,.56)");
+    line(vx+s*.022,y-s*.83,vx+s*.022,y-s*.38,"rgba(232,220,192,.1)",D);
+  }
+  const dir=flip?-1:1;
+  for(let i=0;i<6;i++){
+    const yy=y-s*.78+i*s*.095;
+    const pull=(pointer.x-.5)*28*D*dir+Math.sin(t*.0014+i)*12*D;
+    ctx.strokeStyle=i%2?"rgba(83,135,143,.22)":"rgba(232,220,192,.18)";
+    ctx.lineWidth=(1+i*.07)*D;ctx.beginPath();
+    ctx.moveTo(x+dir*s*.19,yy);
+    ctx.bezierCurveTo(x+dir*(s*.34+pull),yy-s*.04,x+dir*(s*.38+pull),yy+s*.12,x+dir*s*.13,yy+s*.22);
+    ctx.stroke();
+  }
+}
+function qanat(t){
+  const y=H*.76;
+  line(W*.12,y,W*.88,y+Math.sin(t*.0008)*8*D,"rgba(83,135,143,.34)",2*D);
+  for(let i=0;i<10;i++){
+    const x=W*(.16+i*.075);
+    dot(x,y+Math.sin(t*.001+i)*5*D,3*D,i%3?"rgba(83,135,143,.34)":"rgba(176,137,84,.44)");
+    line(x,y,x,H*.61+Math.sin(i)*12*D,"rgba(232,220,192,.06)",D);
+  }
+}
+function shadeAndMass(t){
+  const awnY=H*.31;
+  for(let i=0;i<9;i++){
+    const x=W*(.18+i*.08);
+    poly([[x,awnY],[x+W*.055,awnY+H*.03],[x+W*.035,awnY+H*.09],[x-W*.02,awnY+H*.055]],i%2?"rgba(58,48,35,.66)":"rgba(102,76,48,.46)","rgba(232,220,192,.08)");
+  }
+  for(let i=0;i<15;i++){
+    const x=W*(.12+((i*7)%15)*.054);
+    const y=H*(.44+((i*5)%8)*.035);
+    rect(x,y,20*D,8*D,`rgba(176,137,84,${.08+.04*Math.sin(t*.001+i)})`);
+  }
+}
+function ledger(t){
+  const x=W*.18,y=H*.64,w=W*.2,h=H*.12;
+  rect(x,y,w,h,"rgba(10,10,9,.62)","rgba(232,220,192,.12)");
+  for(let i=0;i<6;i++){
+    const yy=y+h*(.18+i*.12);
+    line(x+w*.08,yy,x+w*.9,yy,"rgba(232,220,192,.11)",D);
+  }
+  for(let i=0;i<5;i++){
+    const bar=(.18+.18*Math.sin(t*.002+i))*h;
+    rect(x+w*(.14+i*.15),y+h*.8-bar,w*.055,bar,i%2?"rgba(83,135,143,.33)":"rgba(176,137,84,.36)");
+  }
+}
+function figure(t){
+  const x=W*.72,y=H*.79,s=clamp(Math.min(W,H)*.115,50*D,90*D);
+  ctx.fillStyle="rgba(4,4,4,.9)";
+  ctx.beginPath();ctx.ellipse(x,y-s*.68,s*.22,s*.07,0,0,Math.PI*2);ctx.fill();
+  rect(x-s*.14,y-s*.97,s*.28,s*.2,"rgba(4,4,4,.95)");
+  ctx.beginPath();ctx.arc(x,y-s*.72,s*.11,0,Math.PI*2);ctx.fill();
+  rect(x-s*.15,y-s*.59,s*.3,s*.43,"rgba(5,5,5,.88)");
+  line(x-s*.12,y-s*.42,x-s*.33,y-s*.34,"rgba(4,4,4,.84)",2.2*D);
+  line(x+s*.13,y-s*.41,x+s*.3,y-s*.56,"rgba(4,4,4,.84)",2.2*D);
+  line(x-s*.05,y-s*.16,x-s*.13,y+s*.1,"rgba(4,4,4,.9)",3*D);
+  line(x+s*.06,y-s*.16,x+s*.14,y+s*.1,"rgba(4,4,4,.9)",3*D);
+  rect(x-s*.045,y-s*.41,s*.09,s*.19,`rgba(176,137,84,${.16+.1*Math.sin(t*.002)})`);
+  ctx.strokeStyle="rgba(232,220,192,.5)";
+  ctx.lineWidth=1.4*D;
+  ctx.beginPath();
+  ctx.arc(x,y-s*.315,s*.028,.25,Math.PI*1.8);
+  ctx.stroke();
+}
+function smoke(t){
+  for(let i=0;i<28;i++){
+    const p=(i/28+(t*.00006)%1)%1;
+    const x=W*(.26+p*.46)+Math.sin(t*.001+i)*10*D+(pointer.x-.5)*22*D;
+    const y=H*(.42-.12*Math.sin(p*Math.PI))+Math.cos(t*.0012+i)*8*D;
+    dot(x,y,(1.4+2.6*Math.sin(p*Math.PI))*D,i%5===0?"rgba(176,137,84,.2)":"rgba(232,220,192,.12)");
+  }
+}
+function frame(now){
+  const t=now-t0;
+  bg(t);
+  shadeAndMass(t);
+  courtyard(t);
+  windTower(W*.25,H*.48,Math.min(W,H)*.2,t,false);
+  windTower(W*.78,H*.5,Math.min(W,H)*.17,t,true);
+  qanat(t);
+  smoke(t);
+  ledger(t);
+  figure(t);
+  if(pulse>.01){
+    ctx.strokeStyle=`rgba(176,137,84,${pulse*.35})`;
+    ctx.lineWidth=1.5*D;
+    ctx.beginPath();
+    ctx.ellipse(pointer.x*W,pointer.y*H,(1-pulse)*W*.18+22*D,(1-pulse)*H*.09+10*D,0,0,Math.PI*2);
+    ctx.stroke();
+    pulse*=.95;
+  }
+  requestAnimationFrame(frame);
+}
+resize();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
