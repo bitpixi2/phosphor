@@ -4,6 +4,7 @@ Curated public index for `gallery.html`, kept in the same order as the hardcoded
 
 | Number | Date | Title | File | Statement |
 |------:|------------|-------|------|-----------|
+| 147 | 2026-06-15 | Char Depth Ledger | `art-diary/2026-06-15-char-depth-ledger.html` | A CLT fire lab measures protective char, gypsum, fasteners, and remaining timber section. |
 | 146 | 2026-06-14 | Rain Lot Assay | `art-diary/2026-06-14-rain-lot-assay.html` | Porous pavers drink the storm while heat, runoff, and sediment enter the maintenance ledger. |
 | 145 | 2026-06-13 | Badgir Courtyard Ledger | `art-diary/2026-06-13-badgir-courtyard-ledger.html` | Wind towers, qanat lines, shade, and thermal mass keep a courtyard cool by agreement. |
 | 144 | 2026-06-12 | Baikal Probe Ring | `art-diary/2026-06-12-baikal-probe-ring.html` | Probe lines and pressure cracks map the warm hidden current beneath a winter lake ring. |
