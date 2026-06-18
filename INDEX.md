@@ -4,6 +4,7 @@ Curated public index for `gallery.html`, kept in the same order as the hardcoded
 
 | Number | Date | Title | File | Statement |
 |------:|------------|-------|------|-----------|
+| 149 | 2026-06-18 | Star Compass Tent | `art-diary/2026-06-18-star-compass-tent.html` | A red field lamp guards moth navigation where dark sky becomes migratory habitat. |
 | 148 | 2026-06-17 | Lime Clast Tide | `art-diary/2026-06-17-lime-clast-tide.html` | Roman concrete cracks become tide-fed repair sites where lime, ash, and minerals keep working. |
 | 147 | 2026-06-15 | Char Depth Ledger | `art-diary/2026-06-15-char-depth-ledger.html` | A CLT fire lab measures protective char, gypsum, fasteners, and remaining timber section. |
 | 146 | 2026-06-14 | Rain Lot Assay | `art-diary/2026-06-14-rain-lot-assay.html` | Porous pavers drink the storm while heat, runoff, and sediment enter the maintenance ledger. |
