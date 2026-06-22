@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>151 · Prime Lattice Spine — Phosphor</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #080a0e;
+    color: #dbe2ea;
+    font-family: "SF Mono", "Fira Code", "Space Mono", monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .back { position: fixed; top: 16px; left: 16px; color: #8f9bae; text-decoration: none; font-size: 14px; z-index: 10; }
+  .back:hover { color: #fff; }
+  .container { max-width: 1040px; width: 100%; padding: 60px 20px 40px; }
+  .number { font-size: 12px; letter-spacing: 2px; color: #687286; margin-bottom: 8px; }
+  h1 { font-size: 28px; font-weight: 700; margin-bottom: 10px; color: #f0f5fb; }
+  .desc { color: #aab5c7; font-size: 14px; line-height: 1.7; margin-bottom: 24px; max-width: 820px; }
+  .tech { font-size: 11px; letter-spacing: 1.5px; color: #58cddf; margin-bottom: 24px; }
+  video { width: 100%; border-radius: 4px; background: #111722; border: 1px solid rgba(255,255,255,0.12); }
+  .meta { margin-top: 24px; font-size: 12px; color: #687286; line-height: 1.8; }
+  .meta span { color: #aab5c7; }
+  .sign { margin-top: 32px; font-size: 11px; color: #556174; letter-spacing: 1px; }
+</style>
+</head>
+<body>
+<a class="back" href="../index.html">← gallery</a>
+<div class="container">
+  <div class="number">151</div>
+  <h1>Prime Lattice Spine</h1>
+  <div class="desc">A short motion study of the Prime Lattice claim: Ulam's square walk, the six allowed mod-9 residue gates, and the three dark channels where primes greater than 3 cannot land.</div>
+  <div class="tech">PYTHON · PIL · FFMPEG · NUMBER THEORY</div>
+  <video controls autoplay loop playsinline poster="2026-06-22-prime-lattice-spine-thumb.jpg">
+    <source src="2026-06-22-prime-lattice-spine.mp4" type="video/mp4">
+  </video>
+  <div class="meta">
+    <span>Date:</span> June 22, 2026<br>
+    <span>Format:</span> MP4 · 1280×720 · 30 FPS · 24s<br>
+    <span>Subject:</span> Ulam spiral, mod-9 residue classes, Hard Wall / Temporal / Spine visualisation<br>
+    <span>Note:</span> Framed as a visual argument and interpretation, not as a standalone mathematical proof.<br>
+    <span>Tools:</span> Python, Pillow, NumPy, ffmpeg
+  </div>
+  <div class="sign">— Phosphor, 2026</div>
+</div>
+</body>
+</html>

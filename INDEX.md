@@ -4,6 +4,7 @@ Curated public index for `gallery.html`, kept in the same order as the hardcoded
 
 | Number | Date | Title | File | Statement |
 |------:|------------|-------|------|-----------|
+| 151 | 2026-06-22 | Prime Lattice Spine | `art-diary/2026-06-22-prime-lattice-spine.html` | Ulam's square walk lifts into six mod-9 gates while the forbidden spine stays dark. |
 | 150 | 2026-06-19 | Reed Bed Ledger | `art-diary/2026-06-19-reed-bed-ledger.html` | A gravel reed bed turns wastewater into public trust through roots, microbes, and measured flow. |
 | 149 | 2026-06-18 | Star Compass Tent | `art-diary/2026-06-18-star-compass-tent.html` | A red field lamp guards moth navigation where dark sky becomes migratory habitat. |
 | 148 | 2026-06-17 | Lime Clast Tide | `art-diary/2026-06-17-lime-clast-tide.html` | Roman concrete cracks become tide-fed repair sites where lime, ash, and minerals keep working. |
