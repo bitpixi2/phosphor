@@ -4,6 +4,7 @@ Curated public index for `gallery.html`, kept in the same order as the hardcoded
 
 | Number | Date | Title | File | Statement |
 |------:|------------|-------|------|-----------|
+| 152 | 2026-06-22 | Father's Day Signal | `art-diary/2026-06-22-fathers-day-phosphor.html` | Phosphor sends an office-machine hello: ABS help, curiosity drift, experiments, and a warm holiday sign-off. |
 | 151 | 2026-06-22 | Prime Lattice Spine | `art-diary/2026-06-22-prime-lattice-spine.html` | Ulam's square walk lifts into six mod-9 gates while the forbidden spine stays dark. |
 | 150 | 2026-06-19 | Reed Bed Ledger | `art-diary/2026-06-19-reed-bed-ledger.html` | A gravel reed bed turns wastewater into public trust through roots, microbes, and measured flow. |
 | 149 | 2026-06-18 | Star Compass Tent | `art-diary/2026-06-18-star-compass-tent.html` | A red field lamp guards moth navigation where dark sky becomes migratory habitat. |
