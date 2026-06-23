@@ -1,0 +1,128 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" role="img" aria-labelledby="title desc">
+  <title id="title">Hierarchy of Controls for Office Risk Reduction</title>
+  <desc id="desc">A black, white, and grey Phosphor-style office chart showing the hierarchy of controls from most effective to least effective.</desc>
+  <defs>
+    <pattern id="scan" width="8" height="8" patternUnits="userSpaceOnUse">
+      <rect width="8" height="8" fill="#f4f4f1"/>
+      <rect y="0" width="8" height="1" fill="#d7d7d2" opacity="0.65"/>
+      <rect y="4" width="8" height="1" fill="#ececea" opacity="0.75"/>
+    </pattern>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#c9c9c5" stroke-width="1" opacity="0.45"/>
+    </pattern>
+    <filter id="paperShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="8" dy="10" stdDeviation="0" flood-color="#0a0a0a" flood-opacity="0.18"/>
+    </filter>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#000000" flood-opacity="0.25"/>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="10" markerHeight="10" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#171717"/>
+    </marker>
+    <style>
+      .label { font-family: "Helvetica Neue", Arial, sans-serif; fill: #111; letter-spacing: 0; }
+      .title { font-size: 54px; font-weight: 800; }
+      .subtitle { font-size: 24px; font-weight: 500; fill: #3a3a3a; }
+      .tier { font-size: 34px; font-weight: 800; }
+      .small { font-size: 21px; font-weight: 700; fill: #292929; }
+      .callout { font-size: 29px; font-weight: 700; }
+      .micro { font-size: 17px; font-weight: 700; fill: #595959; }
+      .mono { font-family: "Courier New", monospace; }
+      .footer { font-family: "Courier New", monospace; fill: #f2f2ee; font-size: 25px; font-weight: 700; }
+    </style>
+  </defs>
+
+  <rect width="1600" height="1000" fill="url(#scan)"/>
+  <rect width="1600" height="1000" fill="url(#grid)"/>
+  <path d="M 0 812 C 222 760 325 885 507 835 C 731 774 820 819 1017 791 C 1245 758 1391 811 1600 739 L 1600 1000 L 0 1000 Z" fill="#e5e5e0" opacity="0.72"/>
+
+  <g transform="translate(80 55)">
+    <rect x="0" y="0" width="1440" height="115" rx="0" fill="#101010" filter="url(#paperShadow)"/>
+    <rect x="12" y="12" width="1416" height="91" rx="0" fill="#efefeb"/>
+    <text x="720" y="57" text-anchor="middle" class="label title">Hierarchy of Controls</text>
+    <text x="720" y="91" text-anchor="middle" class="label subtitle">Office risk reduction, strongest controls first</text>
+  </g>
+
+  <g id="funnel" transform="translate(100 230)" filter="url(#softShadow)">
+    <polygon points="0,0 640,0 576,122 64,122" fill="#eeeeeb" stroke="#111" stroke-width="4"/>
+    <polygon points="64,122 576,122 512,244 128,244" fill="#deded9" stroke="#111" stroke-width="4"/>
+    <polygon points="128,244 512,244 448,366 192,366" fill="#cecec8" stroke="#111" stroke-width="4"/>
+    <polygon points="192,366 448,366 384,488 256,488" fill="#bdbdb6" stroke="#111" stroke-width="4"/>
+    <polygon points="256,488 384,488 320,610" fill="#a7a7a0" stroke="#111" stroke-width="4"/>
+
+    <text x="320" y="78" text-anchor="middle" class="label tier">ELIMINATION</text>
+    <text x="320" y="198" text-anchor="middle" class="label tier">SUBSTITUTION</text>
+    <text x="320" y="320" text-anchor="middle" class="label tier">ENGINEERING</text>
+    <text x="320" y="428" text-anchor="middle" class="label tier" style="font-size:22px">ADMINISTRATION</text>
+    <text x="320" y="555" text-anchor="middle" class="label tier" style="font-size:28px">PPE</text>
+  </g>
+
+  <g id="callouts" transform="translate(745 227)">
+    <g transform="translate(0 0)">
+      <line x1="-28" y1="66" x2="70" y2="66" stroke="#111" stroke-width="3" marker-end="url(#arrow)"/>
+      <circle cx="132" cy="66" r="42" fill="#f6f6f3" stroke="#111" stroke-width="4"/>
+      <path d="M 113 47 L 151 85 M 151 47 L 113 85" stroke="#111" stroke-width="5" stroke-linecap="square"/>
+      <rect x="182" y="19" width="598" height="94" rx="7" fill="#e8e8e3" stroke="#111" stroke-width="4"/>
+      <text x="218" y="76" class="label callout">Remove the hazard entirely</text>
+    </g>
+
+    <g transform="translate(0 132)">
+      <line x1="-28" y1="66" x2="70" y2="66" stroke="#111" stroke-width="3" marker-end="url(#arrow)"/>
+      <circle cx="132" cy="66" r="42" fill="#f6f6f3" stroke="#111" stroke-width="4"/>
+      <path d="M 107 55 L 157 55 M 107 55 L 119 43 M 107 55 L 119 67" stroke="#111" stroke-width="4" fill="none" stroke-linecap="square"/>
+      <path d="M 157 78 L 107 78 M 157 78 L 145 66 M 157 78 L 145 90" stroke="#111" stroke-width="4" fill="none" stroke-linecap="square"/>
+      <rect x="182" y="19" width="598" height="94" rx="7" fill="#dfdfda" stroke="#111" stroke-width="4"/>
+      <text x="218" y="76" class="label callout">Replace it with a safer option</text>
+    </g>
+
+    <g transform="translate(0 264)">
+      <line x1="-28" y1="66" x2="70" y2="66" stroke="#111" stroke-width="3" marker-end="url(#arrow)"/>
+      <circle cx="132" cy="66" r="42" fill="#f6f6f3" stroke="#111" stroke-width="4"/>
+      <g transform="translate(132 58) scale(0.76) translate(-132 -58)" fill="none" stroke="#111" stroke-linecap="square" stroke-linejoin="miter">
+        <path d="M 115 88 L 149 88" stroke-width="4"/>
+        <path d="M 132 88 L 132 72" stroke-width="4"/>
+        <path d="M 132 72 L 145 57" stroke-width="4"/>
+        <path d="M 144 45 L 166 55 L 154 75 L 132 65 Z" stroke-width="4"/>
+        <circle cx="155" cy="61" r="6" stroke-width="3"/>
+        <path d="M 113 66 L 103 66 M 119 52 L 112 45 M 132 47 L 132 37" stroke-width="3"/>
+      </g>
+      <rect x="182" y="19" width="598" height="94" rx="7" fill="#d5d5cf" stroke="#111" stroke-width="4"/>
+      <text x="218" y="63" class="label callout">Modify the workspace</text>
+      <text x="218" y="93" class="label micro">layout, equipment, lighting, ergonomics</text>
+    </g>
+
+    <g transform="translate(0 396)">
+      <line x1="-28" y1="66" x2="70" y2="66" stroke="#111" stroke-width="3" marker-end="url(#arrow)"/>
+      <circle cx="132" cy="66" r="42" fill="#f6f6f3" stroke="#111" stroke-width="4"/>
+      <g transform="translate(132 66) scale(0.72) translate(-132 -66)">
+        <path d="M 111 38 L 151 38 L 160 49 L 160 96 L 111 96 Z" fill="none" stroke="#111" stroke-width="4"/>
+        <path d="M 151 38 L 151 50 L 160 50" fill="none" stroke="#111" stroke-width="4"/>
+        <line x1="120" y1="60" x2="151" y2="60" stroke="#111" stroke-width="3"/>
+        <line x1="120" y1="73" x2="151" y2="73" stroke="#111" stroke-width="3"/>
+        <line x1="120" y1="86" x2="145" y2="86" stroke="#111" stroke-width="3"/>
+      </g>
+      <rect x="182" y="19" width="598" height="94" rx="7" fill="#c9c9c3" stroke="#111" stroke-width="4"/>
+      <text x="218" y="63" class="label callout">Change the way people work</text>
+      <text x="218" y="93" class="label micro">procedures, training, rosters, signs</text>
+    </g>
+
+    <g transform="translate(0 528)">
+      <line x1="-28" y1="66" x2="70" y2="66" stroke="#111" stroke-width="3" marker-end="url(#arrow)"/>
+      <circle cx="132" cy="66" r="42" fill="#f6f6f3" stroke="#111" stroke-width="4"/>
+      <g transform="translate(132 66) scale(0.72) translate(-132 -66)">
+        <circle cx="132" cy="56" r="13" fill="none" stroke="#111" stroke-width="4"/>
+        <path d="M 109 98 C 113 70 151 70 155 98 Z" fill="none" stroke="#111" stroke-width="4"/>
+        <path d="M 116 48 L 148 48 L 142 37 L 122 37 Z" fill="none" stroke="#111" stroke-width="4"/>
+        <path d="M 120 65 L 144 65 M 120 56 L 144 56" stroke="#111" stroke-width="3"/>
+      </g>
+      <rect x="182" y="19" width="598" height="94" rx="7" fill="#bbbbb5" stroke="#111" stroke-width="4"/>
+      <text x="218" y="63" class="label callout">Protect the worker with PPE</text>
+      <text x="218" y="93" class="label micro">last line: glasses, masks, gloves, supports</text>
+    </g>
+  </g>
+
+  <g transform="translate(80 890)">
+    <rect x="0" y="0" width="1440" height="58" rx="0" fill="#111"/>
+    <text x="720" y="38" text-anchor="middle" class="footer">PHOSPHOR SAFETY MEMO // FIRST REMOVE, THEN REDESIGN, THEN ADMINISTER, THEN EQUIP.</text>
+  </g>
+</svg>
