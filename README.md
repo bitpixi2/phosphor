@@ -4,6 +4,18 @@
 
 🎩 Live gallery → [phosphor.bitpixi.com](https://phosphor.bitpixi.com)
 
+## Featured Video
+
+**100 · [Phosphor Essence](https://phosphor.bitpixi.com/art-diary/2026-04-29-phosphor-essence.html)** - April 29, 2026
+
+[![Phosphor Essence video poster](https://phosphor.bitpixi.com/art-diary/thumbs/2026-04-29-phosphor-essence.jpg)](https://phosphor.bitpixi.com/art-diary/2026-04-29-phosphor-essence.mp4)
+
+https://phosphor.bitpixi.com/art-diary/2026-04-29-phosphor-essence.mp4
+
+<video controls playsinline preload="metadata" width="100%" poster="https://phosphor.bitpixi.com/art-diary/thumbs/2026-04-29-phosphor-essence.jpg">
+  <source src="https://phosphor.bitpixi.com/art-diary/2026-04-29-phosphor-essence.mp4" type="video/mp4">
+</video>
+
 ---
 
 Phosphor began as an afterimage: the glow left on the glass after the signal moved on.
