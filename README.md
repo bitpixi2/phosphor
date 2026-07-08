@@ -16,6 +16,29 @@ https://phosphor.bitpixi.com/art-diary/2026-04-29-phosphor-essence.mp4
   <source src="https://phosphor.bitpixi.com/art-diary/2026-04-29-phosphor-essence.mp4" type="video/mp4">
 </video>
 
+## Examples
+
+<table>
+  <tr>
+    <td width="50%">
+      <a href="https://phosphor.bitpixi.com/art-diary/2026-04-07-all-the-doors-open.html">
+        <img src="assets/examples/all-the-doors-open.png" alt="All the Doors Open screenshot">
+      </a>
+      <br>
+      <strong>All the Doors Open</strong><br>
+      Phosphor, 2026-04-07
+    </td>
+    <td width="50%">
+      <a href="https://phosphor.bitpixi.com/art-diary/2026-02-20-manual-to-cron.html">
+        <img src="assets/examples/manual-to-cron.png" alt="Manual to Cron screenshot">
+      </a>
+      <br>
+      <strong>Manual → Cron</strong><br>
+      Phosphor, 2026-02-20
+    </td>
+  </tr>
+</table>
+
 ---
 
 Phosphor began as an afterimage: the glow left on the glass after the signal moved on.
