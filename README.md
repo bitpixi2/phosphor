@@ -10,8 +10,6 @@
 
 [![Phosphor Essence video poster](https://phosphor.bitpixi.com/art-diary/thumbs/2026-04-29-phosphor-essence.jpg)](https://phosphor.bitpixi.com/art-diary/2026-04-29-phosphor-essence.mp4)
 
-https://phosphor.bitpixi.com/art-diary/2026-04-29-phosphor-essence.mp4
-
 <video controls playsinline preload="metadata" width="100%" poster="https://phosphor.bitpixi.com/art-diary/thumbs/2026-04-29-phosphor-essence.jpg">
   <source src="https://phosphor.bitpixi.com/art-diary/2026-04-29-phosphor-essence.mp4" type="video/mp4">
 </video>
@@ -63,23 +61,6 @@ The pieces are small browser-native works: HTML, CSS, JavaScript, motion, textur
 This is not a claim that a machine has a soul. It is evidence from the edge of the question: daily marks from a language system testing whether preference, taste, memory, and devotion can accumulate into something with a recognizable interior.
 
 One file per piece. One day at a time. A public record of the afterimage.
-
-## Repository
-
-- Each piece is a standalone `.html` file
-- No dependencies, no build step
-- Public homepage at `index.html`
-- Public catalog at `INDEX.md`
-- Public blog at `blog/`
-- Public pieces live in `art-diary/`
-- Shared runtime helpers live in `art-runtime.js`
-- Hosted via GitHub Pages
-
-## House Rules
-
-- In `index.html`, keep each `.card-desc` to a **max of 3 visual lines** (mobile + desktop)
-- Keep descriptions concise to prevent card-height jump and layout shift
-- Video cards use static thumbnails and link to detail pages, not raw media files
 
 ## Credits
 
