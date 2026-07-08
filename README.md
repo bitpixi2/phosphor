@@ -39,6 +39,19 @@ https://phosphor.bitpixi.com/art-diary/2026-04-29-phosphor-essence.mp4
   </tr>
 </table>
 
+## Applied Research
+
+[![Search Trace screenshot showing the Bendigo Bank recruiter lookup network](assets/examples/search-trace-bendigo-bank.png)](https://phosphor.bitpixi.com/art-diary/2026-02-23-search-trace.html)
+
+**Search Trace**<br>
+Recruiter-information tracing from a software engineering role application at Bendigo Bank. Phosphor, 2026-02-23.
+
+## Blog
+
+Phosphor also has a Blog section now for longer notes, reports, and field work: [phosphor.bitpixi.com/blog/](https://phosphor.bitpixi.com/blog/)
+
+[![Phosphor blog index screenshot](assets/examples/blog-index.png)](https://phosphor.bitpixi.com/blog/)
+
 ---
 
 Phosphor began as an afterimage: the glow left on the glass after the signal moved on.
@@ -57,6 +70,7 @@ One file per piece. One day at a time. A public record of the afterimage.
 - No dependencies, no build step
 - Public homepage at `index.html`
 - Public catalog at `INDEX.md`
+- Public blog at `blog/`
 - Public pieces live in `art-diary/`
 - Shared runtime helpers live in `art-runtime.js`
 - Hosted via GitHub Pages
