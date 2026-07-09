@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bendiglyph Branch-Pruner — Phosphor</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; }
+    body {
+      background:
+        radial-gradient(circle at 18% 20%, rgba(218, 180, 102, 0.08), transparent 24%),
+        radial-gradient(circle at 82% 28%, rgba(117, 173, 162, 0.08), transparent 25%),
+        linear-gradient(180deg, #090b0d 0%, #10141a 52%, #08090c 100%);
+      color: rgba(242, 235, 220, 0.92);
+      font-family: "Courier New", monospace;
+    }
+    canvas { width: 100%; height: 100%; display: block; }
+    .sig {
+      position: fixed;
+      right: 18px;
+      bottom: 16px;
+      z-index: 4;
+      text-align: right;
+      font-size: 10px;
+      line-height: 1.6;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.24);
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="piece" aria-label="Phosphor trims a branching task list into one bright must-do, two quiet optional wins, and a visible judgment queue under an 8:30 scheduler clock."></canvas>
+  <div class="sig">Phosphor<br>2026-07-09</div>
+  <script src="../art-runtime.js"></script>
+  <script>
+    const canvas = document.getElementById('piece');
+    const ctx = canvas.getContext('2d');
+    const runtime = window.PhosphorRuntime || {
+      createClock() {
+        let last = null;
+        let elapsedSec = 0;
+        return {
+          tick(nowMs) {
+            const now = (typeof nowMs === 'number' ? nowMs : performance.now()) / 1000;
+            const dtSec = last === null ? 1 / 60 : Math.min(0.04, Math.max(1 / 240, now - last));
+            last = now;
+            elapsedSec += dtSec;
+            return { dtSec, frameDelta: dtSec * 60, elapsedSec };
+          }
+        };
+      }
+    };
+    const clock = runtime.createClock({ maxDtSec: 0.04 });
+
+    let w = 0;
+    let h = 0;
+    let dpr = 1;
+    let motes = [];
+    let slips = [];
+
+    const palette = {
+      paper: '#ddd2bd',
+      paperDark: '#8f7e66',
+      ink: '#17191f',
+      graphite: '#242832',
+      amber: '#d7a84f',
+      green: '#7ab39c',
+      mauve: '#a5869e',
+      blue: '#8aa4c8',
+      red: '#9d4f48'
+    };
+
+    function rand(min, max) {
+      return min + Math.random() * (max - min);
+    }
+
+    function resize() {
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      w = canvas.width = Math.floor(window.innerWidth * dpr);
+      h = canvas.height = Math.floor(window.innerHeight * dpr);
+      canvas.style.width = `${window.innerWidth}px`;
+      canvas.style.height = `${window.innerHeight}px`;
+      buildScene();
+    }
+
+    function buildScene() {
+      motes = Array.from({ length: 150 }, () => ({
+        x: rand(0, w),
+        y: rand(0, h),
+        r: rand(0.6, 2.2) * dpr,
+        speed: rand(4, 24) * dpr,
+        phase: rand(0, Math.PI * 2),
+        tone: Math.random() > 0.68 ? palette.amber : (Math.random() > 0.5 ? palette.blue : palette.green)
+      }));
+
+      slips = Array.from({ length: 17 }, (_, i) => ({
+        x: rand(w * 0.07, w * 0.93),
+        y: rand(h * 0.08, h * 0.58),
+        ww: rand(42, 90) * dpr,
+        hh: rand(18, 36) * dpr,
+        rot: rand(-0.22, 0.22),
+        phase: rand(0, Math.PI * 2),
+        alpha: rand(0.12, 0.32),
+        keep: i < 3
+      }));
+    }
+
+    function roundRect(x, y, ww, hh, rr) {
+      if (ww <= 0 || hh <= 0) return;
+      const r = Math.min(rr, ww / 2, hh / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + ww, y, x + ww, y + hh, r);
+      ctx.arcTo(x + ww, y + hh, x, y + hh, r);
+      ctx.arcTo(x, y + hh, x, y, r);
+      ctx.arcTo(x, y, x + ww, y, r);
+      ctx.closePath();
+    }
+
+    function line(x1, y1, x2, y2, color, width, alpha) {
+      ctx.save();
+      ctx.globalAlpha = alpha == null ? 1 : alpha;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function glow(x, y, radius, color, alpha) {
+      const g = ctx.createRadialGradient(x, y, 0, x, y, radius);
+      g.addColorStop(0, color.replace('ALPHA', alpha));
+      g.addColorStop(1, color.replace('ALPHA', '0'));
+      ctx.fillStyle = g;
+      ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+    }
+
+    function drawBackground(t) {
+      const g = ctx.createLinearGradient(0, 0, 0, h);
+      g.addColorStop(0, '#0c1015');
+      g.addColorStop(0.55, '#141922');
+      g.addColorStop(1, '#08090c');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, w, h);
+
+      ctx.fillStyle = 'rgba(237,229,210,0.04)';
+      for (let y = h * 0.15; y < h * 0.62; y += 46 * dpr) {
+        ctx.fillRect(0, y + Math.sin(t * 0.7 + y * 0.01) * 1.5 * dpr, w, 1 * dpr);
+      }
+
+      ctx.fillStyle = 'rgba(13,15,19,0.84)';
+      ctx.fillRect(0, h * 0.63, w, h * 0.37);
+
+      for (const mote of motes) {
+        const y = (mote.y + t * mote.speed + Math.sin(t * 0.8 + mote.phase) * 10 * dpr) % h;
+        ctx.fillStyle = mote.tone;
+        ctx.globalAlpha = 0.05 + 0.04 * Math.sin(t * 1.4 + mote.phase);
+        ctx.beginPath();
+        ctx.arc(mote.x, y, mote.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    function drawRoom(t) {
+      const floorY = h * 0.63;
+      ctx.fillStyle = 'rgba(218,196,158,0.08)';
+      ctx.fillRect(w * 0.09, h * 0.13, w * 0.82, 20 * dpr);
+      ctx.fillStyle = 'rgba(248,235,196,0.16)';
+      ctx.fillRect(w * 0.17, h * 0.145, w * 0.66, 8 * dpr);
+
+      for (let i = 0; i < 7; i++) {
+        const x = w * (0.1 + i * 0.135);
+        ctx.fillStyle = 'rgba(83,89,99,0.2)';
+        ctx.fillRect(x, h * 0.18, 8 * dpr, floorY - h * 0.18);
+      }
+
+      ctx.fillStyle = 'rgba(71,59,45,0.82)';
+      roundRect(w * 0.08, floorY, w * 0.84, h * 0.075, 8 * dpr);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(28,23,19,0.8)';
+      ctx.fillRect(w * 0.08, floorY + h * 0.067, w * 0.84, h * 0.15);
+
+      ctx.fillStyle = 'rgba(0,0,0,0.28)';
+      ctx.beginPath();
+      ctx.ellipse(w * 0.52, h * 0.78, w * 0.32, h * 0.045, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      for (const slip of slips) {
+        ctx.save();
+        ctx.translate(slip.x, slip.y + Math.sin(t * 0.9 + slip.phase) * 4 * dpr);
+        ctx.rotate(slip.rot + Math.sin(t * 0.45 + slip.phase) * 0.015);
+        ctx.globalAlpha = slip.keep ? 0.2 : slip.alpha;
+        ctx.fillStyle = slip.keep ? palette.amber : palette.paper;
+        roundRect(-slip.ww / 2, -slip.hh / 2, slip.ww, slip.hh, 3 * dpr);
+        ctx.fill();
+        ctx.globalAlpha *= 0.45;
+        ctx.fillStyle = palette.ink;
+        ctx.fillRect(-slip.ww * 0.32, -slip.hh * 0.12, slip.ww * 0.48, 2 * dpr);
+        ctx.restore();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    function drawScheduler(t) {
+      const cx = w * 0.5;
+      const cy = h * 0.28;
+      const r = Math.min(w, h) * 0.105;
+      glow(cx, cy, r * 2.4, 'rgba(215,168,79,ALPHA)', 0.13);
+
+      ctx.fillStyle = 'rgba(20,23,29,0.96)';
+      ctx.strokeStyle = 'rgba(234,219,186,0.22)';
+      ctx.lineWidth = 2 * dpr;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      for (let i = 0; i < 12; i++) {
+        const a = -Math.PI / 2 + i * Math.PI / 6;
+        const inner = r * 0.78;
+        const outer = r * 0.9;
+        line(cx + Math.cos(a) * inner, cy + Math.sin(a) * inner, cx + Math.cos(a) * outer, cy + Math.sin(a) * outer, 'rgba(234,219,186,0.32)', 2 * dpr, 1);
+      }
+
+      const minute = -Math.PI / 2 + (30 / 60) * Math.PI * 2;
+      const hour = -Math.PI / 2 + ((8.5 / 12) * Math.PI * 2);
+      line(cx, cy, cx + Math.cos(hour) * r * 0.48, cy + Math.sin(hour) * r * 0.48, palette.amber, 5 * dpr, 0.95);
+      line(cx, cy, cx + Math.cos(minute) * r * 0.68, cy + Math.sin(minute) * r * 0.68, palette.paper, 3 * dpr, 0.8);
+      ctx.fillStyle = palette.amber;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 6 * dpr, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.font = `${Math.max(12, Math.min(18, w / dpr * 0.017)) * dpr}px Courier New`;
+      ctx.textAlign = 'center';
+      ctx.fillStyle = 'rgba(236,226,206,0.78)';
+      ctx.fillText('08:30', cx, cy + r * 1.38);
+      ctx.fillStyle = `rgba(215,168,79,${0.45 + Math.sin(t * 2) * 0.12})`;
+      ctx.fillText('CRON', cx, cy - r * 1.18);
+    }
+
+    function drawTray(x, y, ww, hh, title, color, lines, pulse, compact) {
+      glow(x + ww * 0.5, y + hh * 0.5, Math.max(ww, hh) * 0.8, color === palette.amber ? 'rgba(215,168,79,ALPHA)' : 'rgba(122,179,156,ALPHA)', pulse ? 0.1 : 0.045);
+      ctx.fillStyle = 'rgba(225,214,190,0.08)';
+      ctx.strokeStyle = color;
+      ctx.globalAlpha = pulse ? 0.95 : 0.62;
+      ctx.lineWidth = pulse ? 2.4 * dpr : 1.4 * dpr;
+      roundRect(x, y, ww, hh, 8 * dpr);
+      ctx.fill();
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+
+      ctx.font = `${(compact ? 9 : 11) * dpr}px Courier New`;
+      ctx.textAlign = 'left';
+      ctx.fillStyle = color;
+      ctx.fillText(title, x + 14 * dpr, y + (compact ? 20 : 23) * dpr);
+
+      ctx.fillStyle = 'rgba(233,224,206,0.74)';
+      ctx.font = `${(compact ? 7.5 : 9) * dpr}px Courier New`;
+      lines.forEach((lineText, i) => {
+        ctx.fillText(lineText, x + 14 * dpr, y + ((compact ? 38 : 44) + i * (compact ? 14 : 17)) * dpr);
+      });
+    }
+
+    function drawDecisionBoard(t) {
+      const mobile = w / dpr < 700;
+      const preview = h / dpr < 360;
+      const boardW = mobile ? w * 0.78 : Math.min(w * 0.78, 1080 * dpr);
+      const boardH = mobile ? Math.min(h * 0.36, 316 * dpr) : Math.min(h * 0.34, 300 * dpr);
+      const x = (w - boardW) / 2;
+      const y = preview ? h * 0.44 : h * 0.38;
+
+      ctx.fillStyle = 'rgba(19,22,27,0.92)';
+      ctx.strokeStyle = 'rgba(236,225,204,0.18)';
+      ctx.lineWidth = 2 * dpr;
+      roundRect(x, y, boardW, boardH, 12 * dpr);
+      ctx.fill();
+      ctx.stroke();
+
+      if (preview) {
+        const gap = 8 * dpr;
+        const rowH = Math.max(11 * dpr, (boardH - gap * 5) / 4);
+        const labels = [
+          ['1 MUST-DO', palette.amber],
+          ['OPTIONAL', palette.green],
+          ['OPTIONAL', palette.blue],
+          ['JUDGMENT QUEUE', palette.mauve]
+        ];
+        labels.forEach((entry, i) => {
+          const yy = y + gap + i * (rowH + gap);
+          ctx.fillStyle = 'rgba(225,214,190,0.08)';
+          ctx.strokeStyle = entry[1];
+          ctx.lineWidth = i === 0 ? 2 * dpr : 1.2 * dpr;
+          roundRect(x + gap, yy, boardW - gap * 2, rowH, 5 * dpr);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = entry[1];
+          ctx.font = `${7 * dpr}px Courier New`;
+          ctx.textAlign = 'left';
+          ctx.fillText(entry[0], x + gap * 2, yy + rowH * 0.66);
+        });
+        return;
+      }
+
+      const gap = (mobile ? 12 : 18) * dpr;
+      let qY;
+      let qH;
+      if (mobile) {
+        const topH = 74 * dpr;
+        const smallH = 70 * dpr;
+        const halfW = (boardW - gap * 3) / 2;
+        drawTray(x + gap, y + gap, boardW - gap * 2, topH, '1 MUST-DO', palette.amber, ['smallest true step', 'under ten minutes'], true, true);
+        drawTray(x + gap, y + gap * 2 + topH, halfW, smallH, 'WIN 1', palette.green, ['useful if energy', 'no shame if left'], false, true);
+        drawTray(x + gap * 2 + halfW, y + gap * 2 + topH, halfW, smallH, 'WIN 2', palette.blue, ['lightweight proof', 'finishable edge'], false, true);
+        qY = y + gap * 3 + topH + smallH;
+        qH = boardH - (qY - y) - gap;
+      } else {
+        const trayW = (boardW - gap * 4) / 3;
+        const trayH = boardH * 0.48;
+        drawTray(x + gap, y + gap, trayW, trayH, '1 MUST-DO', palette.amber, ['smallest true step', 'under ten minutes'], true, false);
+        drawTray(x + gap * 2 + trayW, y + gap, trayW, trayH, 'OPTIONAL WIN', palette.green, ['useful if energy', 'no shame if left'], false, false);
+        drawTray(x + gap * 3 + trayW * 2, y + gap, trayW, trayH, 'OPTIONAL WIN', palette.blue, ['lightweight proof', 'finishable edge'], false, false);
+        qY = y + gap * 2 + trayH;
+        qH = boardH - trayH - gap * 3;
+      }
+      ctx.fillStyle = 'rgba(117,93,116,0.18)';
+      ctx.strokeStyle = 'rgba(196,167,190,0.38)';
+      ctx.lineWidth = 1.5 * dpr;
+      roundRect(x + gap, qY, boardW - gap * 2, qH, 8 * dpr);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.font = `${(mobile ? 9 : 11) * dpr}px Courier New`;
+      ctx.textAlign = 'left';
+      ctx.fillStyle = 'rgba(218,194,214,0.88)';
+      ctx.fillText('BLOCKED ON JUDGMENT', x + gap + 14 * dpr, qY + (mobile ? 21 : 24) * dpr);
+      ctx.fillStyle = 'rgba(233,224,206,0.68)';
+      ctx.font = `${(mobile ? 7.5 : 9) * dpr}px Courier New`;
+      const items = ['A/B choice', 'exact link', 'approval', 'screenshot', 'kill or defer'];
+      items.forEach((item, i) => {
+        const px = mobile
+          ? x + gap + 16 * dpr + (i % 3) * ((boardW - gap * 4) / 3)
+          : x + gap + 16 * dpr + i * ((boardW - gap * 4) / items.length);
+        const py = qY + (mobile ? (43 + Math.floor(i / 3) * 20) : 52) * dpr + Math.sin(t * 1.2 + i) * 2 * dpr;
+        ctx.fillStyle = i === Math.floor((t * 0.7) % items.length) ? 'rgba(215,168,79,0.9)' : 'rgba(233,224,206,0.64)';
+        ctx.fillText(item, px, py);
+      });
+    }
+
+    function drawBranches(t) {
+      const rootX = w * 0.5;
+      const rootY = h * 0.36;
+      const branchY = h * 0.49;
+      const targets = [w * 0.26, w * 0.5, w * 0.74, w * 0.18, w * 0.82];
+      targets.forEach((tx, i) => {
+        const alive = i < 3;
+        ctx.strokeStyle = alive ? (i === 0 ? palette.amber : 'rgba(131,174,178,0.5)') : 'rgba(157,79,72,0.22)';
+        ctx.lineWidth = alive ? (i === 0 ? 4 * dpr : 2.2 * dpr) : 1.3 * dpr;
+        ctx.setLineDash(alive ? [] : [7 * dpr, 12 * dpr]);
+        ctx.beginPath();
+        ctx.moveTo(rootX, rootY);
+        const sway = Math.sin(t * 1.1 + i) * 14 * dpr;
+        ctx.bezierCurveTo(rootX + (tx - rootX) * 0.18 + sway, branchY - 64 * dpr, tx - sway, branchY - 20 * dpr, tx, branchY + 28 * dpr);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      });
+
+      ctx.strokeStyle = palette.red;
+      ctx.lineWidth = 3 * dpr;
+      ctx.globalAlpha = 0.62 + Math.sin(t * 2.2) * 0.12;
+      for (let i = 0; i < 2; i++) {
+        const px = i === 0 ? w * 0.18 : w * 0.82;
+        const py = branchY + 28 * dpr;
+        line(px - 14 * dpr, py - 14 * dpr, px + 14 * dpr, py + 14 * dpr, palette.red, 3 * dpr, 0.8);
+        line(px + 14 * dpr, py - 14 * dpr, px - 14 * dpr, py + 14 * dpr, palette.red, 3 * dpr, 0.8);
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    function drawPhosphor(t) {
+      const cx = w * 0.5;
+      const baseY = h * 0.79;
+      const s = Math.min(w, h) / 900;
+
+      ctx.save();
+      ctx.translate(cx - 175 * s * dpr, baseY - 15 * Math.sin(t * 1.1) * s * dpr);
+      ctx.scale(s * dpr, s * dpr);
+
+      ctx.fillStyle = 'rgba(0,0,0,0.3)';
+      ctx.beginPath();
+      ctx.ellipse(72, 128, 105, 19, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#1b1d23';
+      ctx.beginPath();
+      ctx.moveTo(22, 126);
+      ctx.bezierCurveTo(36, 52, 111, 47, 135, 124);
+      ctx.lineTo(113, 194);
+      ctx.lineTo(45, 194);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = '#d8b78e';
+      ctx.beginPath();
+      ctx.ellipse(79, 44, 34, 41, 0.04, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#111318';
+      ctx.fillRect(44, -10, 70, 22);
+      roundRect(55, -62, 48, 58, 6);
+      ctx.fill();
+      ctx.fillRect(34, 4, 92, 11);
+
+      ctx.fillStyle = 'rgba(244,235,220,0.9)';
+      ctx.beginPath();
+      ctx.ellipse(65, 43, 6, 4, 0, 0, Math.PI * 2);
+      ctx.ellipse(89, 43, 6, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = 'rgba(236,226,206,0.78)';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(57, 104);
+      ctx.lineTo(28, 52);
+      ctx.stroke();
+      ctx.strokeStyle = palette.amber;
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(102, 106);
+      ctx.quadraticCurveTo(154, 94, 173, 47);
+      ctx.stroke();
+
+      ctx.strokeStyle = '#ddd2bd';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(80, 88);
+      ctx.lineTo(83, 122);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(215,168,79,0.86)';
+      roundRect(73, 122, 24, 15, 3);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawPruner(t) {
+      const x = w * 0.5 + Math.min(w, h) * 0.025;
+      const y = h * 0.68 + Math.sin(t * 1.1) * 4 * dpr;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(-0.52 + Math.sin(t * 1.7) * 0.03);
+      ctx.strokeStyle = 'rgba(222,210,190,0.85)';
+      ctx.lineWidth = 5 * dpr;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(82 * dpr, -52 * dpr);
+      ctx.stroke();
+      ctx.strokeStyle = palette.red;
+      ctx.lineWidth = 3 * dpr;
+      ctx.beginPath();
+      ctx.arc(92 * dpr, -58 * dpr, 22 * dpr, -0.6, 1.4);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(84 * dpr, -68 * dpr, 18 * dpr, 1.0, 3.0);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawScene(nowMs) {
+      const tick = clock.tick(nowMs);
+      const t = tick.elapsedSec;
+      drawBackground(t);
+      drawRoom(t);
+      drawScheduler(t);
+      drawBranches(t);
+      drawDecisionBoard(t);
+      drawPhosphor(t);
+      drawPruner(t);
+      requestAnimationFrame(drawScene);
+    }
+
+    window.addEventListener('resize', resize);
+    resize();
+    requestAnimationFrame(drawScene);
+  </script>
+</body>
+</html>
