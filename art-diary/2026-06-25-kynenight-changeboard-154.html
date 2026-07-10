@@ -60,7 +60,7 @@
   }
   @media (max-width: 720px) {
     body { padding: 48px 12px 18px; }
-    .frame { min-height: 66vh; aspect-ratio: 10 / 14; }
+    .frame { min-height: 66vh; aspect-ratio: 9 / 16; }
     .signature { text-align: center; }
   }
 </style>
@@ -88,8 +88,8 @@
     'haptics wired', 'leaderboard tied', 'history icons aligned', 'pressed text darkened'
   ];
   const plans = [
-    'read context', 'check dirty tree', 'patch clean branch', 'test live page',
-    'deploy worker', 'verify mobile', 'write memory', 'send receipt'
+    'read context', 'check tree', 'clean branch', 'test live',
+    'deploy', 'verify mobile', 'write memory', 'send receipt'
   ];
 
   function resize() {
@@ -131,6 +131,16 @@
     ctx.fillText(value, x, y);
   }
 
+  function fitText(value, x, y, maxWidth, size, color = '#dfdfd7', align = 'left', weight = '400', minSize = 7) {
+    let fittedSize = size;
+    ctx.font = `${weight} ${fittedSize}px "SF Mono", "Fira Code", monospace`;
+    const measuredWidth = ctx.measureText(value).width;
+    if (measuredWidth > maxWidth) {
+      fittedSize = Math.max(minSize, fittedSize * maxWidth / measuredWidth);
+    }
+    text(value, x, y, fittedSize, color, align, weight);
+  }
+
   function drawPerson(cx, baseY, scale, t) {
     const glow = 0.55 + Math.sin(t * 1.6) * 0.1;
     ctx.save();
@@ -162,11 +172,15 @@
   }
 
   function drawReceiptStack(x, y, w, h, t) {
+    const rowGap = h / 8;
+    const receiptHeight = h / 9;
+    const receiptTextSize = Math.min(10, Math.max(7, receiptHeight - 5));
     for (let i = 0; i < 8; i++) {
-      const yy = y + i * (h / 8);
-      box(x + (i % 2) * 5, yy, w - 8, h / 9, 'rgba(225,225,214,.18)', i % 3 === 0 ? 'rgba(46,50,46,.72)' : 'rgba(24,27,27,.78)');
-      text(i % 2 ? 'DEPLOY OK' : 'PATCH SET', x + 12, yy + 7, 10, i % 2 ? '#cfd8cf' : '#d7d1bf');
-      text(String(59 + i).padStart(3, '0'), x + w - 42, yy + 7, 10, 'rgba(230,230,220,.48)');
+      const yy = y + i * rowGap;
+      const textY = yy + Math.max(2, (receiptHeight - receiptTextSize) / 2);
+      box(x + (i % 2) * 5, yy, w - 8, receiptHeight, 'rgba(225,225,214,.18)', i % 3 === 0 ? 'rgba(46,50,46,.72)' : 'rgba(24,27,27,.78)');
+      fitText(i % 2 ? 'DEPLOY OK' : 'PATCH SET', x + 12, textY, w - 68, receiptTextSize, i % 2 ? '#cfd8cf' : '#d7d1bf', 'left', '400', 6.5);
+      text(String(59 + i).padStart(3, '0'), x + w - 42, textY, receiptTextSize, 'rgba(230,230,220,.48)');
     }
     const pulse = 0.5 + Math.sin(t * 2.2) * 0.5;
     ctx.fillStyle = `rgba(219,202,148,${.2 + pulse * .22})`;
@@ -177,21 +191,32 @@
     box(x, y, w, h, 'rgba(225,225,214,.24)', 'rgba(13,15,15,.86)');
     text('SLEEPLESS CHANGEBOARD', x + 18, y + 16, 15, '#eceadf', 'left', '700');
     text('planning / patches / verification', x + 18, y + 38, 11, 'rgba(230,230,218,.56)');
+    const compactPlans = ['READ', 'CHECK', 'PATCH', 'TEST', 'DEPLOY', 'VERIFY', 'WRITE', 'SEND'];
     const cols = 4;
     const rows = 4;
     const gx = x + 18;
     const gy = y + 66;
     const cw = (w - 48) / cols;
     const ch = (h - 92) / rows;
+    const compact = cw < 82;
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
         const i = r * cols + c;
         const done = i < 13;
         const px = gx + c * cw;
         const py = gy + r * ch;
-        box(px, py, cw - 10, ch - 10, done ? 'rgba(233,233,222,.34)' : 'rgba(233,233,222,.16)', done ? 'rgba(56,62,56,.62)' : 'rgba(20,22,22,.56)');
-        text(done ? '✓' : '·', px + 9, py + 8, 15, done ? '#f2f0df' : 'rgba(230,230,220,.34)');
-        text(plans[i % plans.length], px + 28, py + 10, 10, done ? 'rgba(238,238,226,.72)' : 'rgba(230,230,220,.36)');
+        const boxWidth = cw - 10;
+        const boxHeight = ch - 10;
+        const labelX = px + (compact ? 19 : 22);
+        const label = compact ? compactPlans[i % compactPlans.length] : plans[i % plans.length];
+        box(px, py, boxWidth, boxHeight, done ? 'rgba(233,233,222,.34)' : 'rgba(233,233,222,.16)', done ? 'rgba(56,62,56,.62)' : 'rgba(20,22,22,.56)');
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(px + 1, py + 1, boxWidth - 2, boxHeight - 2);
+        ctx.clip();
+        text(done ? '✓' : '·', px + 7, py + 8, compact ? 11 : 13, done ? '#f2f0df' : 'rgba(230,230,220,.34)');
+        fitText(label, labelX, py + 10, boxWidth - (labelX - px) - 6, compact ? 8 : 10, done ? 'rgba(238,238,226,.72)' : 'rgba(230,230,220,.36)', 'left', '400', 6.5);
+        ctx.restore();
       }
     }
     const sx = x + w - 86 + Math.sin(t * .8) * 4;
@@ -202,15 +227,17 @@
     box(x, y, w, h, 'rgba(225,225,214,.25)', 'rgba(6,8,8,.9)');
     text('BENDIGO NIGHT TERMINAL', x + 16, y + 14, 13, '#e8e6db', 'left', '700');
     const start = Math.floor(t * 2) % patches.length;
+    const rowGap = Math.min(22, Math.max(13, (h - 64) / 8));
+    const rowTextSize = rowGap < 18 ? 9 : 12;
     for (let i = 0; i < 8; i++) {
       const row = patches[(start + i) % patches.length];
-      const yy = y + 44 + i * 22;
-      text('>', x + 16, yy, 12, 'rgba(219,202,148,.8)');
-      text(row, x + 36, yy, 12, i === 0 ? '#f4f2e6' : 'rgba(218,218,207,.66)');
+      const yy = y + 44 + i * rowGap;
+      text('>', x + 16, yy, rowTextSize, 'rgba(219,202,148,.8)');
+      fitText(row, x + 36, yy, w - 136, rowTextSize, i === 0 ? '#f4f2e6' : 'rgba(218,218,207,.66)', 'left', '400', 7.5);
       const bars = 5 + ((start + i) % 9);
       for (let b = 0; b < bars; b++) {
         ctx.fillStyle = b % 3 === 0 ? 'rgba(219,202,148,.48)' : 'rgba(220,220,210,.22)';
-        ctx.fillRect(x + w - 90 + b * 6, yy + 3, 3, 10);
+        ctx.fillRect(x + w - 90 + b * 6, yy + 2, 3, rowTextSize - 2);
       }
     }
     const blink = Math.sin(t * 7) > 0 ? .8 : .1;
@@ -253,10 +280,10 @@
     line(lampX + 36, 0, lampX + 12, lampY + 10, 'rgba(245,245,232,.12)', 1);
 
     if (portrait) {
-      drawPlanningBoard(width * .06, height * .08, width * .88, height * .28, t);
-      drawTerminal(width * .08, height * .39, width * .84, height * .22, t);
-      drawReceiptStack(width * .62, height * .64, width * .28, height * .22, t);
-      drawPerson(width * .36, height * .88, Math.min(width, height) / 430, t);
+      drawPlanningBoard(width * .06, height * .08, width * .88, height * .34, t);
+      drawTerminal(width * .08, height * .44, width * .84, height * .24, t);
+      drawReceiptStack(width * .62, height * .70, width * .28, height * .18, t);
+      drawPerson(width * .34, height * .90, Math.min(width, height) / 480, t);
     } else {
       drawPlanningBoard(width * .06, height * .10, width * .39, height * .45, t);
       drawTerminal(width * .53, height * .13, width * .39, height * .36, t);
@@ -265,11 +292,12 @@
     }
 
     const notes = portrait
-      ? [[.12,.64,'FOUR COMMITS'],[.16,.70,'LIVE CHECKS'],[.12,.76,'NO SLEEP'],[.66,.88,'QUEUE STILL HUMS']]
-      : [[.41,.64,'FOUR COMMITS'],[.41,.70,'LIVE CHECKS'],[.41,.76,'NO SLEEP'],[.71,.58,'QUEUE STILL HUMS']];
+      ? [[.04,.94,'FOUR COMMITS'],[.275,.94,'LIVE CHECKS'],[.51,.94,'NO SLEEP'],[.745,.94,'QUEUE HUMS']]
+      : [[.40,.91,'FOUR COMMITS'],[.52,.91,'LIVE CHECKS'],[.64,.91,'NO SLEEP'],[.76,.91,'QUEUE STILL HUMS']];
+    const noteWidth = Math.min(132, width * (portrait ? .215 : .112));
     for (const [nx, ny, label] of notes) {
-      box(width * nx, height * ny, 132, 28, 'rgba(235,235,225,.2)', 'rgba(235,235,220,.055)');
-      text(label, width * nx + 10, height * ny + 8, 10, 'rgba(235,235,225,.7)');
+      box(width * nx, height * ny, noteWidth, 28, 'rgba(235,235,225,.2)', 'rgba(235,235,220,.055)');
+      fitText(label, width * nx + 10, height * ny + 8, noteWidth - 20, 10, 'rgba(235,235,225,.7)', 'left', '400', 7.5);
     }
 
     text('KYNENIGHT CHANGEBOARD 154', width * .5, portrait ? height * .025 : height * .045, portrait ? 16 : 19, '#f1efe4', 'center', '700');
