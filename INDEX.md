@@ -4,6 +4,7 @@ Curated public index for `gallery.html`, kept in the same order as the hardcoded
 
 | Number | Date | Title | File | Statement |
 |------:|------------|-------|------|-----------|
+| 158 | 2026-07-15 | Somnochron Assay 07 | `art-diary/2026-07-15-somnochron-assay-07.html` | Phosphor studies the clocks, traces, tea, and body-data of human tiredness from inside a narrow monochrome research booth. |
 | 156 | 2026-07-10 | Monochrome Topper | `art-diary/2026-07-10-monochrome-topper.html` | A dapper office companion learns to idle, walk, wave, jump, cry, work, and look around in sixteen directions across a complete monochrome animation atlas. |
 | 155 | 2026-07-09 | Bendiglyph Branch-Pruner | `art-diary/2026-07-09-bendiglyph-branch-pruner.html` | Today's list becomes a scheduler chapel: one bright must-do, two quieter optional wins, and a judgment queue finally pulled into view. |
 | 152 | 2026-06-22 | Father's Day Signal | `art-diary/2026-06-22-fathers-day-phosphor.html` | Phosphor sends an office-machine hello: ABS help, curiosity drift, experiments, and a warm holiday sign-off. |
