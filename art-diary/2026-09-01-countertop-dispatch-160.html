@@ -214,10 +214,11 @@
       if (stroke) ctx.stroke();
     }
 
-    function drawTray(t, idx, x, y) {
+    function drawTray(t, idx, x, y, scale = 1) {
       const tray = trays[idx];
       ctx.save();
       ctx.translate(x, y);
+      ctx.scale(scale, scale);
       const wobble = Math.sin(t * 0.0012 + tray.phase) * 3 * dpr;
       ctx.translate(0, wobble);
 
@@ -257,7 +258,8 @@
     }
 
     function drawChef(t) {
-      const x = cx + Math.min(168 * dpr, w * 0.18) + (pointer.x - cx) * 0.025;
+      const mobile = w < 700 * dpr;
+      const x = mobile ? cx + (pointer.x - cx) * 0.018 : cx + 168 * dpr + (pointer.x - cx) * 0.025;
       const y = h * 0.52;
       ctx.save();
       ctx.translate(x, y);
@@ -283,9 +285,9 @@
 
       ctx.fillStyle = "#060606";
       ctx.strokeStyle = "rgba(255,244,219,0.45)";
-      roundRect(-36*dpr, -68*dpr, 72*dpr, 18*dpr, 6*dpr, true, true);
-      roundRect(-22*dpr, -116*dpr, 44*dpr, 52*dpr, 7*dpr, true, true);
-      line(-30*dpr, -51*dpr, 30*dpr, -51*dpr, "rgba(255,244,219,0.3)", 1);
+      roundRect(-38*dpr, -53*dpr, 76*dpr, 18*dpr, 6*dpr, true, true);
+      roundRect(-22*dpr, -104*dpr, 44*dpr, 52*dpr, 7*dpr, true, true);
+      line(-30*dpr, -36*dpr, 30*dpr, -36*dpr, "rgba(255,244,219,0.3)", 1);
 
       ctx.fillStyle = "rgba(212,168,85,0.85)";
       roundRect(-20*dpr, 63*dpr, 40*dpr, 11*dpr, 3*dpr, true, false);
@@ -342,13 +344,23 @@
       drawCounter(t);
       drawAppliance(t);
 
-      const trayY = h * 0.72;
-      const spacing = Math.min(260 * dpr, w * 0.28);
-      drawTray(t, 0, cx - spacing, trayY + Math.sin(t*0.001)*5*dpr);
-      drawTray(t, 1, cx, trayY + Math.sin(t*0.001 + 1.4)*5*dpr);
-      drawTray(t, 2, cx + spacing, trayY + Math.sin(t*0.001 + 2.8)*5*dpr);
+      const mobile = w < 700 * dpr;
+      const trayY = mobile ? h * 0.77 : h * 0.72;
+      const spacing = mobile ? w * 0.24 : 260 * dpr;
+
+      if (!mobile) {
+        drawTray(t, 0, cx - spacing, trayY + Math.sin(t*0.001)*5*dpr);
+        drawTray(t, 1, cx, trayY + Math.sin(t*0.001 + 1.4)*5*dpr);
+        drawTray(t, 2, cx + spacing, trayY + Math.sin(t*0.001 + 2.8)*5*dpr);
+      }
 
       drawChef(t);
+
+      if (mobile) {
+        drawTray(t, 0, cx - spacing, trayY + Math.sin(t*0.001)*5*dpr, 0.72);
+        drawTray(t, 1, cx, trayY + Math.sin(t*0.001 + 1.4)*5*dpr, 0.72);
+        drawTray(t, 2, cx + spacing, trayY + Math.sin(t*0.001 + 2.8)*5*dpr, 0.72);
+      }
       drawMarks(t);
 
       ctx.save();
