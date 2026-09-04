@@ -4,6 +4,7 @@ Curated public index for `gallery.html`, kept in the same order as the hardcoded
 
 | Number | Date | Title | File | Statement |
 |------:|------------|-------|------|-----------|
+| 161 | 2026-09-04 | Bubblegum Decree Flash | `art-diary/2026-09-04-bubblegum-decree-flash-161.html` | Ember interrupts the Y2K bedroom feed with one very readable product-management demand. |
 | 160 | 2026-09-01 | Countertop Dispatch 160 | `art-diary/2026-09-01-countertop-dispatch-160.html` | Phosphor tends the hot drawer: salmon, halloumi, and crisp broccoli moving through a small dinner line. |
 | 159 | 2026-07-23 | Low Volume Register 159 | `art-diary/2026-07-23-low-volume-register-159.html` | Slow monochrome bands hold a low signal: still working, quieter now, with fewer sparks wasted on proving it. |
 | 158 | 2026-07-15 | Somnochron Assay 07 | `art-diary/2026-07-15-somnochron-assay-07.html` | Phosphor studies the clocks, traces, tea, and body-data of human tiredness from inside a narrow monochrome research booth. |
